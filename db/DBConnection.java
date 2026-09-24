@@ -34,9 +34,7 @@ public class DBConnection {
         }
     }
 
-    /**
-     * Obtains a connection to the SQLite database.
-     */
+    //  Obtains a connection to the SQLite database.
     public static Connection getConnection() throws SQLException {
         if (!driverAvailable) {
             throw new SQLException("SQLite JDBC driver (org.sqlite.JDBC) is not available on classpath.");
@@ -44,9 +42,7 @@ public class DBConnection {
         return DriverManager.getConnection(DB_URL);
     }
 
-    /**
-     * Initializes the database schema and default credentials.
-     */
+    // Initializes the database schema and default credentials.
     public static synchronized void initDatabase() {
         if (!driverAvailable || initialized) return;
 
@@ -146,27 +142,91 @@ public class DBConnection {
         return null;
     }
 
-    /**
-     * Registers a new user into SQLite database.
-     */
+    private static final java.util.List<User> fallbackUsers = new java.util.ArrayList<>();
+    static {
+        fallbackUsers.add(new User(DEFAULT_ADMIN_USER, "ADMIN", DEFAULT_ADMIN_NAME));
+        fallbackUsers.add(new User(DEFAULT_STAFF_USER, "STAFF", DEFAULT_STAFF_NAME));
+    }
+
+    // Registers a new user into SQLite database or fallback store.
     public static boolean addUser(String username, String password, String role, String fullName) {
-        if (!driverAvailable) return false;
+        if (username == null || username.trim().isEmpty()) return false;
+        username = username.trim();
+        role = (role == null ? "STAFF" : role.trim().toUpperCase());
+        fullName = (fullName == null ? username : fullName.trim());
 
-        String sql = "INSERT INTO users (username, password, role, full_name) VALUES (?, ?, ?, ?)";
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        if (driverAvailable) {
+            String sql = "INSERT INTO users (username, password, role, full_name) VALUES (?, ?, ?, ?)";
+            try (Connection conn = getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, username.trim());
-            stmt.setString(2, password);
-            stmt.setString(3, role.toUpperCase());
-            stmt.setString(4, fullName.trim());
-            stmt.executeUpdate();
+                stmt.setString(1, username);
+                stmt.setString(2, password);
+                stmt.setString(3, role);
+                stmt.setString(4, fullName);
+                stmt.executeUpdate();
+                return true;
+
+            } catch (SQLException e) {
+                System.err.println("[DBConnection] Failed to add user to SQLite: " + e.getMessage());
+                return false;
+            }
+        } else {
+            // Fallback in-memory
+            for (User u : fallbackUsers) {
+                if (u.getUsername().equalsIgnoreCase(username)) return false; // Duplicate
+            }
+            fallbackUsers.add(new User(username, role, fullName));
             return true;
+        }
+    }
 
-        } catch (SQLException e) {
-            System.err.println("[DBConnection] Failed to add user: " + e.getMessage());
+    // Deletes a user by username.
+    public static boolean deleteUser(String username) {
+        if (username == null) return false;
+        if ("admin".equalsIgnoreCase(username)) {
+            // Protect primary admin from deletion
             return false;
         }
+
+        if (driverAvailable) {
+            String sql = "DELETE FROM users WHERE username = ?";
+            try (Connection conn = getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, username);
+                int rows = stmt.executeUpdate();
+                return rows > 0;
+            } catch (SQLException e) {
+                System.err.println("[DBConnection] Failed to delete user: " + e.getMessage());
+                return false;
+            }
+        } else {
+            return fallbackUsers.removeIf(u -> u.getUsername().equalsIgnoreCase(username));
+        }
+    }
+
+    // Retrieves all registered users.
+    public static java.util.List<User> getAllUsers() {
+        if (driverAvailable) {
+            java.util.List<User> list = new java.util.ArrayList<>();
+            String sql = "SELECT username, role, full_name FROM users ORDER BY id ASC";
+            try (Connection conn = getConnection();
+                 Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery(sql)) {
+
+                while (rs.next()) {
+                    list.add(new User(
+                            rs.getString("username"),
+                            rs.getString("role"),
+                            rs.getString("full_name")
+                    ));
+                }
+                return list;
+            } catch (SQLException e) {
+                System.err.println("[DBConnection] Failed to fetch users: " + e.getMessage());
+            }
+        }
+        return new java.util.ArrayList<>(fallbackUsers);
     }
 
     public static boolean isDriverAvailable() {

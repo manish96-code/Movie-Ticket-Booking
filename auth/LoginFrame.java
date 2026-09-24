@@ -1,5 +1,6 @@
 package auth;
 
+import admin.AdminDashboard;
 import db.DBConnection;
 import db.User;
 import staff.StaffDashboard;
@@ -13,15 +14,7 @@ import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 
-/**
- * Modern Cinema Login Terminal
- * Features:
- * - SQLite Database authentication (cinema.db)
- * - Auto-seeding for Admin (admin / admin123) and Staff (staff / staff123)
- * - Password Show/Hide toggle
- * - Enter-key quick submit
- * - Inline status alerts and quick-fill test credentials
- */
+
 public class LoginFrame extends JFrame {
 
     private JTextField usernameField;
@@ -272,8 +265,13 @@ public class LoginFrame extends JFrame {
                 // Small delay for smooth feedback before switching screens
                 Timer timer = new Timer(350, evt -> {
                     dispose(); // Close login window
-                    StaffDashboard dashboard = new StaffDashboard(user.getFullName(), user.getRole());
-                    dashboard.setVisible(true);
+                    if (user.isAdmin()) {
+                        AdminDashboard adminDashboard = new AdminDashboard(user.getFullName());
+                        adminDashboard.setVisible(true);
+                    } else {
+                        StaffDashboard staffDashboard = new StaffDashboard(user.getFullName(), user.getRole());
+                        staffDashboard.setVisible(true);
+                    }
                 });
                 timer.setRepeats(false);
                 timer.start();
