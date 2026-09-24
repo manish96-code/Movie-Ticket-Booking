@@ -489,6 +489,8 @@ public class Home extends JFrame {
                 "Confirm Cancellation",
                 JOptionPane.YES_NO_OPTION);
 
+                lkkdfhygfk
+
         if (confirm == JOptionPane.YES_OPTION) {
             // Adjust stats
             String totalStr = (String) tableModel.getValueAt(row, 5);
