@@ -1,6 +1,7 @@
 package staff;
 
 import utils.Theme;
+import auth.LoginFrame;
 
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
@@ -29,8 +30,22 @@ public class StaffDashboard extends JFrame {
     private JLabel clockLabel;
     private String staffName = "Rahul Sharma";
     private String counterName = "Counter #02";
+    private String role = "STAFF";
 
     public StaffDashboard() {
+        this("Rahul Sharma", "STAFF");
+    }
+
+    public StaffDashboard(String staffName, String role) {
+        if (staffName != null && !staffName.trim().isEmpty()) {
+            this.staffName = staffName.trim();
+        }
+        if (role != null && !role.trim().isEmpty()) {
+            this.role = role.trim().toUpperCase();
+            if ("ADMIN".equalsIgnoreCase(this.role)) {
+                this.counterName = "Admin Terminal";
+            }
+        }
         initWindow();
         buildHeader();
         buildBodyWithSidebarAndMainPanel();
@@ -78,7 +93,8 @@ public class StaffDashboard extends JFrame {
         title.setFont(Theme.FONT_TITLE);
         title.setForeground(Theme.TEXT_DARK);
 
-        JLabel subtitle = new JLabel("STAFF TERMINAL • " + counterName.toUpperCase());
+        String terminalRole = "ADMIN".equalsIgnoreCase(role) ? "ADMIN TERMINAL" : "STAFF TERMINAL";
+        JLabel subtitle = new JLabel(terminalRole + " • " + counterName.toUpperCase());
         subtitle.setFont(Theme.FONT_BOLD_SM);
         subtitle.setForeground(Theme.ACCENT_BLUE);
 
@@ -111,11 +127,12 @@ public class StaffDashboard extends JFrame {
         JButton logoutBtn = Theme.createSecondaryButton("Logout");
         logoutBtn.addActionListener(e -> {
             int confirm = JOptionPane.showConfirmDialog(this,
-                    "Do you want to log out of the current staff session?",
+                    "Do you want to log out of the current session?",
                     "Confirm Logout",
                     JOptionPane.YES_NO_OPTION);
             if (confirm == JOptionPane.YES_OPTION) {
-                JOptionPane.showMessageDialog(this, "Logged out. In full build, this will return to LoginFrame.");
+                dispose();
+                new LoginFrame().setVisible(true);
             }
         });
 
@@ -363,7 +380,7 @@ public class StaffDashboard extends JFrame {
                 new EmptyBorder(8, 20, 8, 20)
         ));
 
-        JLabel statusText = new JLabel("Ready • Logged in as: " + staffName + " (" + counterName + ")");
+        JLabel statusText = new JLabel("Ready • Logged in as: " + staffName + " (" + role + " • " + counterName + ")");
         statusText.setFont(Theme.FONT_SMALL);
         statusText.setForeground(Theme.TEXT_MUTED);
 
