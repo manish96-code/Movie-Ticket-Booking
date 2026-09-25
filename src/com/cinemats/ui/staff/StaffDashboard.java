@@ -25,6 +25,8 @@ public class StaffDashboard extends JFrame {
     private CardLayout cardLayout;
     private JPanel mainContentPanel;
     private List<JButton> sidebarButtons = new ArrayList<>();
+    private java.util.Map<String, JButton> pageButtonMap = new java.util.HashMap<>();
+    private MoviesPanel moviesPanel;
 
     // --- Header & Clock ---
     private JLabel clockLabel;
@@ -170,11 +172,14 @@ public class StaffDashboard extends JFrame {
 
         // Sidebar Navigation Buttons
         JButton bookTicketBtn = createSidebarButton("🎫  Book Ticket", "PAGE_BOOK_TICKET", true);
-        JButton todayShowsBtn = createSidebarButton("🎬  Today's Shows", "PAGE_TODAY_SHOWS", false);
+        JButton moviesBtn = createSidebarButton("🎬  Movies", "PAGE_MOVIES", false);
+        JButton todayShowsBtn = createSidebarButton("🕒  Today's Shows", "PAGE_TODAY_SHOWS", false);
         JButton searchTicketBtn = createSidebarButton("🔍  Search Ticket", "PAGE_SEARCH_TICKET", false);
         JButton shiftSummaryBtn = createSidebarButton("📊  Shift Summary", "PAGE_SHIFT_SUMMARY", false);
 
         sidebar.add(bookTicketBtn);
+        sidebar.add(Box.createVerticalStrut(8));
+        sidebar.add(moviesBtn);
         sidebar.add(Box.createVerticalStrut(8));
         sidebar.add(todayShowsBtn);
         sidebar.add(Box.createVerticalStrut(8));
@@ -207,8 +212,12 @@ public class StaffDashboard extends JFrame {
         mainContentPanel = new JPanel(cardLayout);
         mainContentPanel.setBackground(Theme.BG_MAIN);
 
+        // Instantiate Standalone Page Components
+        moviesPanel = new MoviesPanel(this);
+
         // Register Pages in CardLayout
         mainContentPanel.add(createBookTicketPagePlaceholder(), "PAGE_BOOK_TICKET");
+        mainContentPanel.add(moviesPanel, "PAGE_MOVIES");
         mainContentPanel.add(createTodayShowsPagePlaceholder(), "PAGE_TODAY_SHOWS");
         mainContentPanel.add(createSearchTicketPagePlaceholder(), "PAGE_SEARCH_TICKET");
         mainContentPanel.add(createShiftSummaryPagePlaceholder(), "PAGE_SHIFT_SUMMARY");
@@ -233,15 +242,28 @@ public class StaffDashboard extends JFrame {
 
         setSidebarButtonState(btn, active);
         sidebarButtons.add(btn);
+        pageButtonMap.put(pageKey, btn);
 
-        btn.addActionListener(e -> {
-            cardLayout.show(mainContentPanel, pageKey);
-            for (JButton b : sidebarButtons) {
-                setSidebarButtonState(b, b == btn);
-            }
-        });
+        btn.addActionListener(e -> showPage(pageKey));
 
         return btn;
+    }
+
+    /**
+     * Smooth page navigation across tabs
+     */
+    public void showPage(String pageKey) {
+        if (cardLayout != null && mainContentPanel != null) {
+            cardLayout.show(mainContentPanel, pageKey);
+            JButton activeBtn = pageButtonMap.get(pageKey);
+            for (JButton b : sidebarButtons) {
+                setSidebarButtonState(b, b == activeBtn);
+            }
+        }
+    }
+
+    public MoviesPanel getMoviesPanel() {
+        return moviesPanel;
     }
 
     private void setSidebarButtonState(JButton btn, boolean active) {
