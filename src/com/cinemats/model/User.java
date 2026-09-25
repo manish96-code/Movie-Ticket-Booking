@@ -1,4 +1,4 @@
-package db;
+package com.cinemats.model;
 
 /**
  * User session model for authenticated accounts.

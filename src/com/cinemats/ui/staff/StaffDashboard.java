@@ -1,7 +1,7 @@
-package staff;
+package com.cinemats.ui.staff;
 
-import utils.Theme;
-import auth.LoginFrame;
+import com.cinemats.ui.auth.LoginFrame;
+import com.cinemats.util.Theme;
 
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;

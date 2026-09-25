@@ -1,10 +1,10 @@
-package auth;
+package com.cinemats.ui.auth;
 
-import admin.AdminDashboard;
-import db.DBConnection;
-import db.User;
-import staff.StaffDashboard;
-import utils.Theme;
+import com.cinemats.config.DBConnection;
+import com.cinemats.model.User;
+import com.cinemats.ui.admin.AdminDashboard;
+import com.cinemats.ui.staff.StaffDashboard;
+import com.cinemats.util.Theme;
 
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
@@ -13,7 +13,6 @@ import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-
 
 public class LoginFrame extends JFrame {
 

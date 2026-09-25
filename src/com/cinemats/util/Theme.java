@@ -1,4 +1,4 @@
-package utils;
+package com.cinemats.util;
 
 import java.awt.*;
 import javax.swing.*;

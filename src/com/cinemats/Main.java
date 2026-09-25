@@ -1,4 +1,6 @@
-import auth.LoginFrame;
+package com.cinemats;
+
+import com.cinemats.ui.auth.LoginFrame;
 
 import javax.swing.*;
 

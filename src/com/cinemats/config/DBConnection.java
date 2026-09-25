@@ -1,6 +1,10 @@
-package db;
+package com.cinemats.config;
+
+import com.cinemats.model.User;
 
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * SQLite Database Connection & User Management
@@ -21,6 +25,12 @@ public class DBConnection {
     private static final String DEFAULT_STAFF_PASS = "staff123";
     private static final String DEFAULT_STAFF_NAME = "Rahul Sharma";
 
+    private static final List<User> fallbackUsers = new ArrayList<>();
+    static {
+        fallbackUsers.add(new User(DEFAULT_ADMIN_USER, "ADMIN", DEFAULT_ADMIN_NAME));
+        fallbackUsers.add(new User(DEFAULT_STAFF_USER, "STAFF", DEFAULT_STAFF_NAME));
+    }
+
     static {
         try {
             Class.forName("org.sqlite.JDBC");
@@ -34,7 +44,7 @@ public class DBConnection {
         }
     }
 
-    //  Obtains a connection to the SQLite database.
+    // Obtains a connection to the SQLite database.
     public static Connection getConnection() throws SQLException {
         if (!driverAvailable) {
             throw new SQLException("SQLite JDBC driver (org.sqlite.JDBC) is not available on classpath.");
@@ -142,12 +152,6 @@ public class DBConnection {
         return null;
     }
 
-    private static final java.util.List<User> fallbackUsers = new java.util.ArrayList<>();
-    static {
-        fallbackUsers.add(new User(DEFAULT_ADMIN_USER, "ADMIN", DEFAULT_ADMIN_NAME));
-        fallbackUsers.add(new User(DEFAULT_STAFF_USER, "STAFF", DEFAULT_STAFF_NAME));
-    }
-
     // Registers a new user into SQLite database or fallback store.
     public static boolean addUser(String username, String password, String role, String fullName) {
         if (username == null || username.trim().isEmpty()) return false;
@@ -206,9 +210,9 @@ public class DBConnection {
     }
 
     // Retrieves all registered users.
-    public static java.util.List<User> getAllUsers() {
+    public static List<User> getAllUsers() {
         if (driverAvailable) {
-            java.util.List<User> list = new java.util.ArrayList<>();
+            List<User> list = new ArrayList<>();
             String sql = "SELECT username, role, full_name FROM users ORDER BY id ASC";
             try (Connection conn = getConnection();
                  Statement stmt = conn.createStatement();
@@ -226,7 +230,7 @@ public class DBConnection {
                 System.err.println("[DBConnection] Failed to fetch users: " + e.getMessage());
             }
         }
-        return new java.util.ArrayList<>(fallbackUsers);
+        return new ArrayList<>(fallbackUsers);
     }
 
     public static boolean isDriverAvailable() {
