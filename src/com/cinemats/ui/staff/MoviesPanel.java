@@ -6,7 +6,7 @@ import javax.swing.*;
 public class MoviesPanel extends JPanel {
 
     Color background = new Color(245, 245, 245);
-    Color dark = new Color(25, 25, 25);
+    Color dark = new Color(25, 25, 25); 
     Color cardColor = Color.WHITE;
     Color red = new Color(210, 40, 40);
     Color gray = new Color(100, 100, 100);
