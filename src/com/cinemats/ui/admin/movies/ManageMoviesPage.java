@@ -86,8 +86,9 @@ public class ManageMoviesPage extends JPanel {
 
         add(card, BorderLayout.CENTER);
     }
-
     private void openAddMovieDialog() {
+
+        
         JTextField nameField = Theme.createTextField("Title");
         JTextField genreField = Theme.createTextField("Genre");
         JTextField durationField = Theme.createTextField("Duration (e.g. 150 min)");
