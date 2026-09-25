@@ -373,9 +373,19 @@ public class AddStaffPage extends JPanel {
                 return;
             }
 
-            boolean ok = DBConnection.addUser(un, p1, role, fn);
+            String counter = (String) counterCombo.getSelectedItem();
+            String shift = (String) shiftCombo.getSelectedItem();
+            String phone = phoneField.getText().trim();
+
+            if (DBConnection.userExists(un)) {
+                showInlineStatus(statusBox, statusLbl, "⚠️ Username '@" + un + "' already exists in database. Please choose another ID.", false);
+                usernameField.requestFocus();
+                return;
+            }
+
+            boolean ok = DBConnection.addUser(un, p1, role, fn, counter, shift, phone);
             if (ok) {
-                showInlineStatus(statusBox, statusLbl, "✅ Staff account '" + un + "' registered successfully in SQLite database!", true);
+                showInlineStatus(statusBox, statusLbl, "✅ Staff account '@" + un + "' registered successfully into SQLite database (cinema.db)!", true);
                 previewStatus.setText("● ACTIVE IN DATABASE (cinema.db)");
                 passwordField.setText("");
                 confirmPasswordField.setText("");
@@ -383,7 +393,7 @@ public class AddStaffPage extends JPanel {
                     dashboard.getStaffAccountsPage().refreshStaffTable();
                 }
             } else {
-                showInlineStatus(statusBox, statusLbl, "⚠️ Failed to create user: Username '" + un + "' already exists in database.", false);
+                showInlineStatus(statusBox, statusLbl, "⚠️ Failed to save user: database error or invalid username format.", false);
             }
         });
 

@@ -3,3 +3,6 @@
 
 # Build output directory
 bin/
+
+# Local SQLite databases
+*.db
