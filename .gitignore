@@ -1,0 +1,8 @@
+# Compiled Java class files
+*.class
+
+# Build output directory
+bin/
+
+# Local SQLite databases
+*.db
