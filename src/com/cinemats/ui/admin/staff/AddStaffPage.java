@@ -294,24 +294,24 @@ public class AddStaffPage extends JPanel {
         guideTitle.setFont(Theme.FONT_HEADER);
         guideTitle.setForeground(Theme.TEXT_DARK);
 
-        JLabel p1 = new JLabel("• STAFF: Authorized for Ticket POS counter booking, search, and receipts.");
-        p1.setFont(Theme.FONT_SMALL); p1.setForeground(Theme.TEXT_MUTED);
-        JLabel p2 = new JLabel("• ADMIN: Full HQ privileges, revenue analytics, movies catalogue, staff management.");
-        p2.setFont(Theme.FONT_SMALL); p2.setForeground(Theme.TEXT_MUTED);
-        JLabel p3 = new JLabel("• Passwords must be at least 4 characters long.");
-        p3.setFont(Theme.FONT_SMALL); p3.setForeground(Theme.TEXT_MUTED);
-        JLabel p4 = new JLabel("• Accounts are immediately active for login in cinema.db upon saving.");
-        p4.setFont(Theme.FONT_SMALL); p4.setForeground(Theme.TEXT_MUTED);
+        JLabel guidePoint1 = new JLabel("• STAFF: Authorized for Ticket POS counter booking, search, and receipts.");
+        guidePoint1.setFont(Theme.FONT_SMALL); guidePoint1.setForeground(Theme.TEXT_MUTED);
+        JLabel guidePoint2 = new JLabel("• ADMIN: Full HQ privileges, revenue analytics, movies catalogue, staff management.");
+        guidePoint2.setFont(Theme.FONT_SMALL); guidePoint2.setForeground(Theme.TEXT_MUTED);
+        JLabel guidePoint3 = new JLabel("• Passwords must be at least 4 characters long.");
+        guidePoint3.setFont(Theme.FONT_SMALL); guidePoint3.setForeground(Theme.TEXT_MUTED);
+        JLabel guidePoint4 = new JLabel("• Accounts are immediately active for login in cinema.db upon saving.");
+        guidePoint4.setFont(Theme.FONT_SMALL); guidePoint4.setForeground(Theme.TEXT_MUTED);
 
         guideCard.add(guideTitle);
         guideCard.add(Box.createVerticalStrut(8));
-        guideCard.add(p1);
+        guideCard.add(guidePoint1);
         guideCard.add(Box.createVerticalStrut(4));
-        guideCard.add(p2);
+        guideCard.add(guidePoint2);
         guideCard.add(Box.createVerticalStrut(4));
-        guideCard.add(p3);
+        guideCard.add(guidePoint3);
         guideCard.add(Box.createVerticalStrut(4));
-        guideCard.add(p4);
+        guideCard.add(guidePoint4);
 
         rightCol.add(badgeCard, BorderLayout.NORTH);
         rightCol.add(guideCard, BorderLayout.CENTER);
