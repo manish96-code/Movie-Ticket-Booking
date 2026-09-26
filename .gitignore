@@ -1,8 +1,8 @@
-# # Compiled Java class files
-# *.class
+# Compiled Java class files
+*.class
 
-# # Build output directory
-# bin/
+# Build output directory
+bin/
 
-# # Local SQLite databases
-# *.db
+# Local SQLite databases
+*.db
