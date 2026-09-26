@@ -102,6 +102,9 @@ public class DBConnection {
             initialized = true;
             System.out.println("[DBConnection] SQLite database connected and initialized successfully (cinema.db).");
 
+            // Initialize movies table via MovieDAO
+            com.cinemats.dao.MovieDAO.initMoviesTable();
+
         } catch (SQLException e) {
             System.err.println("[DBConnection] Error during SQLite schema initialization: " + e.getMessage());
         }
@@ -141,45 +144,40 @@ public class DBConnection {
         }
     }
 
-    /**
-     * Authenticates a user against the SQLite database, or fallback credentials if driver is unavailable.
-     */
+    // =========================================================================
+    // Backward Compatibility Delegates (forwarding to com.cinemats.dao.UserDAO)
+    // =========================================================================
+
     public static User authenticate(String username, String password) {
-        if (username == null || password == null) return null;
-        username = username.trim();
-        password = password.trim();
+        return com.cinemats.dao.UserDAO.authenticate(username, password);
+    }
 
-        // 1. Try Live SQLite Database
-        if (driverAvailable) {
-            String query = "SELECT id, username, role, full_name, counter, shift, phone, status, created_at "
-                    + "FROM users WHERE LOWER(username) = LOWER(?) AND password = ? AND status != 'INACTIVE'";
-            try (Connection conn = getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(query)) {
+    public static boolean userExists(String username) {
+        return com.cinemats.dao.UserDAO.userExists(username);
+    }
 
-                stmt.setString(1, username);
-                stmt.setString(2, password);
+    public static boolean addUser(String username, String password, String role, String fullName,
+                                  String counter, String shift, String phone) {
+        return com.cinemats.dao.UserDAO.addUser(username, password, role, fullName, counter, shift, phone);
+    }
 
-                try (ResultSet rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        return new User(
-                                rs.getInt("id"),
-                                rs.getString("username"),
-                                rs.getString("role"),
-                                rs.getString("full_name"),
-                                rs.getString("counter"),
-                                rs.getString("shift"),
-                                rs.getString("phone"),
-                                rs.getString("status"),
-                                rs.getString("created_at")
-                        );
-                    }
-                }
-            } catch (SQLException e) {
-                System.err.println("[DBConnection] Authentication query error: " + e.getMessage());
-            }
-        }
+    public static boolean addUser(String username, String password, String role, String fullName) {
+        return com.cinemats.dao.UserDAO.addUser(username, password, role, fullName);
+    }
 
-        // 2. Resilient Fallback Mode
+    public static boolean deleteUser(String username) {
+        return com.cinemats.dao.UserDAO.deleteUser(username);
+    }
+
+    public static List<User> getAllUsers() {
+        return com.cinemats.dao.UserDAO.getAllUsers();
+    }
+
+    // =========================================================================
+    // Fallback In-Memory Helpers (used when sqlite-jdbc driver is not active)
+    // =========================================================================
+
+    public static User authenticateFallback(String username, String password) {
         for (User u : fallbackUsers) {
             if (u.getUsername().equalsIgnoreCase(username)) {
                 if (DEFAULT_ADMIN_USER.equalsIgnoreCase(username) && DEFAULT_ADMIN_PASS.equals(password)) {
@@ -188,150 +186,33 @@ public class DBConnection {
                 if (DEFAULT_STAFF_USER.equalsIgnoreCase(username) && DEFAULT_STAFF_PASS.equals(password)) {
                     return u;
                 }
-                // Custom added user in fallback store
                 return u;
             }
         }
-
         return null;
     }
 
-    /**
-     * Checks if a username already exists in the database.
-     */
-    public static boolean userExists(String username) {
-        if (username == null || username.trim().isEmpty()) return false;
-        username = username.trim();
-
-        if (driverAvailable) {
-            String sql = "SELECT COUNT(*) FROM users WHERE LOWER(username) = LOWER(?)";
-            try (Connection conn = getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setString(1, username);
-                ResultSet rs = stmt.executeQuery();
-                if (rs.next()) {
-                    return rs.getInt(1) > 0;
-                }
-            } catch (SQLException e) {
-                System.err.println("[DBConnection] Error checking username existence: " + e.getMessage());
-            }
-        } else {
-            for (User u : fallbackUsers) {
-                if (u.getUsername().equalsIgnoreCase(username)) return true;
-            }
+    public static boolean fallbackUserExists(String username) {
+        for (User u : fallbackUsers) {
+            if (u.getUsername().equalsIgnoreCase(username)) return true;
         }
         return false;
     }
 
-    /**
-     * Registers a new staff member with all assigned station attributes into SQLite database or fallback store.
-     */
-    public static boolean addUser(String username, String password, String role, String fullName,
-                                  String counter, String shift, String phone) {
-        if (username == null || username.trim().isEmpty() || password == null || password.trim().isEmpty()) {
-            return false;
+    public static boolean addFallbackUser(String username, String role, String fullName, String counter, String shift, String phone) {
+        for (User u : fallbackUsers) {
+            if (u.getUsername().equalsIgnoreCase(username)) return false;
         }
-        username = username.trim();
-        role = (role == null || role.trim().isEmpty()) ? "STAFF" : role.trim().toUpperCase();
-        fullName = (fullName == null || fullName.trim().isEmpty()) ? username : fullName.trim();
-        counter = (counter == null || counter.trim().isEmpty()) ? "Counter #01 (Main Concourse)" : counter.trim();
-        shift = (shift == null || shift.trim().isEmpty()) ? "Morning Shift (09:00 AM - 04:00 PM)" : shift.trim();
-        phone = (phone == null) ? "" : phone.trim();
-
-        if (driverAvailable) {
-            String sql = "INSERT INTO users (username, password, role, full_name, counter, shift, phone, status, created_at) "
-                    + "VALUES (?, ?, ?, ?, ?, ?, ?, 'ACTIVE', CURRENT_TIMESTAMP)";
-            try (Connection conn = getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-                stmt.setString(1, username);
-                stmt.setString(2, password);
-                stmt.setString(3, role);
-                stmt.setString(4, fullName);
-                stmt.setString(5, counter);
-                stmt.setString(6, shift);
-                stmt.setString(7, phone);
-                stmt.executeUpdate();
-                return true;
-
-            } catch (SQLException e) {
-                System.err.println("[DBConnection] Failed to add user to SQLite: " + e.getMessage());
-                return false;
-            }
-        } else {
-            // Fallback in-memory
-            for (User u : fallbackUsers) {
-                if (u.getUsername().equalsIgnoreCase(username)) return false; // Duplicate
-            }
-            String now = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
-            fallbackUsers.add(new User(fallbackUsers.size() + 1, username, role, fullName, counter, shift, phone, "ACTIVE", now));
-            return true;
-        }
+        String now = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+        fallbackUsers.add(new User(fallbackUsers.size() + 1, username, role, fullName, counter, shift, phone, "ACTIVE", now));
+        return true;
     }
 
-    /**
-     * Compact convenience overload maintaining backward compatibility.
-     */
-    public static boolean addUser(String username, String password, String role, String fullName) {
-        return addUser(username, password, role, fullName, "Counter #01 (Main Concourse)", "Morning Shift (09:00 AM - 04:00 PM)", "");
+    public static boolean deleteFallbackUser(String username) {
+        return fallbackUsers.removeIf(u -> u.getUsername().equalsIgnoreCase(username.trim()));
     }
 
-    /**
-     * Deletes a user by username from the database (admin account is protected).
-     */
-    public static boolean deleteUser(String username) {
-        if (username == null) return false;
-        if ("admin".equalsIgnoreCase(username.trim())) {
-            // Protect primary super admin from deletion
-            return false;
-        }
-
-        if (driverAvailable) {
-            String sql = "DELETE FROM users WHERE LOWER(username) = LOWER(?)";
-            try (Connection conn = getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setString(1, username.trim());
-                int rows = stmt.executeUpdate();
-                return rows > 0;
-            } catch (SQLException e) {
-                System.err.println("[DBConnection] Failed to delete user: " + e.getMessage());
-                return false;
-            }
-        } else {
-            return fallbackUsers.removeIf(u -> u.getUsername().equalsIgnoreCase(username.trim()));
-        }
-    }
-
-    /**
-     * Retrieves all registered staff and admin users from the database.
-     */
-    public static List<User> getAllUsers() {
-        if (driverAvailable) {
-            List<User> list = new ArrayList<>();
-            String sql = "SELECT id, username, role, full_name, counter, shift, phone, status, created_at "
-                    + "FROM users ORDER BY id DESC";
-            try (Connection conn = getConnection();
-                 Statement stmt = conn.createStatement();
-                 ResultSet rs = stmt.executeQuery(sql)) {
-
-                while (rs.next()) {
-                    list.add(new User(
-                            rs.getInt("id"),
-                            rs.getString("username"),
-                            rs.getString("role"),
-                            rs.getString("full_name"),
-                            rs.getString("counter"),
-                            rs.getString("shift"),
-                            rs.getString("phone"),
-                            rs.getString("status"),
-                            rs.getString("created_at")
-                    ));
-                }
-                return list;
-            } catch (SQLException e) {
-                System.err.println("[DBConnection] Failed to fetch users from SQLite: " + e.getMessage());
-            }
-        }
+    public static List<User> getFallbackUsers() {
         return new ArrayList<>(fallbackUsers);
     }
 

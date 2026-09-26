@@ -14,19 +14,7 @@ public class MoviesPanel extends JPanel {
     private StaffDashboard dashboard;
     private JPanel movieGrid;
     private JTextField searchField;
-    private final java.util.List<MovieData> movieList = new java.util.ArrayList<>();
-
-    public static class MovieData {
-        public final String title;
-        public final String genre;
-        public final String price;
-
-        public MovieData(String title, String genre, String price) {
-            this.title = title;
-            this.genre = genre;
-            this.price = price;
-        }
-    }
+    private final java.util.List<com.cinemats.model.Movie> movieList = new java.util.ArrayList<>();
 
     public MoviesPanel() {
         this(null);
@@ -130,12 +118,8 @@ public class MoviesPanel extends JPanel {
     }
 
     private void initMovieData() {
-        movieList.add(new MovieData("Movie 1", "Action", "₹200"));
-        movieList.add(new MovieData("Movie 2", "Drama", "₹180"));
-        movieList.add(new MovieData("Movie 3", "Comedy", "₹150"));
-        movieList.add(new MovieData("Movie 4", "Thriller", "₹220"));
-        movieList.add(new MovieData("Movie 5", "Adventure", "₹200"));
-        movieList.add(new MovieData("Movie 6", "Romance", "₹180"));
+        movieList.clear();
+        movieList.addAll(com.cinemats.dao.MovieDAO.getAllMovies());
     }
 
     public void applyFilter(String query) {
@@ -143,9 +127,9 @@ public class MoviesPanel extends JPanel {
         String q = query == null ? "" : query.trim().toLowerCase();
 
         int matchCount = 0;
-        for (MovieData m : movieList) {
-            if (q.isEmpty() || m.title.toLowerCase().contains(q) || m.genre.toLowerCase().contains(q)) {
-                movieGrid.add(createMovieCard(m.title, m.genre, m.price));
+        for (com.cinemats.model.Movie m : movieList) {
+            if (q.isEmpty() || m.getTitle().toLowerCase().contains(q) || m.getGenre().toLowerCase().contains(q)) {
+                movieGrid.add(createMovieCard(m.getTitle(), m.getGenre(), m.getFormattedPrice()));
                 matchCount++;
             }
         }
