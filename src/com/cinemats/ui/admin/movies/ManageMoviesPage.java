@@ -15,10 +15,7 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.List;
 
-/**
- * Movie Catalogue Management Page
- * Handles movie listing, interactive addition of new titles with verified categories, and deletion.
- */
+// Movie catalogue management page
 public class ManageMoviesPage extends JPanel {
 
     private final AdminDashboard dashboard;
@@ -127,9 +124,7 @@ public class ManageMoviesPage extends JPanel {
         add(card, BorderLayout.CENTER);
     }
 
-    /**
-     * Refreshes the movie table with live data from MovieDAO.
-     */
+    // Refreshes movie table with live data
     public void refreshMovieTable() {
         movieTableModel.setRowCount(0);
         List<Movie> movies = MovieDAO.getAllMovies();
@@ -179,9 +174,7 @@ public class ManageMoviesPage extends JPanel {
         return status;
     }
 
-    /**
-     * Opens the Add Movie Dialog. Enforces that movie categories exist first.
-     */
+    // Opens dialog to add a movie
     private void openAddMovieDialog() {
         List<String> categories = CategoryDAO.getCategoryNames();
 
@@ -281,9 +274,7 @@ public class ManageMoviesPage extends JPanel {
         }
     }
 
-    /**
-     * Helper to quickly prompt for and create a new category on the fly.
-     */
+    // Dialog to add category on the fly
     private String promptQuickAddCategory(JComboBox<String> comboToUpdate) {
         JPanel p = new JPanel(new GridLayout(2, 2, 8, 8));
         JTextField catField = new JTextField();

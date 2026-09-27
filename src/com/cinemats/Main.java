@@ -4,10 +4,7 @@ import com.cinemats.ui.auth.LoginFrame;
 
 import javax.swing.*;
 
-/**
- * Application Entry Point for Cinema Express System.
- * Launches the modern Staff & Admin Login Terminal.
- */
+// Application entry point for Cinema Express
 public class Main {
     public static void main(String[] args) {
         // Set Look and Feel for clean modern native rendering

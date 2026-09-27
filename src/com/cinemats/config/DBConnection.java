@@ -1,5 +1,6 @@
 package com.cinemats.config;
 
+import com.cinemats.data.UserMockData;
 import com.cinemats.model.User;
 
 import java.sql.*;
@@ -8,33 +9,23 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-/**
- * SQLite Database Connection & User Management
- * Database File: cinema.db
- * Provides dynamic table creation, schema migration, CRUD operations, and fallback cache.
- */
+// SQLite database connection and user management
 public class DBConnection {
 
     private static final String DB_URL = "jdbc:sqlite:cinema.db";
     private static boolean driverAvailable = false;
     private static boolean initialized = false;
 
-    // Default credentials in-memory fallback
-    private static final String DEFAULT_ADMIN_USER = "admin";
-    private static final String DEFAULT_ADMIN_PASS = "admin123";
-    private static final String DEFAULT_ADMIN_NAME = "System Administrator";
+    // Default credentials and in-memory fallback from UserMockData
+    private static final String DEFAULT_ADMIN_USER = UserMockData.DEFAULT_ADMIN_USER;
+    private static final String DEFAULT_ADMIN_PASS = UserMockData.DEFAULT_ADMIN_PASS;
+    private static final String DEFAULT_ADMIN_NAME = UserMockData.DEFAULT_ADMIN_NAME;
 
-    private static final String DEFAULT_STAFF_USER = "staff";
-    private static final String DEFAULT_STAFF_PASS = "staff123";
-    private static final String DEFAULT_STAFF_NAME = "Rahul Sharma";
+    private static final String DEFAULT_STAFF_USER = UserMockData.DEFAULT_STAFF_USER;
+    private static final String DEFAULT_STAFF_PASS = UserMockData.DEFAULT_STAFF_PASS;
+    private static final String DEFAULT_STAFF_NAME = UserMockData.DEFAULT_STAFF_NAME;
 
-    private static final List<User> fallbackUsers = new ArrayList<>();
-    static {
-        fallbackUsers.add(new User(1, DEFAULT_ADMIN_USER, "ADMIN", DEFAULT_ADMIN_NAME,
-                "HQ Management Station", "General Shift (10:00 AM - 07:00 PM)", "+91 98765 00001", "ACTIVE", "2026-09-01 09:00:00"));
-        fallbackUsers.add(new User(2, DEFAULT_STAFF_USER, "STAFF", DEFAULT_STAFF_NAME,
-                "Counter #01 (Main Concourse)", "Morning Shift (09:00 AM - 04:00 PM)", "+91 98765 43210", "ACTIVE", "2026-09-05 10:00:00"));
-    }
+    private static final List<User> fallbackUsers = new ArrayList<>(UserMockData.getInitialUsers());
 
     static {
         try {
@@ -49,9 +40,7 @@ public class DBConnection {
         }
     }
 
-    /**
-     * Obtains a connection to the SQLite database.
-     */
+    // Returns a connection to the SQLite database
     public static Connection getConnection() throws SQLException {
         if (!driverAvailable) {
             throw new SQLException("SQLite JDBC driver (org.sqlite.JDBC) is not available on classpath.");
@@ -59,10 +48,7 @@ public class DBConnection {
         return DriverManager.getConnection(DB_URL);
     }
 
-    /**
-     * Initializes the database schema and default credentials.
-     * Creates the 'users' table dynamically with all necessary columns.
-     */
+    // Initializes database tables and default user credentials
     public static synchronized void initDatabase() {
         if (!driverAvailable || initialized) return;
 
@@ -92,12 +78,12 @@ public class DBConnection {
             addColumnIfNotExists(stmt, "created_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
 
             // Seed default Admin if not exists
-            seedUser(conn, DEFAULT_ADMIN_USER, DEFAULT_ADMIN_PASS, "ADMIN", DEFAULT_ADMIN_NAME,
-                    "HQ Management Station", "General Shift (10:00 AM - 07:00 PM)", "+91 98765 00001");
+            seedUser(conn, UserMockData.DEFAULT_ADMIN_USER, UserMockData.DEFAULT_ADMIN_PASS, "ADMIN", UserMockData.DEFAULT_ADMIN_NAME,
+                    UserMockData.DEFAULT_ADMIN_COUNTER, UserMockData.DEFAULT_ADMIN_SHIFT, UserMockData.DEFAULT_ADMIN_PHONE);
 
             // Seed default Staff if not exists
-            seedUser(conn, DEFAULT_STAFF_USER, DEFAULT_STAFF_PASS, "STAFF", DEFAULT_STAFF_NAME,
-                    "Counter #01 (Main Concourse)", "Morning Shift (09:00 AM - 04:00 PM)", "+91 98765 43210");
+            seedUser(conn, UserMockData.DEFAULT_STAFF_USER, UserMockData.DEFAULT_STAFF_PASS, "STAFF", UserMockData.DEFAULT_STAFF_NAME,
+                    UserMockData.DEFAULT_STAFF_COUNTER, UserMockData.DEFAULT_STAFF_SHIFT, UserMockData.DEFAULT_STAFF_PHONE);
 
             initialized = true;
             System.out.println("[DBConnection] SQLite database connected and initialized successfully (cinema.db).");

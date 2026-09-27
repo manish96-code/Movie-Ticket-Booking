@@ -2,9 +2,7 @@ package com.cinemats.model;
 
 import java.util.Objects;
 
-/**
- * Category entity model representing film genres and classifications.
- */
+// Movie category model
 public class Category {
     private final int id;
     private final String name;

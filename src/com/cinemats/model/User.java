@@ -1,8 +1,6 @@
 package com.cinemats.model;
 
-/**
- * User and Staff Account model representing authenticated system operators.
- */
+// User and staff account model
 public class User {
     private final int id;
     private final String username;
@@ -14,16 +12,12 @@ public class User {
     private final String status;
     private final String createdAt;
 
-    /**
-     * Compact constructor maintaining backward compatibility.
-     */
+    // Basic user details constructor
     public User(String username, String role, String fullName) {
         this(0, username, role, fullName, "Counter #01 (Main Concourse)", "Morning Shift (09:00 AM - 04:00 PM)", "", "ACTIVE", "");
     }
 
-    /**
-     * Full attributes constructor for dynamic database records.
-     */
+    // Full user details constructor
     public User(int id, String username, String role, String fullName, String counter, String shift, String phone, String status, String createdAt) {
         this.id = id;
         this.username = (username == null) ? "" : username.trim();

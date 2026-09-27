@@ -1,8 +1,6 @@
 package com.cinemats.model;
 
-/**
- * Booking entity model representing ticket reservation records.
- */
+// Ticket booking model
 public class Booking {
     private final int id;
     private final String bookingCode;

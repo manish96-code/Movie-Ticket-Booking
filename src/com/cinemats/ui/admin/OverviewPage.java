@@ -1,5 +1,6 @@
 package com.cinemats.ui.admin;
 
+import com.cinemats.data.BookingMockData;
 import com.cinemats.util.Theme;
 
 import javax.swing.*;
@@ -10,10 +11,7 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 
-/**
- * Overview & Analytics Page
- * Displays live KPI metric cards, recent bookings table, and quick admin action triggers.
- */
+// Overview and analytics page
 public class OverviewPage extends JPanel {
 
     private final AdminDashboard dashboard;
@@ -74,11 +72,9 @@ public class OverviewPage extends JPanel {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
         };
-        model.addRow(new Object[]{"TICK-1042", "Ananya Verma", "Dune: Part Two", "Screen 1 (IMAX)", "2 (VIP)", "$28.00", "Counter 1"});
-        model.addRow(new Object[]{"TICK-1041", "Rajesh Kumar", "Interstellar", "Screen 2", "3 (Regular)", "$36.00", "Counter 2"});
-        model.addRow(new Object[]{"TICK-1040", "Priya Singh", "Oppenheimer", "Screen 3", "1 (Regular)", "$13.00", "Counter 1"});
-        model.addRow(new Object[]{"TICK-1039", "Amitabh Sen", "Spider-Man", "Screen 4", "4 (VIP)", "$56.00", "Counter 2"});
-        model.addRow(new Object[]{"TICK-1038", "Siddharth J.", "Avatar: Water", "Screen 1 (IMAX)", "2 (Regular)", "$25.00", "Counter 1"});
+        for (Object[] row : BookingMockData.getRecentBookings()) {
+            model.addRow(row);
+        }
 
         JTable table = new JTable(model);
         styleTable(table);

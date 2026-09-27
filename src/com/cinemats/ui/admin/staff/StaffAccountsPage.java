@@ -18,11 +18,7 @@ import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Staff Accounts Roster Page
- * Displays dynamic records from SQLite (cinema.db) with real-time filtering,
- * live KPI metric pills, account deletion, and seamless navigation to Add Staff.
- */
+// Staff accounts management page
 public class StaffAccountsPage extends JPanel {
 
     private final AdminDashboard dashboard;

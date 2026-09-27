@@ -6,10 +6,7 @@ import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 
-/**
- * Global Cinema Theme & UI Constants - Clean Modern Light Theme
- * Designed for comfortable daylight desktop operations.
- */
+// Global UI theme colors and styling constants
 public class Theme {
 
     // --- Modern Light Color Palette ---

@@ -13,12 +13,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-/**
- * Staff Dashboard - Light Theme Edition
- * - Top: Clean White Header with branding, staff session info, and live clock
- * - Left: Clean White Sidebar with high-contrast active navigation tabs
- * - Center: Main Panel (CardLayout) with soft gray background and crisp white cards
- */
+// Staff dashboard main window
 public class StaffDashboard extends JFrame {
 
     // --- Navigation & CardLayout ---
@@ -55,9 +50,7 @@ public class StaffDashboard extends JFrame {
         startClockTimer();
     }
 
-    /**
-     * 1. Window Frame Setup
-     */
+    // Window frame setup
     private void initWindow() {
         setTitle("Cinema Express - Staff Counter Terminal (Light Theme)");
         setSize(1360, 820);
@@ -68,9 +61,7 @@ public class StaffDashboard extends JFrame {
         setLayout(new BorderLayout());
     }
 
-    /**
-     * 2. Header Bar (Top) - Clean White Modern Theme
-     */
+    // Top header bar
     private void buildHeader() {
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(Theme.PANEL_BG);
@@ -147,9 +138,7 @@ public class StaffDashboard extends JFrame {
         add(header, BorderLayout.NORTH);
     }
 
-    /**
-     * 3. Body: Sidebar (West) + Main Panel (Center)
-     */
+    // Sidebar and main content layout
     private void buildBodyWithSidebarAndMainPanel() {
         JPanel bodyContainer = new JPanel(new BorderLayout());
         bodyContainer.setOpaque(false);
@@ -228,9 +217,7 @@ public class StaffDashboard extends JFrame {
         add(bodyContainer, BorderLayout.CENTER);
     }
 
-    /**
-     * 4. Sidebar Button Factory & Click Handler
-     */
+    // Sidebar navigation button factory
     private JButton createSidebarButton(String text, String pageKey, boolean active) {
         JButton btn = new JButton(text);
         btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
@@ -249,9 +236,7 @@ public class StaffDashboard extends JFrame {
         return btn;
     }
 
-    /**
-     * Smooth page navigation across tabs
-     */
+    // Switches active tab in main panel
     public void showPage(String pageKey) {
         if (cardLayout != null && mainContentPanel != null) {
             cardLayout.show(mainContentPanel, pageKey);
@@ -283,9 +268,7 @@ public class StaffDashboard extends JFrame {
 
     // --- 5. Page Placeholders (Viewed one-by-one in Main Panel) ---
 
-    /**
-     * Page 1: Book Ticket (Where the 3-column ticket booking will be placed)
-     */
+    // Ticket booking page
     private JPanel createBookTicketPagePlaceholder() {
         return createPageTemplate(
                 "🎫 Book Ticket Page",
@@ -294,9 +277,7 @@ public class StaffDashboard extends JFrame {
         );
     }
 
-    /**
-     * Page 2: Today's Shows
-     */
+    // Today's shows page
     private JPanel createTodayShowsPagePlaceholder() {
         return createPageTemplate(
                 "🎬 Today's Shows Page",
@@ -305,9 +286,7 @@ public class StaffDashboard extends JFrame {
         );
     }
 
-    /**
-     * Page 3: Search / Print Ticket
-     */
+    // Search and print ticket page
     private JPanel createSearchTicketPagePlaceholder() {
         return createPageTemplate(
                 "🔍 Search & Re-print Ticket Page",
@@ -316,9 +295,7 @@ public class StaffDashboard extends JFrame {
         );
     }
 
-    /**
-     * Page 4: Shift Summary
-     */
+    // Shift summary page
     private JPanel createShiftSummaryPagePlaceholder() {
         return createPageTemplate(
                 "📊 Shift Summary Page",
@@ -327,9 +304,7 @@ public class StaffDashboard extends JFrame {
         );
     }
 
-    /**
-     * Reusable Page Container Template in Clean Light Theme
-     */
+    // Reusable page container template
     private JPanel createPageTemplate(String titleText, String descText, Color accentColor) {
         JPanel page = new JPanel(new BorderLayout(0, 16));
         page.setBackground(Theme.BG_MAIN);
@@ -391,9 +366,7 @@ public class StaffDashboard extends JFrame {
         return page;
     }
 
-    /**
-     * 6. Bottom Status Bar
-     */
+    // Bottom status bar
     private void buildStatusBar() {
         JPanel statusBar = new JPanel(new BorderLayout());
         statusBar.setBackground(Theme.PANEL_BG);

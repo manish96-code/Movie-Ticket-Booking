@@ -21,10 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Cinema Express - Administrator Control Panel & HQ Management Dashboard
- * Modular frame coordinator hosting standalone page components from com.cinemats.ui.admin.*
- */
+// Administrator dashboard and navigation controller
 public class AdminDashboard extends JFrame {
 
     private CardLayout cardLayout;
@@ -404,9 +401,7 @@ public class AdminDashboard extends JFrame {
         return btn;
     }
 
-    /**
-     * Modern custom-styled sidebar navigation item.
-     */
+    // Custom sidebar navigation button
     private class ModernNavButton extends JButton {
         private final String pageKey;
         private final String titleText;

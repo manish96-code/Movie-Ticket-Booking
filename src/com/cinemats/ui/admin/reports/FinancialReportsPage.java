@@ -1,6 +1,7 @@
 package com.cinemats.ui.admin.reports;
 
 import com.cinemats.ui.admin.AdminDashboard;
+import com.cinemats.data.ReportMockData;
 import com.cinemats.util.Theme;
 
 import javax.swing.*;
@@ -11,10 +12,7 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 
-/**
- * Financial Reports & Shift Settlement Page
- * Displays payment breakdown, daily station settlement audit, and report printing.
- */
+// Financial reports and shift settlements page
 public class FinancialReportsPage extends JPanel {
 
     private final AdminDashboard dashboard;
@@ -54,10 +52,9 @@ public class FinancialReportsPage extends JPanel {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
         };
-        model.addRow(new Object[]{"Today (Morning)", "Counter #01", "Rahul Sharma", "$620.00", "$1,240.00", "$1,860.00"});
-        model.addRow(new Object[]{"Today (Morning)", "Counter #02", "Priya Verma", "$800.00", "$2,190.00", "$2,990.00"});
-        model.addRow(new Object[]{"Yesterday", "Counter #01", "Rahul Sharma", "$1,120.00", "$2,850.00", "$3,970.00"});
-        model.addRow(new Object[]{"Yesterday", "Counter #02", "Amit Patel", "$980.00", "$3,100.00", "$4,080.00"});
+        for (Object[] row : ReportMockData.getFinancialReports()) {
+            model.addRow(row);
+        }
 
         JTable table = new JTable(model);
         styleTable(table);

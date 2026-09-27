@@ -1,6 +1,7 @@
 package com.cinemats.dao;
 
 import com.cinemats.config.DBConnection;
+import com.cinemats.data.CategoryMockData;
 import com.cinemats.model.Category;
 
 import java.sql.*;
@@ -9,32 +10,13 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-/**
- * Data Access Object (DAO) for Movie Categories & Classifications.
- * Persists genres into SQLite categories table with resilient fallback cache.
- */
+// Data access object for movie categories
 public class CategoryDAO {
 
-    private static final List<Category> fallbackCategories = new ArrayList<>();
-    private static int nextFallbackId = 12;
+    private static final List<Category> fallbackCategories = new ArrayList<>(CategoryMockData.getInitialCategories());
+    private static int nextFallbackId = fallbackCategories.size() + 1;
 
-    static {
-        fallbackCategories.add(new Category(1, "Action", "High-energy sequences, stunts, pursuits, and physical conflicts", "2026-09-01 10:00:00"));
-        fallbackCategories.add(new Category(2, "Adventure", "Exciting journeys, expeditions, heroic quests, and exploration", "2026-09-01 10:00:00"));
-        fallbackCategories.add(new Category(3, "Animation", "CGI, 3D, and hand-drawn animated films for all audiences", "2026-09-01 10:00:00"));
-        fallbackCategories.add(new Category(4, "Comedy", "Lighthearted humor, satirical plots, and comedic entertainment", "2026-09-01 10:00:00"));
-        fallbackCategories.add(new Category(5, "Crime", "Detective investigations, criminal syndicates, and forensic drama", "2026-09-01 10:00:00"));
-        fallbackCategories.add(new Category(6, "Drama", "Character-driven realistic stories, conflicts, and deep emotion", "2026-09-01 10:00:00"));
-        fallbackCategories.add(new Category(7, "Fantasy", "Mythological realms, magical powers, folklore, and mythical creatures", "2026-09-01 10:00:00"));
-        fallbackCategories.add(new Category(8, "Horror", "Supernatural mysteries, psychological fear, and eerie atmosphere", "2026-09-01 10:00:00"));
-        fallbackCategories.add(new Category(9, "Romance", "Love stories, passionate relationships, and intimate journeys", "2026-09-01 10:00:00"));
-        fallbackCategories.add(new Category(10, "Sci-Fi", "Futuristic technology, space exploration, time travel, and AI", "2026-09-01 10:00:00"));
-        fallbackCategories.add(new Category(11, "Thriller", "High-stakes tension, psychological suspense, and unexpected twists", "2026-09-01 10:00:00"));
-    }
-
-    /**
-     * Initializes categories table in SQLite and seeds initial default genres.
-     */
+    // Creates categories table and inserts default genres
     public static synchronized void initCategoriesTable() {
         if (!DBConnection.isDriverAvailable()) return;
 
@@ -50,7 +32,7 @@ public class CategoryDAO {
 
             stmt.execute(createSQL);
 
-            // Check if categories table has records
+            // Check if categories table is empty
             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM categories");
             if (rs.next() && rs.getInt(1) == 0) {
                 String insertSQL = "INSERT INTO categories (name, description, created_at) VALUES (?, ?, ?)";
@@ -69,9 +51,7 @@ public class CategoryDAO {
         }
     }
 
-    /**
-     * Retrieves all categories sorted alphabetically by name.
-     */
+    // Returns all categories sorted by name
     public static synchronized List<Category> getAllCategories() {
         if (DBConnection.isDriverAvailable()) {
             List<Category> list = new ArrayList<>();
@@ -101,9 +81,7 @@ public class CategoryDAO {
         return copy;
     }
 
-    /**
-     * Retrieves a list of category names for populating dropdowns.
-     */
+    // Returns category names for dropdowns
     public static List<String> getCategoryNames() {
         List<Category> all = getAllCategories();
         List<String> names = new ArrayList<>();
@@ -113,9 +91,7 @@ public class CategoryDAO {
         return names;
     }
 
-    /**
-     * Checks if a category name already exists (case-insensitive).
-     */
+    // Checks if category name already exists
     public static synchronized boolean categoryExists(String name) {
         if (name == null || name.trim().isEmpty()) return false;
         String clean = name.trim();
@@ -142,9 +118,7 @@ public class CategoryDAO {
         return false;
     }
 
-    /**
-     * Adds a new category to SQLite database and fallback cache.
-     */
+    // Adds a new category
     public static synchronized boolean addCategory(String name, String description) {
         if (name == null || name.trim().isEmpty()) {
             return false;
@@ -180,9 +154,7 @@ public class CategoryDAO {
         return true;
     }
 
-    /**
-     * Deletes a category by ID.
-     */
+    // Deletes category by ID
     public static synchronized boolean deleteCategory(int id) {
         if (DBConnection.isDriverAvailable()) {
             String sql = "DELETE FROM categories WHERE id = ?";
@@ -200,9 +172,7 @@ public class CategoryDAO {
         return fallbackCategories.removeIf(c -> c.getId() == id);
     }
 
-    /**
-     * Counts how many movies are associated with a given category/genre name.
-     */
+    // Counts movies assigned to a category
     public static synchronized int getMovieCountForCategory(String categoryName) {
         if (categoryName == null || categoryName.trim().isEmpty()) return 0;
         String term = "%" + categoryName.trim().toLowerCase() + "%";

@@ -1,8 +1,6 @@
 package com.cinemats.model;
 
-/**
- * Movie entity model representing films in cinema schedules.
- */
+// Movie entity model
 public class Movie {
     private final int id;
     private final String title;

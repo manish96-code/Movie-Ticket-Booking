@@ -7,15 +7,10 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Data Access Object (DAO) for User and Staff entities.
- * Handles database queries, user authentication, registration, and roster management.
- */
+// Data access object for user accounts
 public class UserDAO {
 
-    /**
-     * Authenticates a user against the SQLite database.
-     */
+    // Authenticates user credentials
     public static User authenticate(String username, String password) {
         if (username == null || password == null) return null;
         username = username.trim();
@@ -54,9 +49,7 @@ public class UserDAO {
         return DBConnection.authenticateFallback(username, password);
     }
 
-    /**
-     * Checks if a username already exists.
-     */
+    // Checks if username already exists
     public static boolean userExists(String username) {
         if (username == null || username.trim().isEmpty()) return false;
         username = username.trim();
@@ -77,9 +70,7 @@ public class UserDAO {
         return DBConnection.fallbackUserExists(username);
     }
 
-    /**
-     * Registers a new staff member with station attributes into SQLite database.
-     */
+    // Registers a new staff account
     public static boolean addUser(String username, String password, String role, String fullName,
                                   String counter, String shift, String phone) {
         if (username == null || username.trim().isEmpty() || password == null || password.trim().isEmpty()) {
@@ -121,9 +112,7 @@ public class UserDAO {
         return addUser(username, password, role, fullName, "Counter #01 (Main Concourse)", "Morning Shift (09:00 AM - 04:00 PM)", "");
     }
 
-    /**
-     * Deletes a user by username from the database (protects super admin).
-     */
+    // Deletes user by username
     public static boolean deleteUser(String username) {
         if (username == null) return false;
         if ("admin".equalsIgnoreCase(username.trim())) {
@@ -146,9 +135,7 @@ public class UserDAO {
         }
     }
 
-    /**
-     * Retrieves all registered staff and admin users.
-     */
+    // Returns all registered users
     public static List<User> getAllUsers() {
         if (DBConnection.isDriverAvailable()) {
             List<User> list = new ArrayList<>();

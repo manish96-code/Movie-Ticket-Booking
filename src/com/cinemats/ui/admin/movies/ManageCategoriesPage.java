@@ -14,11 +14,7 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.List;
 
-/**
- * Movie Category Management Page.
- * Allows Administrators to define, view, and manage movie categories / genres
- * before movies are scheduled and published.
- */
+// Movie category management page
 public class ManageCategoriesPage extends JPanel {
 
     private final AdminDashboard dashboard;

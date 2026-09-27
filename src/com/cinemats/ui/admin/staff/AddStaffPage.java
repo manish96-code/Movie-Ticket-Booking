@@ -12,11 +12,7 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
 
-/**
- * Add Staff Page
- * Provides a 2-column layout with real-time digital ID badge preview,
- * form validation, and direct SQLite registration.
- */
+// Add new staff account page
 public class AddStaffPage extends JPanel {
 
     private final AdminDashboard dashboard;

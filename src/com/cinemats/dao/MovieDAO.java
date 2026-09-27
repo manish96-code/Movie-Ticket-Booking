@@ -1,31 +1,19 @@
 package com.cinemats.dao;
 
 import com.cinemats.config.DBConnection;
+import com.cinemats.data.MovieMockData;
 import com.cinemats.model.Movie;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Data Access Object (DAO) for Movie entities.
- * Manages movies table queries, search filtering, and catalogue persistence.
- */
+// Data access object for movie records
 public class MovieDAO {
 
-    private static final List<Movie> fallbackMovies = new ArrayList<>();
-    static {
-        fallbackMovies.add(new Movie(1, "Interstellar", "Sci-Fi / Adventure", 169, 200.0, "UA", "INTERSTELLAR", "NOW_SHOWING"));
-        fallbackMovies.add(new Movie(2, "Dune: Part Two", "Action / Adventure", 166, 220.0, "UA", "DUNE: PART TWO", "NOW_SHOWING"));
-        fallbackMovies.add(new Movie(3, "Oppenheimer", "Biography / Drama", 180, 200.0, "A", "OPPENHEIMER", "NOW_SHOWING"));
-        fallbackMovies.add(new Movie(4, "Spider-Man: Across The Spider-Verse", "Animation / Action", 140, 180.0, "U", "SPIDER-MAN", "NOW_SHOWING"));
-        fallbackMovies.add(new Movie(5, "Inception", "Sci-Fi / Thriller", 148, 180.0, "UA", "INCEPTION", "NOW_SHOWING"));
-        fallbackMovies.add(new Movie(6, "The Dark Knight", "Action / Crime", 152, 190.0, "UA", "THE DARK KNIGHT", "NOW_SHOWING"));
-    }
+    private static final List<Movie> fallbackMovies = new ArrayList<>(MovieMockData.getInitialMovies());
 
-    /**
-     * Ensures movies table exists in SQLite and seeds default films if empty.
-     */
+    // Creates movies table and seeds default movies
     public static synchronized void initMoviesTable() {
         if (!DBConnection.isDriverAvailable()) return;
 
@@ -46,7 +34,7 @@ public class MovieDAO {
 
             stmt.execute(createSQL);
 
-            // Check if movies table has records
+            // Check if movies table is empty
             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM movies");
             if (rs.next() && rs.getInt(1) == 0) {
                 // Seed initial movies
@@ -71,9 +59,7 @@ public class MovieDAO {
         }
     }
 
-    /**
-     * Retrieves all active movies from SQLite or in-memory fallback.
-     */
+    // Returns all active movies
     public static List<Movie> getAllMovies() {
         if (DBConnection.isDriverAvailable()) {
             List<Movie> list = new ArrayList<>();
@@ -105,9 +91,7 @@ public class MovieDAO {
         return new ArrayList<>(fallbackMovies);
     }
 
-    /**
-     * Searches movies by title or genre.
-     */
+    // Searches movies by title or genre
     public static List<Movie> searchMovies(String query) {
         if (query == null || query.trim().isEmpty()) {
             return getAllMovies();
@@ -122,9 +106,8 @@ public class MovieDAO {
         }
         return filtered;
     }
-    /**
-     * Adds a new movie to SQLite and updates fallback cache.
-     */
+
+    // Adds a new movie
     public static synchronized boolean addMovie(Movie movie) {
         if (movie == null || movie.getTitle().isEmpty()) return false;
 
@@ -181,9 +164,7 @@ public class MovieDAO {
         return true;
     }
 
-    /**
-     * Deletes a movie by ID.
-     */
+    // Deletes movie by ID
     public static synchronized boolean deleteMovie(int id) {
         if (DBConnection.isDriverAvailable()) {
             String sql = "DELETE FROM movies WHERE id = ?";
@@ -200,9 +181,7 @@ public class MovieDAO {
         return fallbackMovies.removeIf(m -> m.getId() == id);
     }
 
-    /**
-     * Deletes a movie by title.
-     */
+    // Deletes movie by title
     public static synchronized boolean deleteMovieByTitle(String title) {
         if (title == null || title.trim().isEmpty()) return false;
         if (DBConnection.isDriverAvailable()) {
