@@ -1,6 +1,7 @@
 package com.cinemats.ui.admin;
 
 import com.cinemats.ui.admin.movies.ManageMoviesPage;
+import com.cinemats.ui.admin.movies.ManageCategoriesPage;
 import com.cinemats.ui.admin.shows.ManageSchedulesPage;
 import com.cinemats.ui.admin.staff.StaffAccountsPage;
 import com.cinemats.ui.admin.staff.AddStaffPage;
@@ -37,6 +38,7 @@ public class AdminDashboard extends JFrame {
     // Standalone Page Components
     private OverviewPage overviewPage;
     private ManageMoviesPage moviesPage;
+    private ManageCategoriesPage categoriesPage;
     private ManageSchedulesPage schedulesPage;
     private StaffAccountsPage staffAccountsPage;
     private AddStaffPage addStaffPage;
@@ -230,8 +232,11 @@ public class AdminDashboard extends JFrame {
         // Group 2: Operations
         navMenuPanel.add(createCategoryHeader("THEATER OPERATIONS"));
         ModernNavButton moviesBtn = createNavButton("Manage Movies", "PAGE_MOVIES", false);
+        ModernNavButton categoriesBtn = createNavButton("Movie Categories", "PAGE_CATEGORIES", false);
         ModernNavButton schedulesBtn = createNavButton("Schedules & Screens", "PAGE_SCHEDULES", false);
         navMenuPanel.add(moviesBtn);
+        navMenuPanel.add(Box.createVerticalStrut(4));
+        navMenuPanel.add(categoriesBtn);
         navMenuPanel.add(Box.createVerticalStrut(4));
         navMenuPanel.add(schedulesBtn);
 
@@ -346,6 +351,7 @@ public class AdminDashboard extends JFrame {
         // Instantiate standalone page components
         overviewPage = new OverviewPage(this);
         moviesPage = new ManageMoviesPage(this);
+        categoriesPage = new ManageCategoriesPage(this);
         schedulesPage = new ManageSchedulesPage(this);
         staffAccountsPage = new StaffAccountsPage(this);
         addStaffPage = new AddStaffPage(this);
@@ -354,6 +360,7 @@ public class AdminDashboard extends JFrame {
         // Register in CardLayout
         mainContentPanel.add(overviewPage, "PAGE_OVERVIEW");
         mainContentPanel.add(moviesPage, "PAGE_MOVIES");
+        mainContentPanel.add(categoriesPage, "PAGE_CATEGORIES");
         mainContentPanel.add(schedulesPage, "PAGE_SCHEDULES");
         mainContentPanel.add(staffAccountsPage, "PAGE_STAFF");
         mainContentPanel.add(addStaffPage, "PAGE_ADD_STAFF");
@@ -380,7 +387,11 @@ public class AdminDashboard extends JFrame {
         for (ModernNavButton b : sidebarButtons) {
             b.setActive(b == activeBtn);
         }
-        if ("PAGE_STAFF".equals(pageKey) && staffAccountsPage != null) {
+        if ("PAGE_CATEGORIES".equals(pageKey) && categoriesPage != null) {
+            categoriesPage.refreshCategoryTable();
+        } else if ("PAGE_MOVIES".equals(pageKey) && moviesPage != null) {
+            moviesPage.refreshMovieTable();
+        } else if ("PAGE_STAFF".equals(pageKey) && staffAccountsPage != null) {
             staffAccountsPage.refreshStaffTable();
         }
     }
@@ -500,6 +511,16 @@ public class AdminDashboard extends JFrame {
                         3
                 );
                 g2.fillPolygon(p);
+            } else if ("PAGE_CATEGORIES".equals(key)) {
+                // Category Label / Tag Vector
+                g2.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                Polygon tag = new Polygon(
+                        new int[]{x + 1, x + 7, x + 14, x + 14, x + 7, x + 1},
+                        new int[]{centerY, centerY - 6, centerY - 6, centerY + 6, centerY + 6, centerY},
+                        6
+                );
+                g2.drawPolygon(tag);
+                g2.fillOval(x + 4, centerY - 2, 3, 3);
             } else if ("PAGE_SCHEDULES".equals(key)) {
                 // Clock (circle with clock hands)
                 g2.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));

@@ -103,10 +103,49 @@ public class DBConnection {
             System.out.println("[DBConnection] SQLite database connected and initialized successfully (cinema.db).");
 
             // Initialize movies table via MovieDAO
+            com.cinemats.dao.CategoryDAO.initCategoriesTable();
             com.cinemats.dao.MovieDAO.initMoviesTable();
+            initShowsAndBookingsTables(stmt);
 
         } catch (SQLException e) {
             System.err.println("[DBConnection] Error during SQLite schema initialization: " + e.getMessage());
+        }
+    }
+
+        private static void initShowsAndBookingsTables(Statement stmt) {
+        try {
+            String createShows = "CREATE TABLE IF NOT EXISTS shows ("
+                    + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                    + "movie_id INTEGER NOT NULL, "
+                    + "screen TEXT NOT NULL DEFAULT 'Screen 1 (IMAX Laser)', "
+                    + "show_time TEXT NOT NULL, "
+                    + "show_date TEXT NOT NULL, "
+                    + "price REAL NOT NULL DEFAULT 200.0, "
+                    + "available_seats INTEGER DEFAULT 120, "
+                    + "total_seats INTEGER DEFAULT 120, "
+                    + "status TEXT DEFAULT 'OPEN', "
+                    + "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
+                    + "FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE CASCADE"
+                    + ");";
+            stmt.execute(createShows);
+
+            String createBookings = "CREATE TABLE IF NOT EXISTS bookings ("
+                    + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                    + "booking_code TEXT UNIQUE NOT NULL, "
+                    + "show_id INTEGER NOT NULL, "
+                    + "customer_name TEXT NOT NULL, "
+                    + "customer_phone TEXT NOT NULL, "
+                    + "seat_numbers TEXT NOT NULL, "
+                    + "seat_count INTEGER NOT NULL DEFAULT 1, "
+                    + "total_amount REAL NOT NULL, "
+                    + "payment_mode TEXT DEFAULT 'CASH', "
+                    + "booked_by_staff TEXT DEFAULT 'staff', "
+                    + "booked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
+                    + "FOREIGN KEY (show_id) REFERENCES shows(id) ON DELETE CASCADE"
+                    + ");";
+            stmt.execute(createBookings);
+        } catch (SQLException e) {
+            System.err.println("[DBConnection] Error initializing shows/bookings tables: " + e.getMessage());
         }
     }
 

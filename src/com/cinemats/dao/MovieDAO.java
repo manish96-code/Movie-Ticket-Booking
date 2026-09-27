@@ -122,4 +122,101 @@ public class MovieDAO {
         }
         return filtered;
     }
+    /**
+     * Adds a new movie to SQLite and updates fallback cache.
+     */
+    public static synchronized boolean addMovie(Movie movie) {
+        if (movie == null || movie.getTitle().isEmpty()) return false;
+
+        if (DBConnection.isDriverAvailable()) {
+            String sql = "INSERT INTO movies (title, genre, duration_mins, price, rating, poster_label, status) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?)";
+            try (Connection conn = DBConnection.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+
+                stmt.setString(1, movie.getTitle());
+                stmt.setString(2, movie.getGenre());
+                stmt.setInt(3, movie.getDurationMins());
+                stmt.setDouble(4, movie.getPrice());
+                stmt.setString(5, movie.getRating());
+                stmt.setString(6, movie.getPosterLabel());
+                stmt.setString(7, movie.getStatus());
+
+                int rows = stmt.executeUpdate();
+                if (rows > 0) {
+                    int generatedId = 0;
+                    try (ResultSet keys = stmt.getGeneratedKeys()) {
+                        if (keys.next()) {
+                            generatedId = keys.getInt(1);
+                        }
+                    }
+                    fallbackMovies.add(new Movie(
+                            generatedId > 0 ? generatedId : fallbackMovies.size() + 1,
+                            movie.getTitle(),
+                            movie.getGenre(),
+                            movie.getDurationMins(),
+                            movie.getPrice(),
+                            movie.getRating(),
+                            movie.getPosterLabel(),
+                            movie.getStatus()
+                    ));
+                    System.out.println("[MovieDAO] Movie saved to database: " + movie.getTitle());
+                    return true;
+                }
+            } catch (SQLException e) {
+                System.err.println("[MovieDAO] Error saving movie to SQLite: " + e.getMessage());
+            }
+        }
+
+        fallbackMovies.add(new Movie(
+                fallbackMovies.size() + 1,
+                movie.getTitle(),
+                movie.getGenre(),
+                movie.getDurationMins(),
+                movie.getPrice(),
+                movie.getRating(),
+                movie.getPosterLabel(),
+                movie.getStatus()
+        ));
+        return true;
+    }
+
+    /**
+     * Deletes a movie by ID.
+     */
+    public static synchronized boolean deleteMovie(int id) {
+        if (DBConnection.isDriverAvailable()) {
+            String sql = "DELETE FROM movies WHERE id = ?";
+            try (Connection conn = DBConnection.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setInt(1, id);
+                int rows = stmt.executeUpdate();
+                fallbackMovies.removeIf(m -> m.getId() == id);
+                return rows > 0;
+            } catch (SQLException e) {
+                System.err.println("[MovieDAO] Error deleting movie from SQLite: " + e.getMessage());
+            }
+        }
+        return fallbackMovies.removeIf(m -> m.getId() == id);
+    }
+
+    /**
+     * Deletes a movie by title.
+     */
+    public static synchronized boolean deleteMovieByTitle(String title) {
+        if (title == null || title.trim().isEmpty()) return false;
+        if (DBConnection.isDriverAvailable()) {
+            String sql = "DELETE FROM movies WHERE LOWER(title) = LOWER(?)";
+            try (Connection conn = DBConnection.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, title.trim());
+                int rows = stmt.executeUpdate();
+                fallbackMovies.removeIf(m -> m.getTitle().equalsIgnoreCase(title.trim()));
+                return rows > 0;
+            } catch (SQLException e) {
+                System.err.println("[MovieDAO] Error deleting movie by title: " + e.getMessage());
+            }
+        }
+        return fallbackMovies.removeIf(m -> m.getTitle().equalsIgnoreCase(title.trim()));
+    }
 }

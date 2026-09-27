@@ -26,7 +26,30 @@ INSERT OR IGNORE INTO users (id, username, password, role, full_name, counter, s
 VALUES (2, 'staff', 'staff123', 'STAFF', 'Rahul Sharma', 'Counter #01 (Main Concourse)', 'Morning Shift (09:00 AM - 04:00 PM)', '+91 98765 43210', 'ACTIVE');
 
 
--- 2. MOVIES TABLE
+-- 2. MOVIE CATEGORIES TABLE
+CREATE TABLE IF NOT EXISTS categories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Seed Initial Default Movie Categories
+INSERT OR IGNORE INTO categories (id, name, description) VALUES
+(1, 'Action', 'High-energy sequences, stunts, pursuits, and physical conflicts'),
+(2, 'Adventure', 'Exciting journeys, expeditions, heroic quests, and exploration'),
+(3, 'Animation', 'CGI, 3D, and hand-drawn animated films for all audiences'),
+(4, 'Comedy', 'Lighthearted humor, satirical plots, and comedic entertainment'),
+(5, 'Crime', 'Detective investigations, criminal syndicates, and forensic drama'),
+(6, 'Drama', 'Character-driven realistic stories, conflicts, and deep emotion'),
+(7, 'Fantasy', 'Mythological realms, magical powers, folklore, and mythical creatures'),
+(8, 'Horror', 'Supernatural mysteries, psychological fear, and eerie atmosphere'),
+(9, 'Romance', 'Love stories, passionate relationships, and intimate journeys'),
+(10, 'Sci-Fi', 'Futuristic technology, space exploration, time travel, and AI'),
+(11, 'Thriller', 'High-stakes tension, psychological suspense, and unexpected twists');
+
+
+-- 3. MOVIES TABLE
 CREATE TABLE IF NOT EXISTS movies (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,

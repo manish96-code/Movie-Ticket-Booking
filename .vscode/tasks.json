@@ -1,0 +1,15 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build Cinema Express",
+            "type": "shell",
+            "command": "javac -d bin -cp \"lib/*:src\" $(find src -name \"*.java\")",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        }
+    ]
+}
