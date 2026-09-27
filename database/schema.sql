@@ -103,3 +103,51 @@ CREATE TABLE IF NOT EXISTS bookings (
     booked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (show_id) REFERENCES shows(id) ON DELETE CASCADE
 );
+
+-- 4. SCREENS & AUDITORIUMS TABLE
+CREATE TABLE IF NOT EXISTS screens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    screen_number INTEGER UNIQUE NOT NULL,
+    screen_type TEXT NOT NULL DEFAULT 'Standard',  -- 'Standard', 'Premium', 'IMAX', 'Dolby', '4DX', 'Other'
+    status TEXT NOT NULL DEFAULT 'ACTIVE',          -- 'ACTIVE', 'INACTIVE', 'MAINTENANCE'
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Seed Initial Screens
+INSERT OR IGNORE INTO screens (id, name, screen_number, screen_type, status) VALUES
+(1, 'Screen 1', 1, 'IMAX', 'ACTIVE'),
+(2, 'Screen 2', 2, 'Premium', 'ACTIVE'),
+(3, 'Screen 3', 3, 'Standard', 'ACTIVE'),
+(4, 'Screen 4', 4, 'Dolby', 'MAINTENANCE');
+
+
+-- 5. PHYSICAL SCREEN SEATS TABLE
+CREATE TABLE IF NOT EXISTS screen_seats (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    screen_id INTEGER NOT NULL,
+    row_name TEXT NOT NULL,                        -- e.g. 'A', 'B', 'C'
+    seat_number INTEGER NOT NULL,                  -- e.g. 1, 2, 3
+    seat_label TEXT NOT NULL,                      -- e.g. 'A1', 'A2'
+    seat_type TEXT NOT NULL DEFAULT 'REGULAR',      -- 'REGULAR', 'PREMIUM', 'RECLINER'
+    status TEXT NOT NULL DEFAULT 'ACTIVE',          -- 'ACTIVE', 'BLOCKED'
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (screen_id) REFERENCES screens(id) ON DELETE CASCADE,
+    UNIQUE(screen_id, seat_label)
+);
+
+
+-- 6. SHOWTIME SEATS INVENTORY TABLE
+CREATE TABLE IF NOT EXISTS show_seats (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    show_id INTEGER NOT NULL,
+    screen_seat_id INTEGER NOT NULL,
+    price REAL NOT NULL DEFAULT 200.0,
+    status TEXT NOT NULL DEFAULT 'AVAILABLE',      -- 'AVAILABLE', 'BOOKED', 'BLOCKED'
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (show_id) REFERENCES shows(id) ON DELETE CASCADE,
+    FOREIGN KEY (screen_seat_id) REFERENCES screen_seats(id) ON DELETE CASCADE
+);

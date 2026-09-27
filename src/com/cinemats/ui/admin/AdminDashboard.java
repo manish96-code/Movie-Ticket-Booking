@@ -6,6 +6,11 @@ import com.cinemats.ui.admin.shows.ManageSchedulesPage;
 import com.cinemats.ui.admin.staff.StaffAccountsPage;
 import com.cinemats.ui.admin.staff.AddStaffPage;
 import com.cinemats.ui.admin.reports.FinancialReportsPage;
+import com.cinemats.ui.admin.screens.ManageScreensPage;
+import com.cinemats.ui.admin.screens.SeatLayoutPage;
+import com.cinemats.model.Screen;
+import com.cinemats.service.ScreenService;
+import com.cinemats.service.ScreenSeatService;
 import com.cinemats.ui.auth.LoginFrame;
 import com.cinemats.util.Theme;
 
@@ -36,6 +41,8 @@ public class AdminDashboard extends JFrame {
     private OverviewPage overviewPage;
     private ManageMoviesPage moviesPage;
     private ManageCategoriesPage categoriesPage;
+    private ManageScreensPage screensPage;
+    private SeatLayoutPage seatLayoutPage;
     private ManageSchedulesPage schedulesPage;
     private StaffAccountsPage staffAccountsPage;
     private AddStaffPage addStaffPage;
@@ -230,10 +237,13 @@ public class AdminDashboard extends JFrame {
         navMenuPanel.add(createCategoryHeader("THEATER OPERATIONS"));
         ModernNavButton moviesBtn = createNavButton("Manage Movies", "PAGE_MOVIES", false);
         ModernNavButton categoriesBtn = createNavButton("Movie Categories", "PAGE_CATEGORIES", false);
-        ModernNavButton schedulesBtn = createNavButton("Schedules & Screens", "PAGE_SCHEDULES", false);
+        ModernNavButton screensBtn = createNavButton("Screens & Seats", "PAGE_SCREENS", false);
+        ModernNavButton schedulesBtn = createNavButton("Show Schedules", "PAGE_SCHEDULES", false);
         navMenuPanel.add(moviesBtn);
         navMenuPanel.add(Box.createVerticalStrut(4));
         navMenuPanel.add(categoriesBtn);
+        navMenuPanel.add(Box.createVerticalStrut(4));
+        navMenuPanel.add(screensBtn);
         navMenuPanel.add(Box.createVerticalStrut(4));
         navMenuPanel.add(schedulesBtn);
 
@@ -349,6 +359,9 @@ public class AdminDashboard extends JFrame {
         overviewPage = new OverviewPage(this);
         moviesPage = new ManageMoviesPage(this);
         categoriesPage = new ManageCategoriesPage(this);
+        screensPage = new ManageScreensPage(this);
+        Screen defaultScreen = new Screen(1, "Screen 1", 1, "IMAX", "ACTIVE");
+        seatLayoutPage = new SeatLayoutPage(defaultScreen, new ScreenService(), new ScreenSeatService(), () -> switchToPage("PAGE_SCREENS"));
         schedulesPage = new ManageSchedulesPage(this);
         staffAccountsPage = new StaffAccountsPage(this);
         addStaffPage = new AddStaffPage(this);
@@ -358,6 +371,8 @@ public class AdminDashboard extends JFrame {
         mainContentPanel.add(overviewPage, "PAGE_OVERVIEW");
         mainContentPanel.add(moviesPage, "PAGE_MOVIES");
         mainContentPanel.add(categoriesPage, "PAGE_CATEGORIES");
+        mainContentPanel.add(screensPage, "PAGE_SCREENS");
+        mainContentPanel.add(seatLayoutPage, "PAGE_SEAT_LAYOUT");
         mainContentPanel.add(schedulesPage, "PAGE_SCHEDULES");
         mainContentPanel.add(staffAccountsPage, "PAGE_STAFF");
         mainContentPanel.add(addStaffPage, "PAGE_ADD_STAFF");
@@ -388,6 +403,8 @@ public class AdminDashboard extends JFrame {
             categoriesPage.refreshCategoryTable();
         } else if ("PAGE_MOVIES".equals(pageKey) && moviesPage != null) {
             moviesPage.refreshMovieTable();
+        } else if ("PAGE_SCREENS".equals(pageKey) && screensPage != null) {
+            screensPage.refreshScreens();
         } else if ("PAGE_STAFF".equals(pageKey) && staffAccountsPage != null) {
             staffAccountsPage.refreshStaffTable();
         }
@@ -583,10 +600,23 @@ public class AdminDashboard extends JFrame {
         timer.start();
     }
 
+    // Opens visual seat layout editor for a specific screen
+    public void openSeatLayoutEditor(Screen screen) {
+        if (seatLayoutPage != null && screen != null) {
+            seatLayoutPage.setScreen(screen);
+            cardLayout.show(mainContentPanel, "PAGE_SEAT_LAYOUT");
+            ModernNavButton screensBtn = pageButtonMap.get("PAGE_SCREENS");
+            for (ModernNavButton b : sidebarButtons) {
+                b.setActive(b == screensBtn);
+            }
+        }
+    }
+
     // Page component accessors
     public StaffAccountsPage getStaffAccountsPage() { return staffAccountsPage; }
     public AddStaffPage getAddStaffPage() { return addStaffPage; }
     public ManageMoviesPage getMoviesPage() { return moviesPage; }
+    public ManageScreensPage getScreensPage() { return screensPage; }
 
     public static void main(String[] args) {
         try {
@@ -604,3 +634,4 @@ public class AdminDashboard extends JFrame {
         });
     }
 }
+

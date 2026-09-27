@@ -88,9 +88,13 @@ public class DBConnection {
             initialized = true;
             System.out.println("[DBConnection] SQLite database connected and initialized successfully (cinema.db).");
 
-            // Initialize movies table via MovieDAO
+            // Initialize tables via DAOs
             com.cinemats.dao.CategoryDAO.initCategoriesTable();
             com.cinemats.dao.MovieDAO.initMoviesTable();
+            com.cinemats.dao.ScreenDAO.initScreensTable();
+            com.cinemats.dao.ScreenSeatDAO.initScreenSeatsTable();
+            com.cinemats.dao.ShowDAO.initShowsTable();
+            com.cinemats.dao.ShowSeatDAO.initShowSeatsTable();
             initShowsAndBookingsTables(stmt);
 
         } catch (SQLException e) {
