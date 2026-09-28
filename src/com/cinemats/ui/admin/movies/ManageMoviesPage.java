@@ -5,15 +5,14 @@ import com.cinemats.dao.MovieDAO;
 import com.cinemats.model.Movie;
 import com.cinemats.ui.admin.AdminDashboard;
 import com.cinemats.util.Theme;
-
+import java.awt.*;
+import java.util.List;
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-import java.awt.*;
-import java.util.List;
 
 // Movie catalogue management page
 public class ManageMoviesPage extends JPanel {

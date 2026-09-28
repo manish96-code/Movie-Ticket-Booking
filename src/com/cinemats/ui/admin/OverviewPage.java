@@ -2,14 +2,13 @@ package com.cinemats.ui.admin;
 
 import com.cinemats.data.BookingMockData;
 import com.cinemats.util.Theme;
-
+import java.awt.*;
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-import java.awt.*;
 
 // Overview and analytics page
 public class OverviewPage extends JPanel {

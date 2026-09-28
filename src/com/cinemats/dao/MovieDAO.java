@@ -3,7 +3,6 @@ package com.cinemats.dao;
 import com.cinemats.config.DBConnection;
 import com.cinemats.data.MovieMockData;
 import com.cinemats.model.Movie;
-
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
