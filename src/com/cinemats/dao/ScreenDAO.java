@@ -3,7 +3,6 @@ package com.cinemats.dao;
 import com.cinemats.config.DBConnection;
 import com.cinemats.data.ScreenMockData;
 import com.cinemats.model.Screen;
-
 import java.sql.*;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;

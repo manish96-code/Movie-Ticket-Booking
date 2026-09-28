@@ -1,16 +1,15 @@
 package com.cinemats.ui.admin.shows;
 
-import com.cinemats.ui.admin.AdminDashboard;
 import com.cinemats.data.ScheduleMockData;
+import com.cinemats.ui.admin.AdminDashboard;
 import com.cinemats.util.Theme;
-
+import java.awt.*;
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-import java.awt.*;
 
 // Schedules and screen allocation page
 public class ManageSchedulesPage extends JPanel {

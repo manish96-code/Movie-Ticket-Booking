@@ -1,23 +1,18 @@
 package com.cinemats.ui.admin;
 
-import com.cinemats.ui.admin.movies.ManageMoviesPage;
+import com.cinemats.model.Screen;
+import com.cinemats.service.ScreenSeatService;
+import com.cinemats.service.ScreenService;
 import com.cinemats.ui.admin.movies.ManageCategoriesPage;
-import com.cinemats.ui.admin.shows.ManageSchedulesPage;
-import com.cinemats.ui.admin.staff.StaffAccountsPage;
-import com.cinemats.ui.admin.staff.AddStaffPage;
+import com.cinemats.ui.admin.movies.ManageMoviesPage;
 import com.cinemats.ui.admin.reports.FinancialReportsPage;
 import com.cinemats.ui.admin.screens.ManageScreensPage;
 import com.cinemats.ui.admin.screens.SeatLayoutPage;
-import com.cinemats.model.Screen;
-import com.cinemats.service.ScreenService;
-import com.cinemats.service.ScreenSeatService;
+import com.cinemats.ui.admin.shows.ManageSchedulesPage;
+import com.cinemats.ui.admin.staff.AddStaffPage;
+import com.cinemats.ui.admin.staff.StaffAccountsPage;
 import com.cinemats.ui.auth.LoginFrame;
 import com.cinemats.util.Theme;
-
-import javax.swing.*;
-import javax.swing.border.CompoundBorder;
-import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -25,6 +20,10 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.swing.*;
+import javax.swing.border.CompoundBorder;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
 
 // Administrator dashboard and navigation controller
 public class AdminDashboard extends JFrame {
