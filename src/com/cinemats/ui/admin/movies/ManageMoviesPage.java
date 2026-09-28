@@ -111,7 +111,7 @@ public class ManageMoviesPage extends JPanel {
         card.add(toolbar, BorderLayout.NORTH);
 
         // Movie Table
-        String[] cols = {"Movie ID", "Title", "Category / Genre", "Duration", "Rating", "Base Price", "Status"};
+        String[] cols = {"Movie ID", "Title", "Category / Genre", "Duration", "Rating", "Status"};
         movieTableModel = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
@@ -135,7 +135,6 @@ public class ManageMoviesPage extends JPanel {
                     m.getGenre(),
                     m.getDurationMins() + " min",
                     m.getRating(),
-                    m.getFormattedPrice(),
                     formatStatus(m.getStatus())
             });
         }
@@ -156,7 +155,6 @@ public class ManageMoviesPage extends JPanel {
                         m.getGenre(),
                         m.getDurationMins() + " min",
                         m.getRating(),
-                        m.getFormattedPrice(),
                         formatStatus(m.getStatus())
                 });
                 matched++;
@@ -218,18 +216,16 @@ public class ManageMoviesPage extends JPanel {
         categoryRow.add(quickAddCatBtn, BorderLayout.EAST);
 
         JTextField durationField = Theme.createTextField("150");
-        JTextField priceField = Theme.createTextField("200.00");
         JComboBox<String> ratingCombo = new JComboBox<>(new String[]{"U", "UA", "A", "PG", "PG-13", "R"});
         JComboBox<String> statusCombo = new JComboBox<>(new String[]{"Now Showing", "Upcoming"});
 
-        JPanel form = new JPanel(new GridLayout(6, 2, 10, 12));
+        JPanel form = new JPanel(new GridLayout(5, 2, 10, 12));
         form.setBorder(new EmptyBorder(8, 8, 8, 8));
 
         form.add(new JLabel("Movie Title:")); form.add(nameField);
         form.add(new JLabel("Movie Category / Genre:")); form.add(categoryRow);
         form.add(new JLabel("Duration (Minutes):")); form.add(durationField);
         form.add(new JLabel("Age Rating:")); form.add(ratingCombo);
-        form.add(new JLabel("Base Ticket Price (₹):")); form.add(priceField);
         form.add(new JLabel("Release Status:")); form.add(statusCombo);
 
         int res = JOptionPane.showConfirmDialog(this, form, "Add New Movie Title", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
@@ -237,7 +233,6 @@ public class ManageMoviesPage extends JPanel {
             String title = nameField.getText().trim();
             String selectedCategory = (String) categoryCombo.getSelectedItem();
             String durStr = durationField.getText().trim();
-            String priceStr = priceField.getText().trim();
 
             if (title.isEmpty()) {
                 JOptionPane.showMessageDialog(this, "Movie Title is required.", "Validation Error", JOptionPane.ERROR_MESSAGE);
@@ -254,15 +249,10 @@ public class ManageMoviesPage extends JPanel {
                 duration = Integer.parseInt(durStr.replaceAll("[^0-9]", ""));
             } catch (Exception ignored) {}
 
-            double price = 200.0;
-            try {
-                price = Double.parseDouble(priceStr.replaceAll("[^0-9.]", ""));
-            } catch (Exception ignored) {}
-
             String rating = (String) ratingCombo.getSelectedItem();
             String status = "Now Showing".equals(statusCombo.getSelectedItem()) ? "NOW_SHOWING" : "UPCOMING";
 
-            Movie newMovie = new Movie(0, title, selectedCategory, duration, price, rating, title.toUpperCase(), status);
+            Movie newMovie = new Movie(0, title, selectedCategory, duration, rating, title.toUpperCase(), status);
             boolean saved = MovieDAO.addMovie(newMovie);
 
             if (saved) {

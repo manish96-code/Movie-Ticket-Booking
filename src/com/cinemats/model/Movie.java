@@ -1,26 +1,26 @@
 package com.cinemats.model;
 
-// Movie entity model
+// Movie entity model representing cinematic title metadata
 public class Movie {
     private final int id;
     private final String title;
     private final String genre;
     private final int durationMins;
-    private final double price;
     private final String rating;
     private final String posterLabel;
     private final String status;
 
-    public Movie(String title, String genre, double price) {
-        this(0, title, genre, 150, price, "UA", title.toUpperCase(), "NOW_SHOWING");
+    // Compact constructor for adding new movies
+    public Movie(String title, String genre, int durationMins) {
+        this(0, title, genre, durationMins, "UA", title.toUpperCase(), "NOW_SHOWING");
     }
 
-    public Movie(int id, String title, String genre, int durationMins, double price, String rating, String posterLabel, String status) {
+    // Full constructor for database records
+    public Movie(int id, String title, String genre, int durationMins, String rating, String posterLabel, String status) {
         this.id = id;
         this.title = (title == null) ? "" : title.trim();
         this.genre = (genre == null) ? "General" : genre.trim();
         this.durationMins = durationMins > 0 ? durationMins : 120;
-        this.price = price >= 0 ? price : 200.0;
         this.rating = (rating == null || rating.trim().isEmpty()) ? "UA" : rating.trim();
         this.posterLabel = (posterLabel == null || posterLabel.trim().isEmpty()) ? this.title.toUpperCase() : posterLabel.trim();
         this.status = (status == null || status.trim().isEmpty()) ? "NOW_SHOWING" : status.trim().toUpperCase();
@@ -42,12 +42,16 @@ public class Movie {
         return durationMins;
     }
 
-    public double getPrice() {
-        return price;
-    }
-
-    public String getFormattedPrice() {
-        return String.format("₹%.0f", price);
+    public String getFormattedDuration() {
+        int hrs = durationMins / 60;
+        int mins = durationMins % 60;
+        if (hrs > 0 && mins > 0) {
+            return hrs + "h " + mins + "m";
+        } else if (hrs > 0) {
+            return hrs + "h";
+        } else {
+            return mins + "m";
+        }
     }
 
     public String getRating() {
@@ -64,6 +68,6 @@ public class Movie {
 
     @Override
     public String toString() {
-        return title + " (" + getFormattedPrice() + ")";
+        return title + " (" + genre + " • " + getFormattedDuration() + ")";
     }
 }
