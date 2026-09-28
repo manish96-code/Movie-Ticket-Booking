@@ -21,6 +21,8 @@ public class StaffDashboard extends JFrame {
     private JPanel mainContentPanel;
     private List<JButton> sidebarButtons = new ArrayList<>();
     private java.util.Map<String, JButton> pageButtonMap = new java.util.HashMap<>();
+    private MoviesListPage moviesListPage;
+    private OrderBookingPage orderBookingPage;
     private MoviesPanel moviesPanel;
 
     // --- Header & Clock ---
@@ -160,13 +162,13 @@ public class StaffDashboard extends JFrame {
         sidebar.add(menuTitle);
 
         // Sidebar Navigation Buttons
-        JButton bookTicketBtn = createSidebarButton("🎫  Book Ticket", "PAGE_BOOK_TICKET", true);
-        JButton moviesBtn = createSidebarButton("🎬  Movies", "PAGE_MOVIES", false);
+        JButton orderBookingBtn = createSidebarButton("🎫  Order Booking", "PAGE_ORDER_BOOKING", true);
+        JButton moviesBtn = createSidebarButton("🎬  Movies List", "PAGE_MOVIES_LIST", false);
         JButton todayShowsBtn = createSidebarButton("🕒  Today's Shows", "PAGE_TODAY_SHOWS", false);
         JButton searchTicketBtn = createSidebarButton("🔍  Search Ticket", "PAGE_SEARCH_TICKET", false);
         JButton shiftSummaryBtn = createSidebarButton("📊  Shift Summary", "PAGE_SHIFT_SUMMARY", false);
 
-        sidebar.add(bookTicketBtn);
+        sidebar.add(orderBookingBtn);
         sidebar.add(Box.createVerticalStrut(8));
         sidebar.add(moviesBtn);
         sidebar.add(Box.createVerticalStrut(8));
@@ -202,11 +204,13 @@ public class StaffDashboard extends JFrame {
         mainContentPanel.setBackground(Theme.BG_MAIN);
 
         // Instantiate Standalone Page Components
+        orderBookingPage = new OrderBookingPage(this);
+        moviesListPage = new MoviesListPage(this);
         moviesPanel = new MoviesPanel(this);
 
         // Register Pages in CardLayout
-        mainContentPanel.add(createBookTicketPagePlaceholder(), "PAGE_BOOK_TICKET");
-        mainContentPanel.add(moviesPanel, "PAGE_MOVIES");
+        mainContentPanel.add(orderBookingPage, "PAGE_ORDER_BOOKING");
+        mainContentPanel.add(moviesListPage, "PAGE_MOVIES_LIST");
         mainContentPanel.add(createTodayShowsPagePlaceholder(), "PAGE_TODAY_SHOWS");
         mainContentPanel.add(createSearchTicketPagePlaceholder(), "PAGE_SEARCH_TICKET");
         mainContentPanel.add(createShiftSummaryPagePlaceholder(), "PAGE_SHIFT_SUMMARY");
@@ -215,6 +219,9 @@ public class StaffDashboard extends JFrame {
         bodyContainer.add(mainContentPanel, BorderLayout.CENTER);
 
         add(bodyContainer, BorderLayout.CENTER);
+
+        // Show default landing page
+        showPage("PAGE_ORDER_BOOKING");
     }
 
     // Sidebar navigation button factory
@@ -239,12 +246,29 @@ public class StaffDashboard extends JFrame {
     // Switches active tab in main panel
     public void showPage(String pageKey) {
         if (cardLayout != null && mainContentPanel != null) {
-            cardLayout.show(mainContentPanel, pageKey);
-            JButton activeBtn = pageButtonMap.get(pageKey);
+            String targetKey = pageKey;
+            if ("PAGE_BOOK_TICKET".equals(targetKey)) {
+                targetKey = "PAGE_ORDER_BOOKING";
+            } else if ("PAGE_MOVIES".equals(targetKey)) {
+                targetKey = "PAGE_MOVIES_LIST";
+            }
+            cardLayout.show(mainContentPanel, targetKey);
+            JButton activeBtn = pageButtonMap.get(targetKey);
+            if (activeBtn == null) {
+                activeBtn = pageButtonMap.get(pageKey);
+            }
             for (JButton b : sidebarButtons) {
                 setSidebarButtonState(b, b == activeBtn);
             }
         }
+    }
+
+    public MoviesListPage getMoviesListPage() {
+        return moviesListPage;
+    }
+
+    public OrderBookingPage getOrderBookingPage() {
+        return orderBookingPage;
     }
 
     public MoviesPanel getMoviesPanel() {
