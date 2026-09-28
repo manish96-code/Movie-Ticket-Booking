@@ -104,15 +104,22 @@ public class MoviesPanel extends JPanel {
         movieGrid = new JPanel(new GridLayout(0, 3, 20, 20));
         movieGrid.setBackground(background);
 
-        applyFilter("");
 
-        JScrollPane scrollPane = new JScrollPane(movieGrid);
-        scrollPane.setBorder(null);
-        scrollPane.setBackground(background);
-        scrollPane.getViewport().setBackground(background);
-        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        movieGrid.add(createMovieCard("Movie 1",  "Action",    "₹200"));
+        movieGrid.add(createMovieCard("Movie 2",  "Drama",     "₹180"));
+        movieGrid.add(createMovieCard("Movie 3",  "Comedy",    "₹150"));
+        movieGrid.add(createMovieCard("Movie 4",  "Thriller",  "₹220"));
+        movieGrid.add(createMovieCard("Movie 5",  "Adventure", "₹200"));
+        movieGrid.add(createMovieCard("Movie 6",  "Romance",   "₹180"));
+        movieGrid.add(createMovieCard("Movie 7",  "Action",    "₹200"));
+        movieGrid.add(createMovieCard("Movie 8",  "Drama",     "₹180"));
+        movieGrid.add(createMovieCard("Movie 9",  "Comedy",    "₹150"));
+        movieGrid.add(createMovieCard("Movie 10", "Thriller",  "₹220"));
+        movieGrid.add(createMovieCard("Movie 11", "Adventure", "₹200"));
+        movieGrid.add(createMovieCard("Movie 12", "Romance",   "₹180"));
 
-        mainPanel.add(scrollPane, BorderLayout.CENTER);
+
+        mainPanel.add(movieGrid, BorderLayout.CENTER);
 
         add(mainPanel, BorderLayout.CENTER);
     }
