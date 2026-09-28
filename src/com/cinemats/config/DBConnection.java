@@ -202,6 +202,19 @@ public class DBConnection {
         return com.cinemats.dao.UserDAO.getAllUsers();
     }
 
+    public static boolean updateUser(int id, String username, String newPassword, String role,
+                                     String fullName, String counter, String shift, String phone, String status) {
+        return com.cinemats.dao.UserDAO.updateUser(id, username, newPassword, role, fullName, counter, shift, phone, status);
+    }
+
+    public static boolean emailExistsForOther(String username, int excludeId) {
+        return com.cinemats.dao.UserDAO.emailExistsForOther(username, excludeId);
+    }
+
+    public static User getUserById(int id) {
+        return com.cinemats.dao.UserDAO.getUserById(id);
+    }
+
     // =========================================================================
     // Fallback In-Memory Helpers (used when sqlite-jdbc driver is not active)
     // =========================================================================
@@ -235,6 +248,18 @@ public class DBConnection {
         String now = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
         fallbackUsers.add(new User(fallbackUsers.size() + 1, username, role, fullName, counter, shift, phone, "ACTIVE", now));
         return true;
+    }
+
+    public static boolean updateFallbackUser(int id, String username, String role, String fullName,
+                                            String counter, String shift, String phone, String status) {
+        for (int i = 0; i < fallbackUsers.size(); i++) {
+            User u = fallbackUsers.get(i);
+            if (u.getId() == id || u.getUsername().equalsIgnoreCase(username)) {
+                fallbackUsers.set(i, new User(u.getId(), username, role, fullName, counter, shift, phone, status, u.getCreatedAt()));
+                return true;
+            }
+        }
+        return false;
     }
 
     public static boolean deleteFallbackUser(String username) {

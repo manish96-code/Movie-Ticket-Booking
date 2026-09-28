@@ -120,6 +120,9 @@ public class StaffAccountsPage extends JPanel {
         addStaffBtn.setBackground(Theme.COLOR_SUCCESS);
         addStaffBtn.addActionListener(e -> dashboard.switchToPage("PAGE_ADD_STAFF"));
 
+        JButton editStaffBtn = Theme.createSecondaryButton("✏️ Edit Staff");
+        editStaffBtn.addActionListener(e -> handleEditStaff());
+
         JButton delStaffBtn = Theme.createSecondaryButton("🗑️ Delete Selected");
         delStaffBtn.setForeground(Theme.ACCENT_RED);
         delStaffBtn.addActionListener(e -> handleDeleteStaff());
@@ -128,6 +131,7 @@ public class StaffAccountsPage extends JPanel {
         refreshBtn.addActionListener(e -> refreshStaffTable());
 
         btnRow.add(addStaffBtn);
+        btnRow.add(editStaffBtn);
         btnRow.add(delStaffBtn);
         btnRow.add(refreshBtn);
         toolbar.add(btnRow, BorderLayout.EAST);
@@ -150,6 +154,28 @@ public class StaffAccountsPage extends JPanel {
 
         staffTable = new JTable(staffTableModel);
         styleTable(staffTable);
+
+        // Double click to edit staff details
+        staffTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2 && staffTable.getSelectedRow() >= 0) {
+                    handleEditStaff();
+                }
+            }
+        });
+
+        // Right-click context popup menu
+        JPopupMenu contextMenu = new JPopupMenu();
+        JMenuItem editItem = new JMenuItem("✏️ Edit Staff Details");
+        JMenuItem deleteItem = new JMenuItem("🗑️ Delete Staff Account");
+        editItem.addActionListener(e -> handleEditStaff());
+        deleteItem.addActionListener(e -> handleDeleteStaff());
+        contextMenu.add(editItem);
+        contextMenu.addSeparator();
+        contextMenu.add(deleteItem);
+        staffTable.setComponentPopupMenu(contextMenu);
+
         JScrollPane scrollPane = new JScrollPane(staffTable);
         scrollPane.setBorder(new LineBorder(Theme.BORDER_COLOR, 1, true));
         mainCard.add(scrollPane, BorderLayout.CENTER);
@@ -224,6 +250,42 @@ public class StaffAccountsPage extends JPanel {
                     u.getCreatedAt().isEmpty() ? "System Default" : u.getCreatedAt()
             });
         }
+    }
+
+    // Opens the edit dialog for the currently selected staff account
+    private void handleEditStaff() {
+        int row = staffTable.getSelectedRow();
+        if (row < 0) {
+            JOptionPane.showMessageDialog(this,
+                    "Please select a staff account row from the table to edit.",
+                    "No Account Selected", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        String idStr = (String) staffTableModel.getValueAt(row, 0);
+        String email = (String) staffTableModel.getValueAt(row, 2);
+
+        User selectedUser = null;
+        for (User u : cachedUsers) {
+            if (!"-".equals(idStr) && String.valueOf(u.getId()).equals(idStr)) {
+                selectedUser = u;
+                break;
+            } else if (u.getUsername().equalsIgnoreCase(email)) {
+                selectedUser = u;
+                break;
+            }
+        }
+
+        if (selectedUser == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Unable to locate the selected staff details.",
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        Window parentWindow = SwingUtilities.getWindowAncestor(this);
+        EditStaffDialog dialog = new EditStaffDialog(parentWindow, selectedUser, this::refreshStaffTable);
+        dialog.setVisible(true);
     }
 
     private void handleDeleteStaff() {
