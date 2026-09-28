@@ -13,18 +13,17 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-/**
- * Staff Dashboard - Light Theme Edition
- * - Top: Clean White Header with branding, staff session info, and live clock
- * - Left: Clean White Sidebar with high-contrast active navigation tabs
- * - Center: Main Panel (CardLayout) with soft gray background and crisp white cards
- */
+// Staff dashboard main window
 public class StaffDashboard extends JFrame {
 
     // --- Navigation & CardLayout ---
     private CardLayout cardLayout;
     private JPanel mainContentPanel;
     private List<JButton> sidebarButtons = new ArrayList<>();
+    private java.util.Map<String, JButton> pageButtonMap = new java.util.HashMap<>();
+    private MoviesListPage moviesListPage;
+    private OrderBookingPage orderBookingPage;
+    private MoviesPanel moviesPanel;
 
     // --- Header & Clock ---
     private JLabel clockLabel;
@@ -53,9 +52,7 @@ public class StaffDashboard extends JFrame {
         startClockTimer();
     }
 
-    /**
-     * 1. Window Frame Setup
-     */
+    // Window frame setup
     private void initWindow() {
         setTitle("Cinema Express - Staff Counter Terminal (Light Theme)");
         setSize(1360, 820);
@@ -66,9 +63,7 @@ public class StaffDashboard extends JFrame {
         setLayout(new BorderLayout());
     }
 
-    /**
-     * 2. Header Bar (Top) - Clean White Modern Theme
-     */
+    // Top header bar
     private void buildHeader() {
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(Theme.PANEL_BG);
@@ -145,9 +140,7 @@ public class StaffDashboard extends JFrame {
         add(header, BorderLayout.NORTH);
     }
 
-    /**
-     * 3. Body: Sidebar (West) + Main Panel (Center)
-     */
+    // Sidebar and main content layout
     private void buildBodyWithSidebarAndMainPanel() {
         JPanel bodyContainer = new JPanel(new BorderLayout());
         bodyContainer.setOpaque(false);
@@ -169,12 +162,15 @@ public class StaffDashboard extends JFrame {
         sidebar.add(menuTitle);
 
         // Sidebar Navigation Buttons
-        JButton bookTicketBtn = createSidebarButton("🎫  Book Ticket", "PAGE_BOOK_TICKET", true);
-        JButton todayShowsBtn = createSidebarButton("🎬  Today's Shows", "PAGE_TODAY_SHOWS", false);
+        JButton orderBookingBtn = createSidebarButton("🎫  Order Booking", "PAGE_ORDER_BOOKING", true);
+        JButton moviesBtn = createSidebarButton("🎬  Movies List", "PAGE_MOVIES_LIST", false);
+        JButton todayShowsBtn = createSidebarButton("🕒  Today's Shows", "PAGE_TODAY_SHOWS", false);
         JButton searchTicketBtn = createSidebarButton("🔍  Search Ticket", "PAGE_SEARCH_TICKET", false);
         JButton shiftSummaryBtn = createSidebarButton("📊  Shift Summary", "PAGE_SHIFT_SUMMARY", false);
 
-        sidebar.add(bookTicketBtn);
+        sidebar.add(orderBookingBtn);
+        sidebar.add(Box.createVerticalStrut(8));
+        sidebar.add(moviesBtn);
         sidebar.add(Box.createVerticalStrut(8));
         sidebar.add(todayShowsBtn);
         sidebar.add(Box.createVerticalStrut(8));
@@ -207,8 +203,14 @@ public class StaffDashboard extends JFrame {
         mainContentPanel = new JPanel(cardLayout);
         mainContentPanel.setBackground(Theme.BG_MAIN);
 
+        // Instantiate Standalone Page Components
+        orderBookingPage = new OrderBookingPage(this);
+        moviesListPage = new MoviesListPage(this);
+        moviesPanel = new MoviesPanel(this);
+
         // Register Pages in CardLayout
-        mainContentPanel.add(createBookTicketPagePlaceholder(), "PAGE_BOOK_TICKET");
+        mainContentPanel.add(orderBookingPage, "PAGE_ORDER_BOOKING");
+        mainContentPanel.add(moviesListPage, "PAGE_MOVIES_LIST");
         mainContentPanel.add(createTodayShowsPagePlaceholder(), "PAGE_TODAY_SHOWS");
         mainContentPanel.add(createSearchTicketPagePlaceholder(), "PAGE_SEARCH_TICKET");
         mainContentPanel.add(createShiftSummaryPagePlaceholder(), "PAGE_SHIFT_SUMMARY");
@@ -217,11 +219,12 @@ public class StaffDashboard extends JFrame {
         bodyContainer.add(mainContentPanel, BorderLayout.CENTER);
 
         add(bodyContainer, BorderLayout.CENTER);
+
+        // Show default landing page
+        showPage("PAGE_ORDER_BOOKING");
     }
 
-    /**
-     * 4. Sidebar Button Factory & Click Handler
-     */
+    // Sidebar navigation button factory
     private JButton createSidebarButton(String text, String pageKey, boolean active) {
         JButton btn = new JButton(text);
         btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
@@ -233,15 +236,43 @@ public class StaffDashboard extends JFrame {
 
         setSidebarButtonState(btn, active);
         sidebarButtons.add(btn);
+        pageButtonMap.put(pageKey, btn);
 
-        btn.addActionListener(e -> {
-            cardLayout.show(mainContentPanel, pageKey);
-            for (JButton b : sidebarButtons) {
-                setSidebarButtonState(b, b == btn);
-            }
-        });
+        btn.addActionListener(e -> showPage(pageKey));
 
         return btn;
+    }
+
+    // Switches active tab in main panel
+    public void showPage(String pageKey) {
+        if (cardLayout != null && mainContentPanel != null) {
+            String targetKey = pageKey;
+            if ("PAGE_BOOK_TICKET".equals(targetKey)) {
+                targetKey = "PAGE_ORDER_BOOKING";
+            } else if ("PAGE_MOVIES".equals(targetKey)) {
+                targetKey = "PAGE_MOVIES_LIST";
+            }
+            cardLayout.show(mainContentPanel, targetKey);
+            JButton activeBtn = pageButtonMap.get(targetKey);
+            if (activeBtn == null) {
+                activeBtn = pageButtonMap.get(pageKey);
+            }
+            for (JButton b : sidebarButtons) {
+                setSidebarButtonState(b, b == activeBtn);
+            }
+        }
+    }
+
+    public MoviesListPage getMoviesListPage() {
+        return moviesListPage;
+    }
+
+    public OrderBookingPage getOrderBookingPage() {
+        return orderBookingPage;
+    }
+
+    public MoviesPanel getMoviesPanel() {
+        return moviesPanel;
     }
 
     private void setSidebarButtonState(JButton btn, boolean active) {
@@ -261,9 +292,7 @@ public class StaffDashboard extends JFrame {
 
     // --- 5. Page Placeholders (Viewed one-by-one in Main Panel) ---
 
-    /**
-     * Page 1: Book Ticket (Where the 3-column ticket booking will be placed)
-     */
+    // Ticket booking page
     private JPanel createBookTicketPagePlaceholder() {
         return createPageTemplate(
                 "🎫 Book Ticket Page",
@@ -272,9 +301,7 @@ public class StaffDashboard extends JFrame {
         );
     }
 
-    /**
-     * Page 2: Today's Shows
-     */
+    // Today's shows page
     private JPanel createTodayShowsPagePlaceholder() {
         return createPageTemplate(
                 "🎬 Today's Shows Page",
@@ -283,9 +310,7 @@ public class StaffDashboard extends JFrame {
         );
     }
 
-    /**
-     * Page 3: Search / Print Ticket
-     */
+    // Search and print ticket page
     private JPanel createSearchTicketPagePlaceholder() {
         return createPageTemplate(
                 "🔍 Search & Re-print Ticket Page",
@@ -294,9 +319,7 @@ public class StaffDashboard extends JFrame {
         );
     }
 
-    /**
-     * Page 4: Shift Summary
-     */
+    // Shift summary page
     private JPanel createShiftSummaryPagePlaceholder() {
         return createPageTemplate(
                 "📊 Shift Summary Page",
@@ -305,9 +328,7 @@ public class StaffDashboard extends JFrame {
         );
     }
 
-    /**
-     * Reusable Page Container Template in Clean Light Theme
-     */
+    // Reusable page container template
     private JPanel createPageTemplate(String titleText, String descText, Color accentColor) {
         JPanel page = new JPanel(new BorderLayout(0, 16));
         page.setBackground(Theme.BG_MAIN);
@@ -369,9 +390,7 @@ public class StaffDashboard extends JFrame {
         return page;
     }
 
-    /**
-     * 6. Bottom Status Bar
-     */
+    // Bottom status bar
     private void buildStatusBar() {
         JPanel statusBar = new JPanel(new BorderLayout());
         statusBar.setBackground(Theme.PANEL_BG);

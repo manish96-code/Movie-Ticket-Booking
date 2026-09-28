@@ -1,0 +1,27 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Cinema Express (Main Application)",
+            "request": "launch",
+            "mainClass": "com.cinemats.Main",
+            "projectName": "ticket_booking",
+            "classPaths": [
+                "bin",
+                "lib/*"
+            ]
+        },
+        {
+            "type": "java",
+            "name": "Admin Dashboard (Direct)",
+            "request": "launch",
+            "mainClass": "com.cinemats.ui.admin.AdminDashboard",
+            "projectName": "ticket_booking",
+            "classPaths": [
+                "bin",
+                "lib/*"
+            ]
+        }
+    ]
+}

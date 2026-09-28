@@ -1,15 +1,12 @@
 package com.cinemats.util;
 
-import java.awt.*;
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
+import java.awt.*;
 
-/**
- * Global Cinema Theme & UI Constants - Clean Modern Light Theme
- * Designed for comfortable daylight desktop operations.
- */
+// Global UI theme colors and styling constants
 public class Theme {
 
     // --- Modern Light Color Palette ---
@@ -38,6 +35,24 @@ public class Theme {
     public static final Color SEAT_SELECTED  = new Color(37, 99, 235);     // Electric Blue
     public static final Color SEAT_BOOKED    = new Color(226, 232, 240);   // Muted Slate 200
 
+    // Physical Seat Type Colors
+    public static final Color SEAT_REGULAR_BG      = new Color(241, 245, 249); // Slate 100
+    public static final Color SEAT_REGULAR_BORDER  = new Color(148, 163, 184); // Slate 400
+    public static final Color SEAT_PREMIUM_BG      = new Color(243, 232, 255); // Purple 100
+    public static final Color SEAT_PREMIUM_BORDER  = new Color(147, 51, 234);  // Purple 600
+    public static final Color SEAT_RECLINER_BG     = new Color(254, 243, 199); // Amber 100
+    public static final Color SEAT_RECLINER_BORDER = new Color(217, 119, 6);   // Amber 600
+    public static final Color SEAT_BLOCKED_BG      = new Color(254, 226, 226); // Rose 100
+    public static final Color SEAT_BLOCKED_BORDER  = new Color(239, 68, 68);   // Rose 500
+
+    // Screen Status Colors
+    public static final Color STATUS_ACTIVE_BG      = new Color(240, 253, 244); // Green 50
+    public static final Color STATUS_ACTIVE_FG      = new Color(22, 163, 74);   // Green 600
+    public static final Color STATUS_MAINT_BG       = new Color(254, 243, 199); // Amber 100
+    public static final Color STATUS_MAINT_FG       = new Color(217, 119, 6);   // Amber 600
+    public static final Color STATUS_INACTIVE_BG    = new Color(241, 245, 249); // Slate 100
+    public static final Color STATUS_INACTIVE_FG    = new Color(100, 116, 139); // Slate 500
+
     // --- Fonts ---
     public static final Font FONT_TITLE   = new Font("Segoe UI", Font.BOLD, 18);
     public static final Font FONT_HEADER  = new Font("Segoe UI", Font.BOLD, 15);
@@ -63,6 +78,17 @@ public class Theme {
         JButton btn = new JButton(text);
         btn.setFont(new Font("Segoe UI", Font.BOLD, 13));
         btn.setBackground(ACCENT_BLUE);
+        btn.setForeground(Color.WHITE);
+        btn.setFocusPainted(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btn.setBorder(new EmptyBorder(10, 16, 10, 16));
+        return btn;
+    }
+
+    public static JButton createSuccessButton(String text) {
+        JButton btn = new JButton(text);
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        btn.setBackground(new Color(16, 185, 129));
         btn.setForeground(Color.WHITE);
         btn.setFocusPainted(false);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
