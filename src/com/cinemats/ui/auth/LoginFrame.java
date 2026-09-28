@@ -90,12 +90,12 @@ public class LoginFrame extends JFrame {
         card.add(Box.createVerticalStrut(14));
 
         // --- 3. Username Field ---
-        JLabel userLabel = new JLabel("Username / Account ID");
+        JLabel userLabel = new JLabel("Email Address");
         userLabel.setFont(Theme.FONT_BOLD_SM);
         userLabel.setForeground(Theme.TEXT_DARK);
         userLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        usernameField = Theme.createTextField("Enter username");
+        usernameField = Theme.createTextField("Enter your email address");
         usernameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
         usernameField.setAlignmentX(Component.LEFT_ALIGNMENT);
 
@@ -240,7 +240,7 @@ public class LoginFrame extends JFrame {
         String password = new String(passwordField.getPassword()).trim();
 
         if (username.isEmpty()) {
-            showStatus("Please enter your username.", false);
+            showStatus("Please enter your email address.", false);
             usernameField.requestFocus();
             return;
         }
@@ -278,7 +278,7 @@ public class LoginFrame extends JFrame {
             } else {
                 loginButton.setEnabled(true);
                 loginButton.setText("Sign In to Terminal");
-                showStatus("Invalid username or password.", false);
+                showStatus("Invalid email or password.", false);
                 passwordField.setText("");
                 passwordField.requestFocus();
             }

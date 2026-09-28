@@ -38,6 +38,10 @@ public class User {
         return username;
     }
 
+    public String getEmail() {
+        return username;
+    }
+
     public String getRole() {
         return role;
     }
@@ -72,6 +76,6 @@ public class User {
 
     @Override
     public String toString() {
-        return fullName + " (@" + username + " - " + role + ")";
+        return fullName + " (" + username + " - " + role + ")";
     }
 }

@@ -1,34 +1,32 @@
 package com.cinemats.ui.admin.screens;
 
-import com.cinemats.constants.SeatType;
-import com.cinemats.service.ScreenSeatService;
+import com.cinemats.model.ScreenSeat;
 import com.cinemats.util.Theme;
 
 import javax.swing.*;
-import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
 
 // Dialog for configuring and generating a new row of physical seats
 public class AddRowDialog extends JDialog {
 
     private final int screenId;
-    private final ScreenSeatService seatService;
-    private final Runnable onSuccess;
+    private final Consumer<List<ScreenSeat>> onGenerated;
 
     private JTextField rowNameField;
     private JSpinner seatCountSpinner;
     private JComboBox<String> seatTypeCombo;
     private JLabel errorLabel;
 
-    public AddRowDialog(Window parent, int screenId, String suggestedRow, ScreenSeatService seatService, Runnable onSuccess) {
+    public AddRowDialog(Window parent, int screenId, String suggestedRow, Consumer<List<ScreenSeat>> onGenerated) {
         super(parent, "Add Seat Row", ModalityType.APPLICATION_MODAL);
         this.screenId = screenId;
-        this.seatService = seatService;
-        this.onSuccess = onSuccess;
+        this.onGenerated = onGenerated;
 
-        setSize(420, 360);
+        setSize(420, 370);
         setLocationRelativeTo(parent);
         setResizable(false);
         getContentPane().setBackground(Theme.PANEL_BG);
@@ -49,7 +47,7 @@ public class AddRowDialog extends JDialog {
         title.setForeground(Theme.TEXT_DARK);
         form.add(title);
 
-        JLabel subtitle = new JLabel("Configure row name and number of seats to generate automatically.");
+        JLabel subtitle = new JLabel("Configure row name and number of seats to generate.");
         subtitle.setFont(Theme.FONT_SMALL);
         subtitle.setForeground(Theme.TEXT_MUTED);
         form.add(subtitle);
@@ -112,21 +110,25 @@ public class AddRowDialog extends JDialog {
         return lbl;
     }
 
-    // Validates inputs and generates seats in database
+    // Validates inputs and passes generated seats to callback
     private void handleGenerate() {
-        String rowName = rowNameField.getText().trim();
-        int seatCount = (Integer) seatCountSpinner.getValue();
-        String seatType = (String) seatTypeCombo.getSelectedItem();
-
-        String error = seatService.addRow(screenId, rowName, seatCount, seatType);
-        if (error != null) {
-            errorLabel.setText(error);
+        String rowName = rowNameField.getText().trim().toUpperCase();
+        if (rowName.isEmpty()) {
+            errorLabel.setText("Please enter a row letter or name.");
             return;
         }
 
+        int seatCount = (Integer) seatCountSpinner.getValue();
+        String seatType = ((String) seatTypeCombo.getSelectedItem()).toUpperCase();
+
+        List<ScreenSeat> newSeats = new ArrayList<>();
+        for (int i = 1; i <= seatCount; i++) {
+            newSeats.add(new ScreenSeat(screenId, rowName, i, seatType, "ACTIVE"));
+        }
+
         dispose();
-        if (onSuccess != null) {
-            onSuccess.run();
+        if (onGenerated != null) {
+            onGenerated.accept(newSeats);
         }
     }
 }

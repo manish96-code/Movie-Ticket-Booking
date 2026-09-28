@@ -97,6 +97,54 @@ public class ScreenSeatDAO {
         return ScreenMockData.getInitialSeats(screenId);
     }
 
+    // Replaces all physical seats for a screen within a transaction
+    public static synchronized boolean replaceScreenSeats(int screenId, List<ScreenSeat> seats) {
+        if (seats == null) return false;
+        String now = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+
+        if (DBConnection.isDriverAvailable()) {
+            try (Connection conn = DBConnection.getConnection()) {
+                conn.setAutoCommit(false);
+                try {
+                    // Delete existing physical seats for this screen
+                    try (PreparedStatement delStmt = conn.prepareStatement("DELETE FROM screen_seats WHERE screen_id = ?")) {
+                        delStmt.setInt(1, screenId);
+                        delStmt.executeUpdate();
+                    }
+
+                    // Batch insert all new seats
+                    String insertSQL = "INSERT INTO screen_seats (screen_id, row_name, seat_number, seat_label, seat_type, status, created_at, updated_at) "
+                            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                    try (PreparedStatement insertStmt = conn.prepareStatement(insertSQL)) {
+                        for (ScreenSeat s : seats) {
+                            insertStmt.setInt(1, screenId);
+                            insertStmt.setString(2, s.getRowName().toUpperCase());
+                            insertStmt.setInt(3, s.getSeatNumber());
+                            insertStmt.setString(4, s.getSeatLabel().toUpperCase());
+                            insertStmt.setString(5, s.getSeatType().toUpperCase());
+                            insertStmt.setString(6, s.getStatus().toUpperCase());
+                            insertStmt.setString(7, now);
+                            insertStmt.setString(8, now);
+                            insertStmt.addBatch();
+                        }
+                        insertStmt.executeBatch();
+                    }
+
+                    conn.commit();
+                    return true;
+                } catch (SQLException ex) {
+                    conn.rollback();
+                    System.err.println("[ScreenSeatDAO] Replace screen seats rolled back: " + ex.getMessage());
+                } finally {
+                    conn.setAutoCommit(true);
+                }
+            } catch (SQLException e) {
+                System.err.println("[ScreenSeatDAO] Error replacing screen seats: " + e.getMessage());
+            }
+        }
+        return false;
+    }
+
     // Inserts a batch of generated seats within a transaction
     public static synchronized boolean addSeatsBatch(List<ScreenSeat> seats) {
         if (seats == null || seats.isEmpty()) return false;

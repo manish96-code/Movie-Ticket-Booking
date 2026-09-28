@@ -14,6 +14,15 @@ public class ScreenSeatService {
         return ScreenSeatDAO.getSeatsByScreenId(screenId);
     }
 
+    // Replaces all seats for a screen in a single transaction
+    public String replaceScreenSeats(int screenId, List<ScreenSeat> seats) {
+        if (seats == null || seats.isEmpty()) {
+            return "Cannot save an empty seat layout.";
+        }
+        boolean ok = ScreenSeatDAO.replaceScreenSeats(screenId, seats);
+        return ok ? null : "Failed to save seat layout to database.";
+    }
+
     // Generates and inserts a complete row of seats
     public String addRow(int screenId, String rowName, int seatCount, String seatType) {
         if (rowName == null || rowName.trim().isEmpty()) {
@@ -72,7 +81,7 @@ public class ScreenSeatService {
         }
         String cleanNew = newRowName.trim().toUpperCase();
         if (oldRowName.equalsIgnoreCase(cleanNew)) {
-            return null; // Same name, no change
+            return null;
         }
 
         List<ScreenSeat> seats = ScreenSeatDAO.getSeatsByScreenId(screenId);

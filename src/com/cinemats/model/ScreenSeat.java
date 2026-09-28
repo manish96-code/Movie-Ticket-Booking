@@ -44,6 +44,22 @@ public class ScreenSeat {
     public boolean isBlocked() { return "BLOCKED".equalsIgnoreCase(status); }
     public boolean isActive() { return "ACTIVE".equalsIgnoreCase(status); }
 
+    // Returns copy with new seat classification
+    public ScreenSeat withType(String newType) {
+        return new ScreenSeat(id, screenId, rowName, seatNumber, seatLabel, newType, status, createdAt, updatedAt);
+    }
+
+    // Returns copy with new seat status
+    public ScreenSeat withStatus(String newStatus) {
+        return new ScreenSeat(id, screenId, rowName, seatNumber, seatLabel, seatType, newStatus, createdAt, updatedAt);
+    }
+
+    // Returns copy with new row and number
+    public ScreenSeat withRowAndNumber(String newRow, int newNumber) {
+        String cleanRow = (newRow == null) ? "" : newRow.trim().toUpperCase();
+        return new ScreenSeat(id, screenId, cleanRow, newNumber, cleanRow + newNumber, seatType, status, createdAt, updatedAt);
+    }
+
     @Override
     public String toString() {
         return seatLabel + " [" + seatType + "]";

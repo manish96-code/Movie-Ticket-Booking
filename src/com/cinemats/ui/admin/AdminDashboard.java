@@ -533,6 +533,15 @@ public class AdminDashboard extends JFrame {
                 );
                 g2.drawPolygon(tag);
                 g2.fillOval(x + 4, centerY - 2, 3, 3);
+            } else if ("PAGE_SCREENS".equals(key)) {
+                // Auditorium Cinema Screen & Seating Vector
+                g2.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                g2.drawRoundRect(x, centerY - 7, 15, 10, 2, 2);
+                g2.drawLine(x + 4, centerY + 5, x + 11, centerY + 5);
+                g2.drawLine(x + 7, centerY + 3, x + 7, centerY + 5);
+                g2.fillRect(x + 3, centerY - 3, 2, 2);
+                g2.fillRect(x + 7, centerY - 3, 2, 2);
+                g2.fillRect(x + 11, centerY - 3, 2, 2);
             } else if ("PAGE_SCHEDULES".equals(key)) {
                 // Clock (circle with clock hands)
                 g2.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));

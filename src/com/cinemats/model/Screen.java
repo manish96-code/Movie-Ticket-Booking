@@ -26,7 +26,7 @@ public class Screen {
                   int totalCapacity, int regularSeats, int premiumSeats, int reclinerSeats,
                   int blockedSeats, int upcomingShowsCount, String createdAt, String updatedAt) {
         this.id = id;
-        this.name = (name == null) ? "" : name.trim();
+        this.name = capitalizeName(name);
         this.screenNumber = screenNumber;
         this.screenType = (screenType == null || screenType.trim().isEmpty()) ? "Standard" : screenType.trim();
         this.status = (status == null || status.trim().isEmpty()) ? "ACTIVE" : status.trim().toUpperCase();
@@ -38,6 +38,25 @@ public class Screen {
         this.upcomingShowsCount = upcomingShowsCount;
         this.createdAt = (createdAt == null) ? "" : createdAt.trim();
         this.updatedAt = (updatedAt == null) ? "" : updatedAt.trim();
+    }
+
+    // Capitalizes words and short screen codes
+    public static String capitalizeName(String input) {
+        if (input == null || input.trim().isEmpty()) return "";
+        String[] words = input.trim().split("\\s+");
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < words.length; i++) {
+            String w = words[i];
+            if (!w.isEmpty()) {
+                if (w.length() <= 3) {
+                    sb.append(w.toUpperCase());
+                } else {
+                    sb.append(Character.toUpperCase(w.charAt(0))).append(w.substring(1));
+                }
+            }
+            if (i < words.length - 1) sb.append(" ");
+        }
+        return sb.toString();
     }
 
     public int getId() { return id; }

@@ -11,10 +11,12 @@ import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.*;
 import java.util.List;
 
-// Visual cinema seating layout editor and seat management console
+// Visual cinema seating layout editor and interactive arrangement canvas
 public class SeatLayoutPage extends JPanel {
 
     private final ScreenService screenService;
@@ -23,11 +25,18 @@ public class SeatLayoutPage extends JPanel {
 
     private Screen currentScreen;
     private List<ScreenSeat> currentSeats = new ArrayList<>();
+    private boolean hasUnsavedChanges = false;
     private SeatButton selectedSeatButton = null;
 
-    private JPanel gridContainer;
+    private JLabel screenTitleLabel;
+    private JLabel statusBadgeLabel;
     private JLabel capacitySummaryLabel;
+    private JPanel gridContainer;
     private JComboBox<String> rowSelectorCombo;
+
+    // Header buttons
+    private JButton saveLayoutBtnHeader;
+    private JButton discardBtnHeader;
 
     // Inspector widgets
     private JLabel inspectorSeatLabel;
@@ -38,6 +47,7 @@ public class SeatLayoutPage extends JPanel {
     private JButton setReclinerBtn;
     private JButton toggleBlockBtn;
     private JButton deleteSeatBtn;
+    private JButton saveLayoutBtnInspector;
 
     public SeatLayoutPage(Screen screen, ScreenService screenService, ScreenSeatService seatService, Runnable onBack) {
         this.currentScreen = screen;
@@ -50,68 +60,121 @@ public class SeatLayoutPage extends JPanel {
         setBorder(new EmptyBorder(16, 20, 16, 20));
 
         initUI();
-        refreshLayout();
+        loadSeatsFromDatabase();
     }
 
-    // Switches the active screen being edited
+    // Switches the active screen and reloads layout from database
     public void setScreen(Screen screen) {
+        if (hasUnsavedChanges) {
+            int confirm = JOptionPane.showConfirmDialog(this,
+                    "You have unsaved changes on the current screen arrangement.\nDiscard changes and switch screens?",
+                    "Unsaved Changes", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            if (confirm != JOptionPane.YES_OPTION) return;
+        }
         this.currentScreen = screen;
+        hasUnsavedChanges = false;
         selectedSeatButton = null;
-        refreshLayout();
+        loadSeatsFromDatabase();
     }
 
-    // Builds the layout editor UI
+    // Fetches saved layout from database
+    private void loadSeatsFromDatabase() {
+        if (currentScreen != null) {
+            currentSeats = new ArrayList<>(seatService.getSeatsForScreen(currentScreen.getId()));
+            hasUnsavedChanges = false;
+            selectedSeatButton = null;
+            renderGrid();
+        }
+    }
+
+    // Builds the visual editor UI layout
     private void initUI() {
-        // Top Header Banner
-        JPanel topBanner = new JPanel(new BorderLayout());
+        // 1. Top Header Banner
+        JPanel topBanner = new JPanel(new BorderLayout(14, 0));
         topBanner.setBackground(Theme.CARD_BG);
         topBanner.setBorder(new CompoundBorder(
                 new LineBorder(Theme.BORDER_COLOR, 1, true),
                 new EmptyBorder(12, 16, 12, 16)
         ));
 
-        // Back button and title (Left)
+        // Back button, Title, and Badges (Left)
         JPanel leftHeader = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
         leftHeader.setOpaque(false);
 
         JButton backBtn = Theme.createSecondaryButton("← Back to Screens");
-        backBtn.addActionListener(e -> {
-            if (onBack != null) onBack.run();
-        });
+        backBtn.addActionListener(e -> handleBackNavigation());
         leftHeader.add(backBtn);
 
         JPanel titleBlock = new JPanel();
         titleBlock.setLayout(new BoxLayout(titleBlock, BoxLayout.Y_AXIS));
         titleBlock.setOpaque(false);
 
-        JLabel titleLbl = new JLabel(currentScreen.getName() + " • Visual Seat Layout Editor");
-        titleLbl.setFont(Theme.FONT_TITLE);
-        titleLbl.setForeground(Theme.TEXT_DARK);
+        JPanel titleLine = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        titleLine.setOpaque(false);
 
-        capacitySummaryLabel = new JLabel("Loading seat capacity...");
+        String capitalizedScreenName = currentScreen != null ? Screen.capitalizeName(currentScreen.getName()) : "";
+        screenTitleLabel = new JLabel(capitalizedScreenName + " • Seating Arrangement Editor");
+        screenTitleLabel.setFont(Theme.FONT_TITLE);
+        screenTitleLabel.setForeground(Theme.TEXT_DARK);
+
+        statusBadgeLabel = new JLabel("  Synced with Database  ");
+        statusBadgeLabel.setFont(Theme.FONT_BOLD_SM);
+        statusBadgeLabel.setForeground(Theme.STATUS_ACTIVE_FG);
+        statusBadgeLabel.setBackground(Theme.STATUS_ACTIVE_BG);
+        statusBadgeLabel.setOpaque(true);
+        statusBadgeLabel.setBorder(new EmptyBorder(2, 6, 2, 6));
+
+        titleLine.add(screenTitleLabel);
+        titleLine.add(statusBadgeLabel);
+
+        capacitySummaryLabel = new JLabel("Calculating physical capacity...");
         capacitySummaryLabel.setFont(Theme.FONT_SMALL);
         capacitySummaryLabel.setForeground(Theme.TEXT_MUTED);
 
-        titleBlock.add(titleLbl);
+        titleBlock.add(titleLine);
         titleBlock.add(Box.createVerticalStrut(2));
         titleBlock.add(capacitySummaryLabel);
         leftHeader.add(titleBlock);
 
         topBanner.add(leftHeader, BorderLayout.WEST);
 
-        // Visual Color Legend (Right)
-        JPanel legendPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 14, 4));
+        // Header Right: Actions and Legend
+        JPanel rightHeader = new JPanel();
+        rightHeader.setLayout(new BoxLayout(rightHeader, BoxLayout.Y_AXIS));
+        rightHeader.setOpaque(false);
+
+        JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        actionRow.setOpaque(false);
+
+        JButton autoGenBtn = Theme.createPrimaryButton("⚡ Setup Seating Grid");
+        autoGenBtn.addActionListener(e -> openGenerateLayoutWizard());
+
+        saveLayoutBtnHeader = Theme.createSuccessButton("Save");
+        saveLayoutBtnHeader.addActionListener(e -> handleSaveLayoutToDatabase());
+
+        discardBtnHeader = Theme.createSecondaryButton("↺ Discard");
+        discardBtnHeader.addActionListener(e -> handleDiscardChanges());
+
+        actionRow.add(autoGenBtn);
+        actionRow.add(saveLayoutBtnHeader);
+        actionRow.add(discardBtnHeader);
+        rightHeader.add(actionRow);
+        rightHeader.add(Box.createVerticalStrut(4));
+
+        // Legend row
+        JPanel legendPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         legendPanel.setOpaque(false);
         legendPanel.add(createLegendDot("Regular", Theme.SEAT_REGULAR_BORDER));
         legendPanel.add(createLegendDot("Premium", Theme.SEAT_PREMIUM_BORDER));
         legendPanel.add(createLegendDot("Recliner", Theme.SEAT_RECLINER_BORDER));
         legendPanel.add(createLegendDot("Blocked", Theme.SEAT_BLOCKED_BORDER));
         legendPanel.add(createLegendDot("Selected", Theme.ACCENT_BLUE));
-        topBanner.add(legendPanel, BorderLayout.EAST);
+        rightHeader.add(legendPanel);
 
+        topBanner.add(rightHeader, BorderLayout.EAST);
         add(topBanner, BorderLayout.NORTH);
 
-        // Center split: Seating Grid (Center) + Inspector/Toolbox (East)
+        // Center split: Canvas Card (Center) + Inspector Toolbox (East)
         JPanel centerSplit = new JPanel(new BorderLayout(14, 0));
         centerSplit.setOpaque(false);
 
@@ -147,10 +210,9 @@ public class SeatLayoutPage extends JPanel {
         add(centerSplit, BorderLayout.CENTER);
     }
 
-    // Builds the side control toolbox and selected seat inspector
+    // Builds the right-hand toolbox and selected seat inspector
     private JPanel buildInspectorPanel() {
-        JPanel inspector = new JPanel();
-        inspector.setLayout(new BoxLayout(inspector, BoxLayout.Y_AXIS));
+        JPanel inspector = new JPanel(new BorderLayout(0, 10));
         inspector.setBackground(Theme.CARD_BG);
         inspector.setPreferredSize(new Dimension(310, 0));
         inspector.setBorder(new CompoundBorder(
@@ -158,29 +220,50 @@ public class SeatLayoutPage extends JPanel {
                 new EmptyBorder(16, 16, 16, 16)
         ));
 
-        // Section 1: Row Management
+        JPanel body = new JPanel();
+        body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
+        body.setOpaque(false);
+
+        // Section 1: Setup Quick Action
+        JLabel wizardTitle = new JLabel("Layout Actions");
+        wizardTitle.setFont(Theme.FONT_HEADER);
+        wizardTitle.setForeground(Theme.TEXT_DARK);
+        body.add(wizardTitle);
+        body.add(Box.createVerticalStrut(8));
+
+        JButton wizardBtn = Theme.createPrimaryButton("⚡ Setup Seating Grid");
+        wizardBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+        wizardBtn.addActionListener(e -> openGenerateLayoutWizard());
+        body.add(wizardBtn);
+
+        body.add(Box.createVerticalStrut(14));
+        body.add(new JSeparator());
+        body.add(Box.createVerticalStrut(12));
+
+        // Section 2: Row Management
         JLabel rowMgmtTitle = new JLabel("Row Operations");
         rowMgmtTitle.setFont(Theme.FONT_HEADER);
         rowMgmtTitle.setForeground(Theme.TEXT_DARK);
-        inspector.add(rowMgmtTitle);
-        inspector.add(Box.createVerticalStrut(8));
+        body.add(rowMgmtTitle);
+        body.add(Box.createVerticalStrut(8));
 
-        JButton addRowBtn = Theme.createPrimaryButton("+ Add New Row");
-        addRowBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
+        JButton addRowBtn = Theme.createSecondaryButton("+ Add New Row");
+        addRowBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
         addRowBtn.addActionListener(e -> openAddRowDialog());
-        inspector.add(addRowBtn);
-        inspector.add(Box.createVerticalStrut(10));
+        body.add(addRowBtn);
+        body.add(Box.createVerticalStrut(8));
 
         rowSelectorCombo = new JComboBox<>();
         rowSelectorCombo.setFont(Theme.FONT_REGULAR);
         rowSelectorCombo.setBackground(Color.WHITE);
         rowSelectorCombo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
-        inspector.add(rowSelectorCombo);
-        inspector.add(Box.createVerticalStrut(8));
+        body.add(rowSelectorCombo);
+        body.add(Box.createVerticalStrut(6));
 
+        // Row structural actions: + Seat, Rename, Delete
         JPanel rowActionRow = new JPanel(new GridLayout(1, 3, 6, 0));
         rowActionRow.setOpaque(false);
-        rowActionRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+        rowActionRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
 
         JButton addSeatBtn = new JButton("+ Seat");
         addSeatBtn.setFont(Theme.FONT_SMALL);
@@ -198,18 +281,47 @@ public class SeatLayoutPage extends JPanel {
         rowActionRow.add(addSeatBtn);
         rowActionRow.add(renameRowBtn);
         rowActionRow.add(deleteRowBtn);
-        inspector.add(rowActionRow);
+        body.add(rowActionRow);
+        body.add(Box.createVerticalStrut(8));
 
-        inspector.add(Box.createVerticalStrut(18));
-        inspector.add(new JSeparator());
-        inspector.add(Box.createVerticalStrut(14));
+        // Apply classification to entire row
+        JLabel setRowTierLbl = new JLabel("Set Entire Row Tier:");
+        setRowTierLbl.setFont(Theme.FONT_SMALL);
+        setRowTierLbl.setForeground(Theme.TEXT_MUTED);
+        body.add(setRowTierLbl);
+        body.add(Box.createVerticalStrut(4));
 
-        // Section 2: Selected Seat Inspector
+        JPanel rowTierGrid = new JPanel(new GridLayout(1, 3, 6, 0));
+        rowTierGrid.setOpaque(false);
+        rowTierGrid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+
+        JButton setRowReg = new JButton("Regular");
+        setRowReg.setFont(Theme.FONT_SMALL);
+        setRowReg.addActionListener(e -> handleApplyTierToRow("REGULAR"));
+
+        JButton setRowPrem = new JButton("Premium");
+        setRowPrem.setFont(Theme.FONT_SMALL);
+        setRowPrem.addActionListener(e -> handleApplyTierToRow("PREMIUM"));
+
+        JButton setRowRec = new JButton("Recliner");
+        setRowRec.setFont(Theme.FONT_SMALL);
+        setRowRec.addActionListener(e -> handleApplyTierToRow("RECLINER"));
+
+        rowTierGrid.add(setRowReg);
+        rowTierGrid.add(setRowPrem);
+        rowTierGrid.add(setRowRec);
+        body.add(rowTierGrid);
+
+        body.add(Box.createVerticalStrut(14));
+        body.add(new JSeparator());
+        body.add(Box.createVerticalStrut(12));
+
+        // Section 3: Selected Seat Inspector
         JLabel seatInspectorTitle = new JLabel("Selected Seat Properties");
         seatInspectorTitle.setFont(Theme.FONT_HEADER);
         seatInspectorTitle.setForeground(Theme.TEXT_DARK);
-        inspector.add(seatInspectorTitle);
-        inspector.add(Box.createVerticalStrut(8));
+        body.add(seatInspectorTitle);
+        body.add(Box.createVerticalStrut(8));
 
         JPanel seatCard = new JPanel(new GridLayout(3, 1, 0, 4));
         seatCard.setBackground(Theme.CARD_HOVER);
@@ -234,19 +346,19 @@ public class SeatLayoutPage extends JPanel {
         seatCard.add(inspectorSeatLabel);
         seatCard.add(inspectorTypeLabel);
         seatCard.add(inspectorStatusLabel);
-        inspector.add(seatCard);
-        inspector.add(Box.createVerticalStrut(12));
+        body.add(seatCard);
+        body.add(Box.createVerticalStrut(10));
 
         // Seat Classification Actions
         JLabel classLbl = new JLabel("Change Classification:");
         classLbl.setFont(Theme.FONT_SMALL);
         classLbl.setForeground(Theme.TEXT_MUTED);
-        inspector.add(classLbl);
-        inspector.add(Box.createVerticalStrut(4));
+        body.add(classLbl);
+        body.add(Box.createVerticalStrut(4));
 
         JPanel typeBtnGrid = new JPanel(new GridLayout(1, 3, 6, 0));
         typeBtnGrid.setOpaque(false);
-        typeBtnGrid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+        typeBtnGrid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
 
         setRegularBtn = new JButton("Regular");
         setRegularBtn.setFont(Theme.FONT_SMALL);
@@ -266,16 +378,16 @@ public class SeatLayoutPage extends JPanel {
         typeBtnGrid.add(setRegularBtn);
         typeBtnGrid.add(setPremiumBtn);
         typeBtnGrid.add(setReclinerBtn);
-        inspector.add(typeBtnGrid);
-        inspector.add(Box.createVerticalStrut(10));
+        body.add(typeBtnGrid);
+        body.add(Box.createVerticalStrut(8));
 
         toggleBlockBtn = new JButton("Block / Unblock Seat");
         toggleBlockBtn.setFont(Theme.FONT_REGULAR);
         toggleBlockBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
         toggleBlockBtn.setEnabled(false);
         toggleBlockBtn.addActionListener(e -> handleToggleBlock());
-        inspector.add(toggleBlockBtn);
-        inspector.add(Box.createVerticalStrut(8));
+        body.add(toggleBlockBtn);
+        body.add(Box.createVerticalStrut(6));
 
         deleteSeatBtn = new JButton("Delete Seat");
         deleteSeatBtn.setFont(Theme.FONT_REGULAR);
@@ -283,24 +395,69 @@ public class SeatLayoutPage extends JPanel {
         deleteSeatBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
         deleteSeatBtn.setEnabled(false);
         deleteSeatBtn.addActionListener(e -> handleDeleteSeat());
-        inspector.add(deleteSeatBtn);
+        body.add(deleteSeatBtn);
 
-        inspector.add(Box.createVerticalGlue());
+        body.add(Box.createVerticalGlue());
+        inspector.add(body, BorderLayout.CENTER);
+
+        // Section 4: Pinned Bottom Save Button
+        JPanel bottomFooter = new JPanel(new BorderLayout(0, 8));
+        bottomFooter.setOpaque(false);
+        bottomFooter.add(new JSeparator(), BorderLayout.NORTH);
+
+        saveLayoutBtnInspector = Theme.createSuccessButton("Save");
+        saveLayoutBtnInspector.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        saveLayoutBtnInspector.setPreferredSize(new Dimension(0, 44));
+        saveLayoutBtnInspector.setToolTipText("Save seating layout to database");
+        saveLayoutBtnInspector.addActionListener(e -> handleSaveLayoutToDatabase());
+        bottomFooter.add(saveLayoutBtnInspector, BorderLayout.CENTER);
+
+        inspector.add(bottomFooter, BorderLayout.SOUTH);
         return inspector;
     }
 
-    // Refreshes the visual seating layout canvas and metadata
-    public void refreshLayout() {
+    // Re-renders seating grid and updates summary stats
+    public void renderGrid() {
         gridContainer.removeAll();
         selectedSeatButton = null;
         updateInspector();
 
-        currentSeats = seatService.getSeatsForScreen(currentScreen.getId());
-        int[] stats = seatService.getSeatStats(currentScreen.getId());
+        if (currentScreen != null) {
+            String capitalized = Screen.capitalizeName(currentScreen.getName());
+            screenTitleLabel.setText(capitalized + " • Seating Arrangement Editor");
+        }
+
+        // Update status badge
+        if (hasUnsavedChanges) {
+            statusBadgeLabel.setText("  ● Unsaved Arrangement Changes  ");
+            statusBadgeLabel.setForeground(new Color(180, 83, 9));
+            statusBadgeLabel.setBackground(new Color(254, 243, 199));
+            saveLayoutBtnHeader.setEnabled(true);
+            saveLayoutBtnInspector.setEnabled(true);
+            discardBtnHeader.setEnabled(true);
+        } else {
+            statusBadgeLabel.setText("  ✓ Synced with Database  ");
+            statusBadgeLabel.setForeground(Theme.STATUS_ACTIVE_FG);
+            statusBadgeLabel.setBackground(Theme.STATUS_ACTIVE_BG);
+            saveLayoutBtnHeader.setEnabled(!currentSeats.isEmpty());
+            saveLayoutBtnInspector.setEnabled(!currentSeats.isEmpty());
+            discardBtnHeader.setEnabled(false);
+        }
+
+        // Calculate statistics from in-memory seats
+        int total = currentSeats.size();
+        int reg = 0, prem = 0, rec = 0, blk = 0;
+        for (ScreenSeat s : currentSeats) {
+            if (s.isBlocked()) blk++;
+            if ("PREMIUM".equalsIgnoreCase(s.getSeatType())) prem++;
+            else if ("RECLINER".equalsIgnoreCase(s.getSeatType())) rec++;
+            else reg++;
+        }
+        int bookable = Math.max(0, total - blk);
 
         capacitySummaryLabel.setText(String.format(
                 "Total Physical: %d seats • Bookable: %d • Blocked: %d (Regular: %d | Premium: %d | Recliner: %d)",
-                stats[0], stats[5], stats[4], stats[1], stats[2], stats[3]
+                total, bookable, blk, reg, prem, rec
         ));
 
         // Group seats by row_name
@@ -322,7 +479,7 @@ public class SeatLayoutPage extends JPanel {
             emptyPanel.setBorder(new EmptyBorder(40, 20, 40, 20));
 
             JLabel emptyIcon = new JLabel("💺", SwingConstants.CENTER);
-            emptyIcon.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 40));
+            emptyIcon.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 44));
             emptyIcon.setAlignmentX(Component.CENTER_ALIGNMENT);
 
             JLabel emptyTitle = new JLabel("No Physical Seats Configured");
@@ -330,22 +487,28 @@ public class SeatLayoutPage extends JPanel {
             emptyTitle.setForeground(Theme.TEXT_DARK);
             emptyTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-            JLabel emptyDesc = new JLabel("Generate rows and seating tiers to configure this auditorium's layout.");
+            JLabel emptyDesc = new JLabel("Use the setup wizard to quickly configure total seats and seats per row.");
             emptyDesc.setFont(Theme.FONT_REGULAR);
             emptyDesc.setForeground(Theme.TEXT_MUTED);
             emptyDesc.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-            JButton addFirstBtn = Theme.createPrimaryButton("+ Add First Row");
-            addFirstBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
-            addFirstBtn.addActionListener(e -> openAddRowDialog());
+            JButton setupFirstBtn = Theme.createPrimaryButton("⚡ Setup Seating Grid (Total Seats & Seats/Row)");
+            setupFirstBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+            setupFirstBtn.addActionListener(e -> openGenerateLayoutWizard());
+
+            JButton addFirstRowBtn = Theme.createSecondaryButton("+ Add Single Row");
+            addFirstRowBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+            addFirstRowBtn.addActionListener(e -> openAddRowDialog());
 
             emptyPanel.add(emptyIcon);
-            emptyPanel.add(Box.createVerticalStrut(8));
+            emptyPanel.add(Box.createVerticalStrut(10));
             emptyPanel.add(emptyTitle);
             emptyPanel.add(Box.createVerticalStrut(4));
             emptyPanel.add(emptyDesc);
-            emptyPanel.add(Box.createVerticalStrut(14));
-            emptyPanel.add(addFirstBtn);
+            emptyPanel.add(Box.createVerticalStrut(16));
+            emptyPanel.add(setupFirstBtn);
+            emptyPanel.add(Box.createVerticalStrut(8));
+            emptyPanel.add(addFirstRowBtn);
 
             gridContainer.add(emptyPanel);
         } else {
@@ -357,7 +520,7 @@ public class SeatLayoutPage extends JPanel {
                 JPanel rowPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 6, 4));
                 rowPanel.setOpaque(false);
 
-                // Left row label
+                // Left row label badge
                 JLabel leftRowBadge = createRowBadge(rowName);
                 rowPanel.add(leftRowBadge);
 
@@ -366,7 +529,35 @@ public class SeatLayoutPage extends JPanel {
                 for (int i = 0; i < seatsInRow.size(); i++) {
                     ScreenSeat seat = seatsInRow.get(i);
                     SeatButton btn = new SeatButton(seat);
-                    btn.addActionListener(e -> selectSeat(btn));
+
+                    // Attach mouse listener for single click, double click, and right click popup
+                    btn.addMouseListener(new MouseAdapter() {
+                        @Override
+                        public void mouseClicked(MouseEvent e) {
+                            if (SwingUtilities.isRightMouseButton(e) || e.isPopupTrigger()) {
+                                showSeatContextMenu(btn, e.getX(), e.getY());
+                            } else if (e.getClickCount() == 2) {
+                                toggleSeatTypeCycle(btn.getSeat());
+                            } else {
+                                selectSeat(btn);
+                            }
+                        }
+
+                        @Override
+                        public void mousePressed(MouseEvent e) {
+                            if (e.isPopupTrigger()) {
+                                showSeatContextMenu(btn, e.getX(), e.getY());
+                            }
+                        }
+
+                        @Override
+                        public void mouseReleased(MouseEvent e) {
+                            if (e.isPopupTrigger()) {
+                                showSeatContextMenu(btn, e.getX(), e.getY());
+                            }
+                        }
+                    });
+
                     rowPanel.add(btn);
 
                     if (seatsInRow.size() > 8 && i == midPoint - 1) {
@@ -374,7 +565,7 @@ public class SeatLayoutPage extends JPanel {
                     }
                 }
 
-                // Right row label
+                // Right row label badge
                 JLabel rightRowBadge = createRowBadge(rowName);
                 rowPanel.add(rightRowBadge);
 
@@ -385,6 +576,154 @@ public class SeatLayoutPage extends JPanel {
 
         gridContainer.revalidate();
         gridContainer.repaint();
+    }
+
+    // Opens setup wizard asking for total seats and seats per row
+    private void openGenerateLayoutWizard() {
+        int defaultTotal = currentSeats.isEmpty() ? 100 : currentSeats.size();
+        int defaultPerRow = 10;
+        if (!currentSeats.isEmpty()) {
+            Map<String, List<ScreenSeat>> map = new HashMap<>();
+            for (ScreenSeat s : currentSeats) {
+                map.computeIfAbsent(s.getRowName(), k -> new ArrayList<>()).add(s);
+            }
+            if (!map.isEmpty()) {
+                defaultPerRow = map.values().iterator().next().size();
+            }
+        }
+
+        Window win = SwingUtilities.getWindowAncestor(this);
+        GenerateLayoutDialog dlg = new GenerateLayoutDialog(win, currentScreen.getId(), defaultTotal, defaultPerRow, generatedList -> {
+            this.currentSeats = new ArrayList<>(generatedList);
+            this.hasUnsavedChanges = true;
+            this.selectedSeatButton = null;
+            renderGrid();
+        });
+        dlg.setVisible(true);
+    }
+
+    // Commits in-memory layout to database in a single transaction
+    private void handleSaveLayoutToDatabase() {
+        if (currentSeats.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Cannot save an empty seating arrangement.", "Empty Layout", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int total = currentSeats.size();
+        int reg = 0, prem = 0, rec = 0, blk = 0;
+        for (ScreenSeat s : currentSeats) {
+            if (s.isBlocked()) blk++;
+            if ("PREMIUM".equalsIgnoreCase(s.getSeatType())) prem++;
+            else if ("RECLINER".equalsIgnoreCase(s.getSeatType())) rec++;
+            else reg++;
+        }
+
+        String capitalizedScreen = Screen.capitalizeName(currentScreen.getName());
+        String msg = String.format(
+                "Save seating layout to %s?\n\n"
+                + "• Total Seats: %d\n"
+                + "• Regular: %d\n"
+                + "• Premium: %d\n"
+                + "• Recliner: %d\n"
+                + "• Physically Blocked: %d\n\n"
+                + "This will commit the layout to the database and update screen capacity.",
+                capitalizedScreen, total, reg, prem, rec, blk
+        );
+
+        int confirm = JOptionPane.showConfirmDialog(this, msg, "Confirm Save Layout", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+        if (confirm == JOptionPane.YES_OPTION) {
+            String error = seatService.replaceScreenSeats(currentScreen.getId(), currentSeats);
+            if (error != null) {
+                JOptionPane.showMessageDialog(this, error, "Database Error", JOptionPane.ERROR_MESSAGE);
+            } else {
+                hasUnsavedChanges = false;
+                renderGrid();
+                JOptionPane.showMessageDialog(this,
+                        "Seating arrangement saved successfully to database!\nScreen capacity updated to " + total + " seats.",
+                        "Layout Saved", JOptionPane.INFORMATION_MESSAGE);
+            }
+        }
+    }
+
+    // Discards unsaved modifications and reloads from database
+    private void handleDiscardChanges() {
+        if (!hasUnsavedChanges) return;
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Discard all unsaved arrangement changes and reload from database?",
+                "Discard Changes", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+        if (confirm == JOptionPane.YES_OPTION) {
+            loadSeatsFromDatabase();
+        }
+    }
+
+    // Handles back navigation with unsaved changes verification
+    private void handleBackNavigation() {
+        if (hasUnsavedChanges) {
+            int confirm = JOptionPane.showConfirmDialog(this,
+                    "You have unsaved changes in the seating arrangement.\nDo you want to discard your changes and leave?",
+                    "Unsaved Changes", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            if (confirm != JOptionPane.YES_OPTION) return;
+        }
+        if (onBack != null) onBack.run();
+    }
+
+    // Right-click context popup on seats
+    private void showSeatContextMenu(SeatButton btn, int x, int y) {
+        selectSeat(btn);
+        ScreenSeat s = btn.getSeat();
+
+        JPopupMenu menu = new JPopupMenu();
+
+        JMenuItem regItem = new JMenuItem("Mark as Regular");
+        regItem.addActionListener(e -> handleChangeSeatType("REGULAR"));
+        menu.add(regItem);
+
+        JMenuItem premItem = new JMenuItem("Mark as Premium");
+        premItem.addActionListener(e -> handleChangeSeatType("PREMIUM"));
+        menu.add(premItem);
+
+        JMenuItem recItem = new JMenuItem("Mark as Recliner");
+        recItem.addActionListener(e -> handleChangeSeatType("RECLINER"));
+        menu.add(recItem);
+
+        menu.addSeparator();
+
+        JMenuItem blockItem = new JMenuItem(s.isBlocked() ? "Unblock Seat" : "Block Seat");
+        blockItem.addActionListener(e -> handleToggleBlock());
+        menu.add(blockItem);
+
+        menu.addSeparator();
+
+        JMenuItem delItem = new JMenuItem("Delete Seat");
+        delItem.setForeground(Theme.ACCENT_RED);
+        delItem.addActionListener(e -> handleDeleteSeat());
+        menu.add(delItem);
+
+        menu.show(btn, x, y);
+    }
+
+    // Cycles seat classification on double-click
+    private void toggleSeatTypeCycle(ScreenSeat seat) {
+        String current = seat.getSeatType().toUpperCase();
+        String next = "REGULAR";
+        if ("REGULAR".equals(current)) next = "PREMIUM";
+        else if ("PREMIUM".equals(current)) next = "RECLINER";
+        else if ("RECLINER".equals(current)) next = "REGULAR";
+
+        updateSeatInMemory(seat.withType(next));
+    }
+
+    // Replaces a seat instance in memory
+    private void updateSeatInMemory(ScreenSeat updated) {
+        for (int i = 0; i < currentSeats.size(); i++) {
+            ScreenSeat s = currentSeats.get(i);
+            if (s.getRowName().equalsIgnoreCase(updated.getRowName()) && s.getSeatNumber() == updated.getSeatNumber()) {
+                currentSeats.set(i, updated);
+                break;
+            }
+        }
+        hasUnsavedChanges = true;
+        renderGrid();
     }
 
     // Handles seat selection and updates inspector panel
@@ -423,9 +762,114 @@ public class SeatLayoutPage extends JPanel {
         }
     }
 
+    // Changes seat classification in memory
+    private void handleChangeSeatType(String newType) {
+        if (selectedSeatButton == null) return;
+        updateSeatInMemory(selectedSeatButton.getSeat().withType(newType));
+    }
+
+    // Toggles blocked status of selected physical seat in memory
+    private void handleToggleBlock() {
+        if (selectedSeatButton == null) return;
+        ScreenSeat s = selectedSeatButton.getSeat();
+        boolean willBlock = !s.isBlocked();
+        updateSeatInMemory(s.withStatus(willBlock ? "BLOCKED" : "ACTIVE"));
+    }
+
+    // Deletes selected seat from in-memory arrangement
+    private void handleDeleteSeat() {
+        if (selectedSeatButton == null) return;
+        ScreenSeat target = selectedSeatButton.getSeat();
+
+        currentSeats.removeIf(s -> s.getRowName().equalsIgnoreCase(target.getRowName()) && s.getSeatNumber() == target.getSeatNumber());
+        hasUnsavedChanges = true;
+        selectedSeatButton = null;
+        renderGrid();
+    }
+
+    // Adds a seat to the end of selected row in memory
+    private void handleAddSeatToRow() {
+        String selected = (String) rowSelectorCombo.getSelectedItem();
+        if (selected == null) return;
+        String rowName = selected.split(" ")[1];
+
+        int maxNum = 0;
+        for (ScreenSeat s : currentSeats) {
+            if (s.getRowName().equalsIgnoreCase(rowName)) {
+                if (s.getSeatNumber() > maxNum) maxNum = s.getSeatNumber();
+            }
+        }
+        int nextNum = maxNum + 1;
+        currentSeats.add(new ScreenSeat(currentScreen.getId(), rowName, nextNum, "REGULAR", "ACTIVE"));
+        hasUnsavedChanges = true;
+        renderGrid();
+    }
+
+    // Applies a single tier classification to all seats in selected row
+    private void handleApplyTierToRow(String tier) {
+        String selected = (String) rowSelectorCombo.getSelectedItem();
+        if (selected == null) return;
+        String rowName = selected.split(" ")[1];
+
+        for (int i = 0; i < currentSeats.size(); i++) {
+            ScreenSeat s = currentSeats.get(i);
+            if (s.getRowName().equalsIgnoreCase(rowName)) {
+                currentSeats.set(i, s.withType(tier));
+            }
+        }
+        hasUnsavedChanges = true;
+        renderGrid();
+    }
+
+    // Renames an existing row in memory
+    private void handleRenameRow() {
+        String selected = (String) rowSelectorCombo.getSelectedItem();
+        if (selected == null) return;
+        String oldRowName = selected.split(" ")[1];
+
+        String newName = JOptionPane.showInputDialog(this,
+                "Enter new letter/name for Row " + oldRowName + ":",
+                "Rename Row", JOptionPane.QUESTION_MESSAGE);
+        if (newName != null && !newName.trim().isEmpty()) {
+            String cleanNew = Screen.capitalizeName(newName.trim());
+            for (ScreenSeat s : currentSeats) {
+                if (s.getRowName().equalsIgnoreCase(cleanNew)) {
+                    JOptionPane.showMessageDialog(this, "Row '" + cleanNew + "' already exists.", "Rename Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+            }
+
+            for (int i = 0; i < currentSeats.size(); i++) {
+                ScreenSeat s = currentSeats.get(i);
+                if (s.getRowName().equalsIgnoreCase(oldRowName)) {
+                    currentSeats.set(i, s.withRowAndNumber(cleanNew, s.getSeatNumber()));
+                }
+            }
+            hasUnsavedChanges = true;
+            renderGrid();
+        }
+    }
+
+    // Deletes an entire row in memory
+    private void handleDeleteRow() {
+        String selected = (String) rowSelectorCombo.getSelectedItem();
+        if (selected == null) return;
+        String rowName = selected.split(" ")[1];
+
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Are you sure you want to remove Row " + rowName + " and all its seats from this arrangement?",
+                "Confirm Delete Row", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+
+        if (confirm == JOptionPane.YES_OPTION) {
+            currentSeats.removeIf(s -> s.getRowName().equalsIgnoreCase(rowName));
+            hasUnsavedChanges = true;
+            selectedSeatButton = null;
+            renderGrid();
+        }
+    }
+
     // Opens dialog to add a new row
     private void openAddRowDialog() {
-        // Suggest next letter (e.g. if A, B exist -> suggest C)
         String suggested = "A";
         Set<String> existingRows = new HashSet<>();
         for (ScreenSeat s : currentSeats) {
@@ -439,95 +883,12 @@ public class SeatLayoutPage extends JPanel {
         }
 
         Window win = SwingUtilities.getWindowAncestor(this);
-        AddRowDialog dlg = new AddRowDialog(win, currentScreen.getId(), suggested, seatService, this::refreshLayout);
+        AddRowDialog dlg = new AddRowDialog(win, currentScreen.getId(), suggested, newSeats -> {
+            currentSeats.addAll(newSeats);
+            hasUnsavedChanges = true;
+            renderGrid();
+        });
         dlg.setVisible(true);
-    }
-
-    // Adds a seat to the currently selected row
-    private void handleAddSeatToRow() {
-        String selected = (String) rowSelectorCombo.getSelectedItem();
-        if (selected == null) return;
-        String rowName = selected.split(" ")[1];
-        seatService.addSeatToRow(currentScreen.getId(), rowName, "REGULAR");
-        refreshLayout();
-    }
-
-    // Prompts to rename the selected row
-    private void handleRenameRow() {
-        String selected = (String) rowSelectorCombo.getSelectedItem();
-        if (selected == null) return;
-        String oldRowName = selected.split(" ")[1];
-
-        String newName = JOptionPane.showInputDialog(this,
-                "Enter new name for Row " + oldRowName + ":",
-                "Rename Row", JOptionPane.QUESTION_MESSAGE);
-        if (newName != null && !newName.trim().isEmpty()) {
-            String error = seatService.renameRow(currentScreen.getId(), oldRowName, newName.trim());
-            if (error != null) {
-                JOptionPane.showMessageDialog(this, error, "Rename Error", JOptionPane.ERROR_MESSAGE);
-            } else {
-                refreshLayout();
-            }
-        }
-    }
-
-    // Deletes selected row after confirmation
-    private void handleDeleteRow() {
-        String selected = (String) rowSelectorCombo.getSelectedItem();
-        if (selected == null) return;
-        String rowName = selected.split(" ")[1];
-
-        int confirm = JOptionPane.showConfirmDialog(this,
-                "Are you sure you want to delete Row " + rowName + " and all its seats?\n"
-                + "This operation modifies the physical capacity of this screen.",
-                "Confirm Delete Row", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-
-        if (confirm == JOptionPane.YES_OPTION) {
-            seatService.deleteRow(currentScreen.getId(), rowName);
-            refreshLayout();
-        }
-    }
-
-    // Changes seat classification
-    private void handleChangeSeatType(String newType) {
-        if (selectedSeatButton == null) return;
-        seatService.changeSeatType(selectedSeatButton.getSeat().getId(), newType);
-        refreshLayout();
-    }
-
-    // Toggles blocked status of selected physical seat
-    private void handleToggleBlock() {
-        if (selectedSeatButton == null) return;
-        ScreenSeat s = selectedSeatButton.getSeat();
-        boolean willBlock = !s.isBlocked();
-
-        String msg = willBlock ?
-                "Block Seat " + s.getSeatLabel() + "?\nThis seat will be excluded from all future show booking availability." :
-                "Unblock Seat " + s.getSeatLabel() + "?\nThis seat will become active and bookable.";
-
-        int confirm = JOptionPane.showConfirmDialog(this, msg,
-                willBlock ? "Block Physical Seat" : "Unblock Seat",
-                JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-
-        if (confirm == JOptionPane.YES_OPTION) {
-            seatService.toggleSeatBlock(s.getId(), willBlock);
-            refreshLayout();
-        }
-    }
-
-    // Deletes single seat
-    private void handleDeleteSeat() {
-        if (selectedSeatButton == null) return;
-        ScreenSeat s = selectedSeatButton.getSeat();
-
-        int confirm = JOptionPane.showConfirmDialog(this,
-                "Delete physical Seat " + s.getSeatLabel() + "?",
-                "Confirm Seat Deletion", JOptionPane.YES_NO_OPTION);
-
-        if (confirm == JOptionPane.YES_OPTION) {
-            seatService.deleteSeat(s.getId());
-            refreshLayout();
-        }
     }
 
     // Row indicator badge widget
@@ -554,7 +915,6 @@ public class SeatLayoutPage extends JPanel {
                 int w = getWidth();
                 int h = getHeight();
 
-                // Draw curved cinema screen beam
                 GradientPaint gp = new GradientPaint(w / 2f, 0, new Color(147, 197, 253), w / 2f, h, new Color(239, 246, 255));
                 g2.setPaint(gp);
                 g2.fillRoundRect(w / 6, 8, (w * 2) / 3, 26, 12, 12);
@@ -563,7 +923,6 @@ public class SeatLayoutPage extends JPanel {
                 g2.setStroke(new BasicStroke(2.0f));
                 g2.drawRoundRect(w / 6, 8, (w * 2) / 3, 26, 12, 12);
 
-                // Screen title text
                 g2.setColor(new Color(30, 64, 175));
                 g2.setFont(Theme.FONT_BOLD_SM);
                 FontMetrics fm = g2.getFontMetrics();

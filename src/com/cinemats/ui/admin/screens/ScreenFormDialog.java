@@ -10,6 +10,8 @@ import javax.swing.*;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import java.awt.*;
 
 // Dialog for creating or modifying cinema screen auditoriums
@@ -23,7 +25,8 @@ public class ScreenFormDialog extends JDialog {
     private JTextField numberField;
     private JComboBox<String> typeCombo;
     private JComboBox<String> statusCombo;
-    private JLabel errorLabel;
+    private JLabel nameErrorLabel;
+    private JLabel numberErrorLabel;
 
     public ScreenFormDialog(Window parent, Screen existingScreen, ScreenService screenService, Runnable onSuccess) {
         super(parent, (existingScreen == null ? "Add New Screen" : "Edit Screen"), ModalityType.APPLICATION_MODAL);
@@ -31,7 +34,7 @@ public class ScreenFormDialog extends JDialog {
         this.screenService = screenService;
         this.onSuccess = onSuccess;
 
-        setSize(460, 480);
+        setSize(480, 500);
         setLocationRelativeTo(parent);
         setResizable(false);
         getContentPane().setBackground(Theme.PANEL_BG);
@@ -64,15 +67,21 @@ public class ScreenFormDialog extends JDialog {
         form.add(createFieldLabel("Screen Name (e.g. Screen 1, IMAX Audi):"));
         nameField = Theme.createTextField("e.g. Screen 1");
         if (existingScreen != null) nameField.setText(existingScreen.getName());
-        form.add(nameField);
-        form.add(Box.createVerticalStrut(10));
+        nameErrorLabel = createFieldErrorLabel();
+        form.add(createFieldWrapper(nameField, nameErrorLabel));
+        form.add(Box.createVerticalStrut(8));
 
         // Screen Number
         form.add(createFieldLabel("Screen Number (unique integer):"));
         numberField = Theme.createTextField("e.g. 1");
         if (existingScreen != null) numberField.setText(String.valueOf(existingScreen.getScreenNumber()));
-        form.add(numberField);
-        form.add(Box.createVerticalStrut(10));
+        numberErrorLabel = createFieldErrorLabel();
+        form.add(createFieldWrapper(numberField, numberErrorLabel));
+        form.add(Box.createVerticalStrut(8));
+
+        // Clear errors on typing
+        nameField.getDocument().addDocumentListener(new SimpleDocListener(() -> clearFieldError(nameField, nameErrorLabel)));
+        numberField.getDocument().addDocumentListener(new SimpleDocListener(() -> clearFieldError(numberField, numberErrorLabel)));
 
         // Screen Type
         form.add(createFieldLabel("Screen Technology / Audi Type:"));
@@ -94,7 +103,7 @@ public class ScreenFormDialog extends JDialog {
 
         // Automatic capacity notice
         JPanel noticeCard = new JPanel(new BorderLayout(8, 0));
-        noticeCard.setBackground(new Color(239, 246, 255)); // Blue 50
+        noticeCard.setBackground(new Color(239, 246, 255));
         noticeCard.setBorder(new CompoundBorder(
                 new LineBorder(new Color(191, 219, 254), 1, true),
                 new EmptyBorder(8, 10, 8, 10)
@@ -104,12 +113,6 @@ public class ScreenFormDialog extends JDialog {
         noticeText.setForeground(new Color(29, 78, 216));
         noticeCard.add(noticeText, BorderLayout.CENTER);
         form.add(noticeCard);
-        form.add(Box.createVerticalStrut(8));
-
-        errorLabel = new JLabel(" ");
-        errorLabel.setFont(Theme.FONT_SMALL);
-        errorLabel.setForeground(Theme.ACCENT_RED);
-        form.add(errorLabel);
 
         add(form, BorderLayout.CENTER);
 
@@ -129,6 +132,53 @@ public class ScreenFormDialog extends JDialog {
         add(footer, BorderLayout.SOUTH);
     }
 
+    // Wraps an input field and its under-field error message
+    private JPanel createFieldWrapper(JComponent field, JLabel errorLabel) {
+        JPanel wrapper = new JPanel();
+        wrapper.setLayout(new BoxLayout(wrapper, BoxLayout.Y_AXIS));
+        wrapper.setOpaque(false);
+        field.setAlignmentX(Component.LEFT_ALIGNMENT);
+        errorLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        wrapper.add(field);
+        wrapper.add(errorLabel);
+        return wrapper;
+    }
+
+    // Creates a dedicated red validation message label
+    private JLabel createFieldErrorLabel() {
+        JLabel lbl = new JLabel("");
+        lbl.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        lbl.setForeground(Theme.ACCENT_RED);
+        lbl.setBorder(new EmptyBorder(3, 2, 0, 0));
+        lbl.setVisible(false);
+        return lbl;
+    }
+
+    // Displays an error message under the field and highlights the border
+    private void setFieldError(JComponent field, JLabel errorLabel, String message) {
+        errorLabel.setText("⚠ " + message);
+        errorLabel.setVisible(true);
+        field.setBorder(new CompoundBorder(
+                new LineBorder(Theme.ACCENT_RED, 1, true),
+                new EmptyBorder(8, 10, 8, 10)
+        ));
+        field.revalidate();
+        field.repaint();
+    }
+
+    // Clears the error message under the field and restores standard border
+    private void clearFieldError(JComponent field, JLabel errorLabel) {
+        errorLabel.setText("");
+        errorLabel.setVisible(false);
+        field.setBorder(new CompoundBorder(
+                new LineBorder(Theme.BORDER_COLOR, 1, true),
+                new EmptyBorder(8, 10, 8, 10)
+        ));
+        field.revalidate();
+        field.repaint();
+    }
+
+    // Creates field label
     private JLabel createFieldLabel(String text) {
         JLabel lbl = new JLabel(text);
         lbl.setFont(Theme.FONT_BOLD_SM);
@@ -139,13 +189,17 @@ public class ScreenFormDialog extends JDialog {
 
     // Validates input and delegates save to ScreenService
     private void handleSave() {
-        String name = nameField.getText().trim();
+        clearFieldError(nameField, nameErrorLabel);
+        clearFieldError(numberField, numberErrorLabel);
+
+        String name = Screen.capitalizeName(nameField.getText().trim());
         String numStr = numberField.getText().trim();
         String type = (String) typeCombo.getSelectedItem();
         String status = (String) statusCombo.getSelectedItem();
 
         if (name.isEmpty()) {
-            errorLabel.setText("Please enter a screen name.");
+            setFieldError(nameField, nameErrorLabel, "Please enter a screen name.");
+            nameField.requestFocus();
             return;
         }
 
@@ -153,11 +207,13 @@ public class ScreenFormDialog extends JDialog {
         try {
             number = Integer.parseInt(numStr);
             if (number <= 0) {
-                errorLabel.setText("Screen number must be greater than 0.");
+                setFieldError(numberField, numberErrorLabel, "Screen number must be greater than 0.");
+                numberField.requestFocus();
                 return;
             }
         } catch (NumberFormatException ex) {
-            errorLabel.setText("Please enter a valid numeric screen number.");
+            setFieldError(numberField, numberErrorLabel, "Please enter a valid numeric screen number.");
+            numberField.requestFocus();
             return;
         }
 
@@ -166,7 +222,13 @@ public class ScreenFormDialog extends JDialog {
 
         String error = screenService.saveScreen(screen, existingScreen != null);
         if (error != null) {
-            errorLabel.setText(error);
+            if (error.toLowerCase().contains("number")) {
+                setFieldError(numberField, numberErrorLabel, error);
+                numberField.requestFocus();
+            } else {
+                setFieldError(nameField, nameErrorLabel, error);
+                nameField.requestFocus();
+            }
             return;
         }
 
@@ -174,5 +236,14 @@ public class ScreenFormDialog extends JDialog {
         if (onSuccess != null) {
             onSuccess.run();
         }
+    }
+
+    // Document listener helper
+    private static class SimpleDocListener implements DocumentListener {
+        private final Runnable callback;
+        public SimpleDocListener(Runnable callback) { this.callback = callback; }
+        public void insertUpdate(DocumentEvent e) { callback.run(); }
+        public void removeUpdate(DocumentEvent e) { callback.run(); }
+        public void changedUpdate(DocumentEvent e) { callback.run(); }
     }
 }

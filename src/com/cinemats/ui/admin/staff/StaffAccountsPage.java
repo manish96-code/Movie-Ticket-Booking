@@ -96,7 +96,7 @@ public class StaffAccountsPage extends JPanel {
                 new LineBorder(Theme.BORDER_COLOR, 1, true),
                 new EmptyBorder(6, 10, 6, 10)
         ));
-        searchField.putClientProperty("JTextField.placeholderText", "Search name, user, station...");
+        searchField.putClientProperty("JTextField.placeholderText", "Search name, email, station...");
 
         roleFilterCombo = new JComboBox<>(new String[]{
                 "All Roles",
@@ -137,7 +137,7 @@ public class StaffAccountsPage extends JPanel {
 
         // 3. Dynamic JTable
         String[] cols = {
-                "# ID", "Full Name", "Username", "Role", "Counter Station",
+                "# ID", "Full Name", "Email", "Role", "Counter Station",
                 "Shift Schedule", "Phone", "Status", "Registered On"
         };
 
@@ -202,7 +202,7 @@ public class StaffAccountsPage extends JPanel {
             if (roleIndex == 1 && u.isAdmin()) continue; // Staff only
             if (roleIndex == 2 && !u.isAdmin()) continue; // Admin only
 
-            // Text search across full name, username, counter, phone, shift
+            // Text search across full name, email, counter, phone, shift
             if (!query.isEmpty()) {
                 boolean matches = u.getFullName().toLowerCase().contains(query)
                         || u.getUsername().toLowerCase().contains(query)
@@ -215,7 +215,7 @@ public class StaffAccountsPage extends JPanel {
             staffTableModel.addRow(new Object[]{
                     u.getId() > 0 ? String.valueOf(u.getId()) : "-",
                     u.getFullName(),
-                    "@" + u.getUsername(),
+                    u.getUsername(),
                     u.getRole(),
                     u.getCounter(),
                     u.getShift(),
@@ -234,12 +234,12 @@ public class StaffAccountsPage extends JPanel {
             return;
         }
 
-        // Column 2 is username (prefixed with @)
+        // Column 2 is email
         String userDisplay = (String) staffTableModel.getValueAt(row, 2);
-        String username = userDisplay.startsWith("@") ? userDisplay.substring(1) : userDisplay;
+        String email = userDisplay.startsWith("@") ? userDisplay.substring(1) : userDisplay;
         String fullName = (String) staffTableModel.getValueAt(row, 1);
 
-        if ("admin".equalsIgnoreCase(username)) {
+        if ("admin".equalsIgnoreCase(email)) {
             JOptionPane.showMessageDialog(this,
                     "The primary super admin account ('admin') is protected and cannot be deleted.",
                     "Protected Super User", JOptionPane.WARNING_MESSAGE);
@@ -249,22 +249,22 @@ public class StaffAccountsPage extends JPanel {
         int confirm = JOptionPane.showConfirmDialog(this,
                 "Are you sure you want to permanently delete user account:\n\n"
                         + "• Name: " + fullName + "\n"
-                        + "• Username: @" + username + "\n\n"
+                        + "• Email: " + email + "\n\n"
                         + "This action will remove their terminal access immediately from cinema.db.",
                 "Confirm Staff Deletion",
                 JOptionPane.YES_NO_OPTION,
                 JOptionPane.WARNING_MESSAGE);
 
         if (confirm == JOptionPane.YES_OPTION) {
-            boolean deleted = DBConnection.deleteUser(username);
+            boolean deleted = DBConnection.deleteUser(email);
             if (deleted) {
                 JOptionPane.showMessageDialog(this,
-                        "✅ Staff account '@" + username + "' was successfully removed from the database.",
+                        "✅ Staff account '" + email + "' was successfully removed from the database.",
                         "User Deleted", JOptionPane.INFORMATION_MESSAGE);
                 refreshStaffTable();
             } else {
                 JOptionPane.showMessageDialog(this,
-                        "⚠️ Unable to delete user '@" + username + "' from SQLite database.",
+                        "⚠️ Unable to delete user '" + email + "' from SQLite database.",
                         "Deletion Error", JOptionPane.ERROR_MESSAGE);
             }
         }
@@ -328,7 +328,7 @@ public class StaffAccountsPage extends JPanel {
         if (table.getColumnModel().getColumnCount() >= 9) {
             table.getColumnModel().getColumn(0).setPreferredWidth(50);   // ID
             table.getColumnModel().getColumn(1).setPreferredWidth(160);  // Full Name
-            table.getColumnModel().getColumn(2).setPreferredWidth(120);  // Username
+            table.getColumnModel().getColumn(2).setPreferredWidth(170);  // Email
             table.getColumnModel().getColumn(3).setPreferredWidth(110);  // Role
             table.getColumnModel().getColumn(4).setPreferredWidth(210);  // Counter
             table.getColumnModel().getColumn(5).setPreferredWidth(210);  // Shift
@@ -353,7 +353,7 @@ public class StaffAccountsPage extends JPanel {
                     setHorizontalAlignment(SwingConstants.CENTER);
                     setForeground(Theme.TEXT_MUTED);
                 } else if (col == 2) {
-                    // Username highlighted
+                    // Email highlighted
                     setHorizontalAlignment(SwingConstants.LEFT);
                     setForeground(new Color(37, 99, 235));
                     setFont(Theme.FONT_BOLD_SM);

@@ -17,21 +17,154 @@ public class AddStaffPage extends JPanel {
 
     private final AdminDashboard dashboard;
 
+    // Form input controls
+    private JTextField fullNameField;
+    private JTextField emailField;
+    private JPasswordField passwordField;
+    private JPasswordField confirmPasswordField;
+    private JCheckBox showPassCheck;
+    private JComboBox<String> roleCombo;
+    private JComboBox<String> counterCombo;
+    private JComboBox<String> shiftCombo;
+    private JTextField phoneField;
+
+    // Dedicated under-field validation error labels
+    private JLabel nameErrorLbl;
+    private JLabel emailErrorLbl;
+    private JLabel passwordErrorLbl;
+    private JLabel confirmPasswordErrorLbl;
+
+    // Status alert banner
+    private JPanel statusBox;
+    private JLabel statusLbl;
+
+    // Live ID badge preview components
+    private JLabel previewName;
+    private JLabel previewEmail;
+    private JLabel previewRolePill;
+    private JLabel previewCounter;
+    private JLabel previewShift;
+    private JLabel previewStatus;
+
+    // Action buttons
+    private JButton resetBtn;
+    private JButton viewRosterBtn;
+    private JButton saveBtn;
+
     public AddStaffPage(AdminDashboard dashboard) {
         this.dashboard = dashboard;
         setLayout(new BorderLayout(0, 16));
         setBackground(Theme.BG_MAIN);
         setBorder(new EmptyBorder(22, 26, 22, 26));
 
+        initComponents();
         initUI();
+        setupListeners();
     }
 
+    // Instantiates all UI components in one organized place
+    private void initComponents() {
+        fullNameField = Theme.createTextField("e.g. Rahul Sharma");
+        emailField = Theme.createTextField("e.g. rahul@cinemaexpress.com");
+        phoneField = Theme.createTextField("e.g. +91 98765 43210");
+
+        passwordField = new JPasswordField();
+        stylePasswordField(passwordField);
+
+        confirmPasswordField = new JPasswordField();
+        stylePasswordField(confirmPasswordField);
+
+        nameErrorLbl = createFieldErrorLabel();
+        emailErrorLbl = createFieldErrorLabel();
+        passwordErrorLbl = createFieldErrorLabel();
+        confirmPasswordErrorLbl = createFieldErrorLabel();
+
+        showPassCheck = new JCheckBox("Show Passwords");
+        showPassCheck.setFont(Theme.FONT_SMALL);
+        showPassCheck.setForeground(Theme.TEXT_MUTED);
+        showPassCheck.setOpaque(false);
+        showPassCheck.setFocusPainted(false);
+
+        roleCombo = new JComboBox<>(new String[]{
+                "STAFF (Ticket Counter Operator)",
+                "ADMIN (Cinema HQ Administrator)"
+        });
+        roleCombo.setFont(Theme.FONT_REGULAR);
+        roleCombo.setBackground(Color.WHITE);
+
+        counterCombo = new JComboBox<>(new String[]{
+                "Counter #01 (Main Concourse)",
+                "Counter #02 (Fast-Track / Express)",
+                "Counter #03 (Box Office)",
+                "Counter #04 (Gold Class & VIP)",
+                "HQ Management Station"
+        });
+        counterCombo.setFont(Theme.FONT_REGULAR);
+        counterCombo.setBackground(Color.WHITE);
+
+        shiftCombo = new JComboBox<>(new String[]{
+                "Morning Shift (09:00 AM - 04:00 PM)",
+                "Evening Shift (03:30 PM - 11:30 PM)",
+                "Night / Late Show Shift (07:00 PM - 02:00 AM)",
+                "General Shift (10:00 AM - 07:00 PM)"
+        });
+        shiftCombo.setFont(Theme.FONT_REGULAR);
+        shiftCombo.setBackground(Color.WHITE);
+
+        statusBox = new JPanel(new BorderLayout());
+        statusBox.setOpaque(false);
+        statusBox.setVisible(false);
+
+        statusLbl = new JLabel("");
+        statusLbl.setFont(Theme.FONT_SMALL);
+        statusLbl.setHorizontalAlignment(SwingConstants.CENTER);
+        statusBox.add(statusLbl, BorderLayout.CENTER);
+
+        previewName = new JLabel("Staff Member Name");
+        previewName.setFont(new Font("Segoe UI", Font.BOLD, 17));
+        previewName.setForeground(Theme.TEXT_DARK);
+        previewName.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        previewEmail = new JLabel("staff@cinemaexpress.com");
+        previewEmail.setFont(Theme.FONT_SMALL);
+        previewEmail.setForeground(Theme.TEXT_MUTED);
+        previewEmail.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        previewRolePill = new JLabel("🎫 STAFF CASHIER");
+        previewRolePill.setFont(Theme.FONT_BOLD_SM);
+        previewRolePill.setForeground(Color.WHITE);
+        previewRolePill.setOpaque(true);
+        previewRolePill.setBackground(Theme.ACCENT_BLUE);
+        previewRolePill.setBorder(new EmptyBorder(4, 12, 4, 12));
+        previewRolePill.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        previewCounter = new JLabel("Station: Counter #01 (Main Concourse)");
+        previewCounter.setFont(Theme.FONT_REGULAR);
+        previewCounter.setForeground(Theme.TEXT_DARK);
+        previewCounter.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        previewShift = new JLabel("Shift: Morning Shift (09:00 AM - 04:00 PM)");
+        previewShift.setFont(Theme.FONT_SMALL);
+        previewShift.setForeground(Theme.TEXT_MUTED);
+        previewShift.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        previewStatus = new JLabel("● READY TO ACTIVATE IN DATABASE");
+        previewStatus.setFont(Theme.FONT_BOLD_SM);
+        previewStatus.setForeground(Theme.COLOR_SUCCESS);
+        previewStatus.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        resetBtn = Theme.createSecondaryButton("🔄 Reset Form");
+        viewRosterBtn = Theme.createSecondaryButton("📋 View Staff Roster");
+        saveBtn = Theme.createPrimaryButton("💾 Save & Register Staff");
+        saveBtn.setBackground(Theme.COLOR_SUCCESS);
+    }
+
+    // Builds the primary page layout
     private void initUI() {
         add(createBanner("➕ Add New Cinema Staff Member",
                 "Register counter ticketing personnel and administrators into the SQLite database with terminal and shift assignments."),
                 BorderLayout.NORTH);
 
-        // Body: Left Form (62%) + Right Badge & Guidelines (38%)
         JPanel contentGrid = new JPanel(new GridBagLayout());
         contentGrid.setOpaque(false);
         GridBagConstraints gbc = new GridBagConstraints();
@@ -39,7 +172,25 @@ public class AddStaffPage extends JPanel {
         gbc.insets = new Insets(0, 0, 0, 16);
         gbc.weighty = 1.0;
 
-        // --- 1. LEFT PANEL: Form Card ---
+        // Left Form Card (62%)
+        gbc.gridx = 0; gbc.weightx = 0.62;
+        contentGrid.add(buildFormCard(), gbc);
+
+        // Right Preview & Guidelines Panel (38%)
+        JPanel rightCol = new JPanel(new BorderLayout(0, 14));
+        rightCol.setOpaque(false);
+        rightCol.add(buildBadgeCard(), BorderLayout.NORTH);
+        rightCol.add(buildGuidelinesCard(), BorderLayout.CENTER);
+
+        gbc.gridx = 1; gbc.weightx = 0.38;
+        gbc.insets = new Insets(0, 0, 0, 0);
+        contentGrid.add(rightCol, gbc);
+
+        add(contentGrid, BorderLayout.CENTER);
+    }
+
+    // Builds the staff details form card
+    private JPanel buildFormCard() {
         JPanel formCard = new JPanel(new BorderLayout(0, 14));
         formCard.setBackground(Theme.CARD_BG);
         formCard.setBorder(new CompoundBorder(
@@ -65,90 +216,44 @@ public class AddStaffPage extends JPanel {
         formTitleBox.add(formSub);
         formCard.add(formTitleBox, BorderLayout.NORTH);
 
-        // Form Fields Container
+        // Form Fields Grid
         JPanel formFields = new JPanel(new GridBagLayout());
         formFields.setOpaque(false);
         GridBagConstraints fgbc = new GridBagConstraints();
         fgbc.fill = GridBagConstraints.HORIZONTAL;
-        fgbc.insets = new Insets(6, 4, 6, 4);
+        fgbc.insets = new Insets(5, 4, 5, 4);
 
-        JTextField fullNameField = Theme.createTextField("e.g. Rahul Sharma");
-        JTextField usernameField = Theme.createTextField("e.g. rahul_counter");
-        JPasswordField passwordField = new JPasswordField();
-        stylePasswordField(passwordField);
-        JPasswordField confirmPasswordField = new JPasswordField();
-        stylePasswordField(confirmPasswordField);
-
-        JComboBox<String> roleCombo = new JComboBox<>(new String[]{
-                "STAFF (Ticket Counter Operator)",
-                "ADMIN (Cinema HQ Administrator)"
-        });
-        roleCombo.setFont(Theme.FONT_REGULAR);
-        roleCombo.setBackground(Color.WHITE);
-
-        JComboBox<String> counterCombo = new JComboBox<>(new String[]{
-                "Counter #01 (Main Concourse)",
-                "Counter #02 (Fast-Track / Express)",
-                "Counter #03 (Box Office)",
-                "Counter #04 (Gold Class & VIP)",
-                "HQ Management Station"
-        });
-        counterCombo.setFont(Theme.FONT_REGULAR);
-        counterCombo.setBackground(Color.WHITE);
-
-        JComboBox<String> shiftCombo = new JComboBox<>(new String[]{
-                "Morning Shift (09:00 AM - 04:00 PM)",
-                "Evening Shift (03:30 PM - 11:30 PM)",
-                "Night / Late Show Shift (07:00 PM - 02:00 AM)",
-                "General Shift (10:00 AM - 07:00 PM)"
-        });
-        shiftCombo.setFont(Theme.FONT_REGULAR);
-        shiftCombo.setBackground(Color.WHITE);
-
-        JTextField phoneField = Theme.createTextField("e.g. +91 98765 43210");
-
-        // Layout rows
         int rowIdx = 0;
 
         // Full Name
         fgbc.gridx = 0; fgbc.gridy = rowIdx; fgbc.weightx = 0.32;
         formFields.add(createFieldLabel("Full Name *"), fgbc);
         fgbc.gridx = 1; fgbc.gridy = rowIdx++; fgbc.weightx = 0.68;
-        formFields.add(fullNameField, fgbc);
+        formFields.add(createFieldWrapper(fullNameField, nameErrorLbl), fgbc);
 
-        // Username
+        // Email Address
         fgbc.gridx = 0; fgbc.gridy = rowIdx; fgbc.weightx = 0.32;
-        formFields.add(createFieldLabel("Username / Login ID *"), fgbc);
+        formFields.add(createFieldLabel("Email Address *"), fgbc);
         fgbc.gridx = 1; fgbc.gridy = rowIdx++; fgbc.weightx = 0.68;
-        formFields.add(usernameField, fgbc);
+        formFields.add(createFieldWrapper(emailField, emailErrorLbl), fgbc);
 
         // Password
         fgbc.gridx = 0; fgbc.gridy = rowIdx; fgbc.weightx = 0.32;
         formFields.add(createFieldLabel("Password *"), fgbc);
         fgbc.gridx = 1; fgbc.gridy = rowIdx++; fgbc.weightx = 0.68;
-        formFields.add(passwordField, fgbc);
+        formFields.add(createFieldWrapper(passwordField, passwordErrorLbl), fgbc);
 
         // Confirm Password
         fgbc.gridx = 0; fgbc.gridy = rowIdx; fgbc.weightx = 0.32;
         formFields.add(createFieldLabel("Confirm Password *"), fgbc);
         fgbc.gridx = 1; fgbc.gridy = rowIdx++; fgbc.weightx = 0.68;
-        formFields.add(confirmPasswordField, fgbc);
+        formFields.add(createFieldWrapper(confirmPasswordField, confirmPasswordErrorLbl), fgbc);
 
-        // Show Password Toggle
-        JCheckBox showPassCheck = new JCheckBox("Show Passwords");
-        showPassCheck.setFont(Theme.FONT_SMALL);
-        showPassCheck.setForeground(Theme.TEXT_MUTED);
-        showPassCheck.setOpaque(false);
-        showPassCheck.setFocusPainted(false);
-        showPassCheck.addActionListener(e -> {
-            char echo = showPassCheck.isSelected() ? (char) 0 : '•';
-            passwordField.setEchoChar(echo);
-            confirmPasswordField.setEchoChar(echo);
-        });
+        // Show Passwords Toggle
         fgbc.gridx = 1; fgbc.gridy = rowIdx++;
         formFields.add(showPassCheck, fgbc);
 
-        // Role
+        // System Role
         fgbc.gridx = 0; fgbc.gridy = rowIdx; fgbc.weightx = 0.32;
         formFields.add(createFieldLabel("System Role *"), fgbc);
         fgbc.gridx = 1; fgbc.gridy = rowIdx++; fgbc.weightx = 0.68;
@@ -160,7 +265,7 @@ public class AddStaffPage extends JPanel {
         fgbc.gridx = 1; fgbc.gridy = rowIdx++; fgbc.weightx = 0.68;
         formFields.add(counterCombo, fgbc);
 
-        // Shift
+        // Assigned Shift
         fgbc.gridx = 0; fgbc.gridy = rowIdx; fgbc.weightx = 0.32;
         formFields.add(createFieldLabel("Assigned Shift"), fgbc);
         fgbc.gridx = 1; fgbc.gridy = rowIdx++; fgbc.weightx = 0.68;
@@ -172,42 +277,25 @@ public class AddStaffPage extends JPanel {
         fgbc.gridx = 1; fgbc.gridy = rowIdx++; fgbc.weightx = 0.68;
         formFields.add(phoneField, fgbc);
 
-        // Inline Alert Status Box
-        JPanel statusBox = new JPanel(new BorderLayout());
-        statusBox.setOpaque(false);
-        JLabel statusLbl = new JLabel("");
-        statusLbl.setFont(Theme.FONT_SMALL);
-        statusLbl.setHorizontalAlignment(SwingConstants.CENTER);
-        statusBox.add(statusLbl, BorderLayout.CENTER);
-        statusBox.setVisible(false);
-
+        // Status alert box
         fgbc.gridx = 0; fgbc.gridy = rowIdx++; fgbc.gridwidth = 2;
         formFields.add(statusBox, fgbc);
 
         formCard.add(formFields, BorderLayout.CENTER);
 
-        // Action Buttons Row
+        // Actions Row
         JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         actionRow.setOpaque(false);
-
-        JButton resetBtn = Theme.createSecondaryButton("🔄 Reset Form");
-        JButton viewRosterBtn = Theme.createSecondaryButton("📋 View Staff Roster");
-        JButton saveBtn = Theme.createPrimaryButton("💾 Save & Register Staff");
-        saveBtn.setBackground(Theme.COLOR_SUCCESS);
-
         actionRow.add(resetBtn);
         actionRow.add(viewRosterBtn);
         actionRow.add(saveBtn);
         formCard.add(actionRow, BorderLayout.SOUTH);
 
-        gbc.gridx = 0; gbc.weightx = 0.62;
-        contentGrid.add(formCard, gbc);
+        return formCard;
+    }
 
-        // --- 2. RIGHT PANEL: Live ID Badge Preview & Security Guidelines (38%) ---
-        JPanel rightCol = new JPanel(new BorderLayout(0, 14));
-        rightCol.setOpaque(false);
-
-        // A. Live ID Badge Preview Card
+    // Builds the live ID card preview widget
+    private JPanel buildBadgeCard() {
         JPanel badgeCard = new JPanel();
         badgeCard.setLayout(new BoxLayout(badgeCard, BoxLayout.Y_AXIS));
         badgeCard.setBackground(Theme.CARD_BG);
@@ -228,46 +316,13 @@ public class AddStaffPage extends JPanel {
         avatarLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 46));
         avatarLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JLabel previewName = new JLabel("Staff Member Name");
-        previewName.setFont(new Font("Segoe UI", Font.BOLD, 17));
-        previewName.setForeground(Theme.TEXT_DARK);
-        previewName.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JLabel previewUser = new JLabel("@username");
-        previewUser.setFont(Theme.FONT_SMALL);
-        previewUser.setForeground(Theme.TEXT_MUTED);
-        previewUser.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JLabel previewRolePill = new JLabel("🎫 STAFF CASHIER");
-        previewRolePill.setFont(Theme.FONT_BOLD_SM);
-        previewRolePill.setForeground(Color.WHITE);
-        previewRolePill.setOpaque(true);
-        previewRolePill.setBackground(Theme.ACCENT_BLUE);
-        previewRolePill.setBorder(new EmptyBorder(4, 12, 4, 12));
-        previewRolePill.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JLabel previewCounter = new JLabel("Station: Counter #01 (Main Concourse)");
-        previewCounter.setFont(Theme.FONT_REGULAR);
-        previewCounter.setForeground(Theme.TEXT_DARK);
-        previewCounter.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JLabel previewShift = new JLabel("Shift: Morning Shift (09:00 AM - 04:00 PM)");
-        previewShift.setFont(Theme.FONT_SMALL);
-        previewShift.setForeground(Theme.TEXT_MUTED);
-        previewShift.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JLabel previewStatus = new JLabel("● READY TO ACTIVATE IN DATABASE");
-        previewStatus.setFont(Theme.FONT_BOLD_SM);
-        previewStatus.setForeground(Theme.COLOR_SUCCESS);
-        previewStatus.setAlignmentX(Component.CENTER_ALIGNMENT);
-
         badgeCard.add(badgeCardHeader);
         badgeCard.add(Box.createVerticalStrut(12));
         badgeCard.add(avatarLabel);
         badgeCard.add(Box.createVerticalStrut(6));
         badgeCard.add(previewName);
         badgeCard.add(Box.createVerticalStrut(2));
-        badgeCard.add(previewUser);
+        badgeCard.add(previewEmail);
         badgeCard.add(Box.createVerticalStrut(10));
         badgeCard.add(previewRolePill);
         badgeCard.add(Box.createVerticalStrut(14));
@@ -277,7 +332,11 @@ public class AddStaffPage extends JPanel {
         badgeCard.add(Box.createVerticalStrut(14));
         badgeCard.add(previewStatus);
 
-        // B. Guidelines Card
+        return badgeCard;
+    }
+
+    // Builds the security and permissions guidelines card
+    private JPanel buildGuidelinesCard() {
         JPanel guideCard = new JPanel();
         guideCard.setLayout(new BoxLayout(guideCard, BoxLayout.Y_AXIS));
         guideCard.setBackground(Theme.CARD_BG);
@@ -309,110 +368,221 @@ public class AddStaffPage extends JPanel {
         guideCard.add(Box.createVerticalStrut(4));
         guideCard.add(guidePoint4);
 
-        rightCol.add(badgeCard, BorderLayout.NORTH);
-        rightCol.add(guideCard, BorderLayout.CENTER);
+        return guideCard;
+    }
 
-        gbc.gridx = 1; gbc.weightx = 0.38;
-        gbc.insets = new Insets(0, 0, 0, 0);
-        contentGrid.add(rightCol, gbc);
+    // Registers all event listeners and interactive actions
+    private void setupListeners() {
+        // Clear field errors and update live badge preview when user types
+        fullNameField.getDocument().addDocumentListener(new SimpleDocListener(() -> {
+            clearFieldError(fullNameField, nameErrorLbl);
+            updateBadgePreview();
+        }));
+        emailField.getDocument().addDocumentListener(new SimpleDocListener(() -> {
+            clearFieldError(emailField, emailErrorLbl);
+            updateBadgePreview();
+        }));
+        passwordField.getDocument().addDocumentListener(new SimpleDocListener(() -> {
+            clearFieldError(passwordField, passwordErrorLbl);
+        }));
+        confirmPasswordField.getDocument().addDocumentListener(new SimpleDocListener(() -> {
+            clearFieldError(confirmPasswordField, confirmPasswordErrorLbl);
+        }));
 
-        add(contentGrid, BorderLayout.CENTER);
+        roleCombo.addActionListener(e -> updateBadgePreview());
+        counterCombo.addActionListener(e -> updateBadgePreview());
+        shiftCombo.addActionListener(e -> updateBadgePreview());
 
-        // Real-Time Live Badge Preview Listener
-        Runnable updatePreview = () -> {
-            String fn = fullNameField.getText().trim();
-            previewName.setText(fn.isEmpty() ? "Staff Member Name" : fn);
-
-            String un = usernameField.getText().trim();
-            previewUser.setText(un.isEmpty() ? "@username" : "@" + un);
-
-            boolean isAdmin = roleCombo.getSelectedIndex() == 1;
-            previewRolePill.setText(isAdmin ? "👑 ADMIN EXECUTIVE" : "🎫 STAFF CASHIER");
-            previewRolePill.setBackground(isAdmin ? new Color(124, 58, 237) : Theme.ACCENT_BLUE);
-
-            previewCounter.setText("Station: " + counterCombo.getSelectedItem());
-            previewShift.setText("Shift: " + shiftCombo.getSelectedItem());
-        };
-
-        fullNameField.getDocument().addDocumentListener(new SimpleDocListener(updatePreview));
-        usernameField.getDocument().addDocumentListener(new SimpleDocListener(updatePreview));
-        roleCombo.addActionListener(e -> updatePreview.run());
-        counterCombo.addActionListener(e -> updatePreview.run());
-        shiftCombo.addActionListener(e -> updatePreview.run());
-
-        // Save Action Handler
-        saveBtn.addActionListener(e -> {
-            String fn = fullNameField.getText().trim();
-            String un = usernameField.getText().trim();
-            String p1 = new String(passwordField.getPassword()).trim();
-            String p2 = new String(confirmPasswordField.getPassword()).trim();
-            String role = roleCombo.getSelectedIndex() == 1 ? "ADMIN" : "STAFF";
-
-            if (fn.isEmpty()) {
-                showInlineStatus(statusBox, statusLbl, "Please enter the staff member's full name.", false);
-                fullNameField.requestFocus();
-                return;
-            }
-            if (un.isEmpty() || un.length() < 3 || un.contains(" ")) {
-                showInlineStatus(statusBox, statusLbl, "Username must be at least 3 characters and contain no spaces.", false);
-                usernameField.requestFocus();
-                return;
-            }
-            if (p1.isEmpty() || p1.length() < 4) {
-                showInlineStatus(statusBox, statusLbl, "Password must be at least 4 characters.", false);
-                passwordField.requestFocus();
-                return;
-            }
-            if (!p1.equals(p2)) {
-                showInlineStatus(statusBox, statusLbl, "Passwords do not match. Please verify.", false);
-                confirmPasswordField.requestFocus();
-                return;
-            }
-
-            String counter = (String) counterCombo.getSelectedItem();
-            String shift = (String) shiftCombo.getSelectedItem();
-            String phone = phoneField.getText().trim();
-
-            if (DBConnection.userExists(un)) {
-                showInlineStatus(statusBox, statusLbl, "⚠️ Username '@" + un + "' already exists in database. Please choose another ID.", false);
-                usernameField.requestFocus();
-                return;
-            }
-
-            boolean ok = DBConnection.addUser(un, p1, role, fn, counter, shift, phone);
-            if (ok) {
-                showInlineStatus(statusBox, statusLbl, "✅ Staff account '@" + un + "' registered successfully into SQLite database (cinema.db)!", true);
-                previewStatus.setText("● ACTIVE IN DATABASE (cinema.db)");
-                passwordField.setText("");
-                confirmPasswordField.setText("");
-                if (dashboard.getStaffAccountsPage() != null) {
-                    dashboard.getStaffAccountsPage().refreshStaffTable();
-                }
-            } else {
-                showInlineStatus(statusBox, statusLbl, "⚠️ Failed to save user: database error or invalid username format.", false);
-            }
+        // Password visibility toggle
+        showPassCheck.addActionListener(e -> {
+            char echo = showPassCheck.isSelected() ? (char) 0 : '•';
+            passwordField.setEchoChar(echo);
+            confirmPasswordField.setEchoChar(echo);
         });
 
-        // Reset Action Handler
-        resetBtn.addActionListener(e -> {
-            fullNameField.setText("");
-            usernameField.setText("");
-            passwordField.setText("");
-            confirmPasswordField.setText("");
-            phoneField.setText("");
-            roleCombo.setSelectedIndex(0);
-            counterCombo.setSelectedIndex(0);
-            shiftCombo.setSelectedIndex(0);
-            statusBox.setVisible(false);
-            previewStatus.setText("● READY TO ACTIVATE IN DATABASE");
-            updatePreview.run();
-            fullNameField.requestFocus();
-        });
+        // Save button action
+        saveBtn.addActionListener(e -> handleSave());
 
-        // View Roster Button
+        // Reset button action
+        resetBtn.addActionListener(e -> handleReset());
+
+        // View roster navigation
         viewRosterBtn.addActionListener(e -> dashboard.switchToPage("PAGE_STAFF"));
     }
 
+    // Validates inputs and creates staff account in database
+    private void handleSave() {
+        String fn = fullNameField.getText().trim();
+        String email = emailField.getText().trim();
+        String p1 = new String(passwordField.getPassword()).trim();
+        String p2 = new String(confirmPasswordField.getPassword()).trim();
+        String role = roleCombo.getSelectedIndex() == 1 ? "ADMIN" : "STAFF";
+
+        clearAllFieldErrors();
+        statusBox.setVisible(false);
+
+        boolean hasError = false;
+        JComponent firstFocus = null;
+
+        // Validate Full Name
+        if (fn.isEmpty()) {
+            setFieldError(fullNameField, nameErrorLbl, "Please enter the staff member's full name.");
+            hasError = true;
+            if (firstFocus == null) firstFocus = fullNameField;
+        }
+
+        // Validate Email Address
+        if (email.isEmpty()) {
+            setFieldError(emailField, emailErrorLbl, "Please enter an email address.");
+            hasError = true;
+            if (firstFocus == null) firstFocus = emailField;
+        } else if (!email.contains("@") || !email.contains(".") || email.contains(" ")) {
+            setFieldError(emailField, emailErrorLbl, "Please enter a valid email address (e.g. rahul@cinemaexpress.com).");
+            hasError = true;
+            if (firstFocus == null) firstFocus = emailField;
+        } else if (DBConnection.userExists(email)) {
+            setFieldError(emailField, emailErrorLbl, "Email '" + email + "' already exists in database. Please choose another email.");
+            hasError = true;
+            if (firstFocus == null) firstFocus = emailField;
+        }
+
+        // Validate Password
+        if (p1.isEmpty()) {
+            setFieldError(passwordField, passwordErrorLbl, "Please enter a password.");
+            hasError = true;
+            if (firstFocus == null) firstFocus = passwordField;
+        } else if (p1.length() < 4) {
+            setFieldError(passwordField, passwordErrorLbl, "Password must be at least 4 characters long.");
+            hasError = true;
+            if (firstFocus == null) firstFocus = passwordField;
+        }
+
+        // Validate Confirm Password
+        if (p2.isEmpty()) {
+            setFieldError(confirmPasswordField, confirmPasswordErrorLbl, "Please confirm the password.");
+            hasError = true;
+            if (firstFocus == null) firstFocus = confirmPasswordField;
+        } else if (!p1.equals(p2)) {
+            setFieldError(confirmPasswordField, confirmPasswordErrorLbl, "Passwords do not match. Please verify.");
+            hasError = true;
+            if (firstFocus == null) firstFocus = confirmPasswordField;
+        }
+
+        if (hasError) {
+            if (firstFocus != null) firstFocus.requestFocus();
+            return;
+        }
+
+        String counter = (String) counterCombo.getSelectedItem();
+        String shift = (String) shiftCombo.getSelectedItem();
+        String phone = phoneField.getText().trim();
+
+        boolean ok = DBConnection.addUser(email, p1, role, fn, counter, shift, phone);
+        if (ok) {
+            showInlineStatus(statusBox, statusLbl, "✅ Staff account '" + email + "' registered successfully into SQLite database (cinema.db)!", true);
+            previewStatus.setText("● ACTIVE IN DATABASE (cinema.db)");
+            fullNameField.setText("");
+            emailField.setText("");
+            passwordField.setText("");
+            confirmPasswordField.setText("");
+            phoneField.setText("");
+            clearAllFieldErrors();
+            if (dashboard.getStaffAccountsPage() != null) {
+                dashboard.getStaffAccountsPage().refreshStaffTable();
+            }
+        } else {
+            showInlineStatus(statusBox, statusLbl, "⚠️ Failed to save staff: database error or invalid email format.", false);
+        }
+    }
+
+    // Resets form fields and restores preview badge
+    private void handleReset() {
+        fullNameField.setText("");
+        emailField.setText("");
+        passwordField.setText("");
+        confirmPasswordField.setText("");
+        phoneField.setText("");
+        roleCombo.setSelectedIndex(0);
+        counterCombo.setSelectedIndex(0);
+        shiftCombo.setSelectedIndex(0);
+        clearAllFieldErrors();
+        statusBox.setVisible(false);
+        previewStatus.setText("● READY TO ACTIVATE IN DATABASE");
+        updateBadgePreview();
+        fullNameField.requestFocus();
+    }
+
+    // Updates live ID card preview based on current form inputs
+    private void updateBadgePreview() {
+        String fn = fullNameField.getText().trim();
+        previewName.setText(fn.isEmpty() ? "Staff Member Name" : fn);
+
+        String email = emailField.getText().trim();
+        previewEmail.setText(email.isEmpty() ? "staff@cinemaexpress.com" : email);
+
+        boolean isAdmin = roleCombo.getSelectedIndex() == 1;
+        previewRolePill.setText(isAdmin ? "👑 ADMIN EXECUTIVE" : "🎫 STAFF CASHIER");
+        previewRolePill.setBackground(isAdmin ? new Color(124, 58, 237) : Theme.ACCENT_BLUE);
+
+        previewCounter.setText("Station: " + counterCombo.getSelectedItem());
+        previewShift.setText("Shift: " + shiftCombo.getSelectedItem());
+    }
+
+    // Clears all field validation errors
+    private void clearAllFieldErrors() {
+        clearFieldError(fullNameField, nameErrorLbl);
+        clearFieldError(emailField, emailErrorLbl);
+        clearFieldError(passwordField, passwordErrorLbl);
+        clearFieldError(confirmPasswordField, confirmPasswordErrorLbl);
+    }
+
+    // Wraps an input field and its under-field error message
+    private JPanel createFieldWrapper(JComponent field, JLabel errorLabel) {
+        JPanel wrapper = new JPanel();
+        wrapper.setLayout(new BoxLayout(wrapper, BoxLayout.Y_AXIS));
+        wrapper.setOpaque(false);
+        field.setAlignmentX(Component.LEFT_ALIGNMENT);
+        errorLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        wrapper.add(field);
+        wrapper.add(errorLabel);
+        return wrapper;
+    }
+
+    // Creates a dedicated red validation message label
+    private JLabel createFieldErrorLabel() {
+        JLabel lbl = new JLabel("");
+        lbl.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        lbl.setForeground(Theme.ACCENT_RED);
+        lbl.setBorder(new EmptyBorder(3, 2, 0, 0));
+        lbl.setVisible(false);
+        return lbl;
+    }
+
+    // Displays an error message under the field and highlights the border
+    private void setFieldError(JComponent field, JLabel errorLabel, String message) {
+        errorLabel.setText("⚠ " + message);
+        errorLabel.setVisible(true);
+        field.setBorder(new CompoundBorder(
+                new LineBorder(Theme.ACCENT_RED, 1, true),
+                new EmptyBorder(8, 10, 8, 10)
+        ));
+        field.revalidate();
+        field.repaint();
+    }
+
+    // Clears the error message under the field and restores standard border
+    private void clearFieldError(JComponent field, JLabel errorLabel) {
+        errorLabel.setText("");
+        errorLabel.setVisible(false);
+        field.setBorder(new CompoundBorder(
+                new LineBorder(Theme.BORDER_COLOR, 1, true),
+                new EmptyBorder(8, 10, 8, 10)
+        ));
+        field.revalidate();
+        field.repaint();
+    }
+
+    // Styles password fields consistently with text fields
     private void stylePasswordField(JPasswordField pf) {
         pf.setBackground(Color.WHITE);
         pf.setForeground(Theme.TEXT_DARK);
@@ -424,6 +594,7 @@ public class AddStaffPage extends JPanel {
         ));
     }
 
+    // Creates field header labels
     private JLabel createFieldLabel(String text) {
         JLabel label = new JLabel(text);
         label.setFont(Theme.FONT_BOLD_SM);
@@ -431,6 +602,7 @@ public class AddStaffPage extends JPanel {
         return label;
     }
 
+    // Shows inline status banner for general operations
     private void showInlineStatus(JPanel box, JLabel lbl, String msg, boolean success) {
         lbl.setText(msg);
         box.setBorder(new CompoundBorder(
@@ -445,6 +617,7 @@ public class AddStaffPage extends JPanel {
         box.repaint();
     }
 
+    // Creates the top page header banner
     private JPanel createBanner(String titleText, String descText) {
         JPanel banner = new JPanel(new BorderLayout());
         banner.setBackground(Theme.CARD_BG);
@@ -472,6 +645,7 @@ public class AddStaffPage extends JPanel {
         return banner;
     }
 
+    // Simple document listener adapter for text changes
     private static class SimpleDocListener implements DocumentListener {
         private final Runnable callback;
         public SimpleDocListener(Runnable callback) { this.callback = callback; }
