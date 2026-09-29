@@ -66,6 +66,15 @@ public class Movie {
         return status;
     }
 
+    // Default base ticket price accessor for counter booking compatibility
+    public double getPrice() {
+        return 250.0;
+    }
+
+    public String getFormattedPrice() {
+        return "₹250.00";
+    }
+
     @Override
     public String toString() {
         return title + " (" + genre + " • " + getFormattedDuration() + ")";
