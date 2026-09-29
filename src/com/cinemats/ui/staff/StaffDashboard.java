@@ -2,16 +2,15 @@ package com.cinemats.ui.staff;
 
 import com.cinemats.ui.auth.LoginFrame;
 import com.cinemats.util.Theme;
-
-import javax.swing.*;
-import javax.swing.border.CompoundBorder;
-import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import javax.swing.*;
+import javax.swing.border.CompoundBorder;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
 
 // Staff dashboard main window
 public class StaffDashboard extends JFrame {
@@ -25,6 +24,7 @@ public class StaffDashboard extends JFrame {
     private OrderBookingPage orderBookingPage;
     private BookingHistoryPage bookingHistoryPage;
     private MoviesPanel moviesPanel;
+    private ReportsPage reportsPage;
 
     // --- Header & Clock ---
     private JLabel clockLabel;
@@ -169,6 +169,7 @@ public class StaffDashboard extends JFrame {
         JButton todayShowsBtn = createSidebarButton("🕒  Today's Shows", "PAGE_TODAY_SHOWS", false);
         JButton searchTicketBtn = createSidebarButton("🔍  Search Ticket", "PAGE_SEARCH_TICKET", false);
         JButton shiftSummaryBtn = createSidebarButton("📊  Shift Summary", "PAGE_SHIFT_SUMMARY", false);
+        JButton reportsBtn = createSidebarButton("📈  Reports", "PAGE_REPORTS", false);
 
         sidebar.add(orderBookingBtn);
         sidebar.add(Box.createVerticalStrut(8));
@@ -181,6 +182,8 @@ public class StaffDashboard extends JFrame {
         sidebar.add(searchTicketBtn);
         sidebar.add(Box.createVerticalStrut(8));
         sidebar.add(shiftSummaryBtn);
+        sidebar.add(Box.createVerticalStrut(8));
+        sidebar.add(reportsBtn);
 
         sidebar.add(Box.createVerticalGlue()); // Push bottom badge downwards
 
@@ -212,6 +215,7 @@ public class StaffDashboard extends JFrame {
         moviesListPage = new MoviesListPage(this);
         bookingHistoryPage = new BookingHistoryPage(this);
         moviesPanel = new MoviesPanel(this);
+        reportsPage = new ReportsPage();
 
         // Register Pages in CardLayout
         mainContentPanel.add(orderBookingPage, "PAGE_ORDER_BOOKING");
@@ -220,6 +224,7 @@ public class StaffDashboard extends JFrame {
         mainContentPanel.add(createTodayShowsPagePlaceholder(), "PAGE_TODAY_SHOWS");
         mainContentPanel.add(createSearchTicketPagePlaceholder(), "PAGE_SEARCH_TICKET");
         mainContentPanel.add(createShiftSummaryPagePlaceholder(), "PAGE_SHIFT_SUMMARY");
+        mainContentPanel.add(reportsPage, "PAGE_REPORTS");
 
         bodyContainer.add(sidebar, BorderLayout.WEST);
         bodyContainer.add(mainContentPanel, BorderLayout.CENTER);
