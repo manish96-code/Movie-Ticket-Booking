@@ -4,12 +4,10 @@ import com.cinemats.dao.MovieDAO;
 import com.cinemats.dao.ScreenDAO;
 import com.cinemats.dao.ScreenSeatDAO;
 import com.cinemats.dao.ShowDAO;
-import com.cinemats.dao.ShowPriceDAO;
 import com.cinemats.model.Movie;
 import com.cinemats.model.Screen;
 import com.cinemats.model.Show;
 import com.cinemats.model.ShowPrice;
-
 import java.math.BigDecimal;
 import java.util.List;
 
