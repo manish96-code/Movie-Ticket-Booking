@@ -3,10 +3,17 @@
     "configurations": [
         {
             "type": "java",
+            "name": "Main",
+            "request": "launch",
+            "mainClass": "com.cinemats.Main",
+            "projectName": "Movie-Ticket-Booking_8bb536f0"
+        },
+        {
+            "type": "java",
             "name": "StaffDashboard",
             "request": "launch",
             "mainClass": "com.cinemats.ui.staff.StaffDashboard",
-            "projectName": "Movie-Ticket-Booking_612342f7"
+            "projectName": "Movie-Ticket-Booking_8bb536f0"
         },
         {
             "type": "java",
