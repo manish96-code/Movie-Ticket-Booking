@@ -67,11 +67,15 @@ public class BookingHistoryPage extends JPanel {
         JButton searchButton = new JButton("Search");
         searchButton.setPreferredSize(new Dimension(90, 38));
 
+        JButton cancelButton = new JButton("Cancel Booking");
+        cancelButton.setPreferredSize(new Dimension(130, 38));
+
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         searchPanel.setOpaque(false);
 
         searchPanel.add(searchField);
         searchPanel.add(searchButton);
+        searchPanel.add(cancelButton);
 
         headerPanel.add(searchPanel, BorderLayout.EAST);
 
@@ -187,6 +191,8 @@ public class BookingHistoryPage extends JPanel {
         searchButton.addActionListener(e -> searchBookings());
 
         searchField.addActionListener(e -> searchBookings());
+
+        cancelButton.addActionListener(e -> cancelSelectedBooking());
     }
 
     // Add booking to table
@@ -237,6 +243,48 @@ public class BookingHistoryPage extends JPanel {
                         "(?i)" + searchText
                 )
         );
+    }
+
+        private void cancelSelectedBooking() {
+                int selectedRow = bookingTable.getSelectedRow();
+                if (selectedRow < 0) {
+                        JOptionPane.showMessageDialog(
+                                        this,
+                                        "Select a booking to cancel.",
+                                        "No Booking Selected",
+                                        JOptionPane.INFORMATION_MESSAGE
+                        );
+                        return;
+                }
+
+                int modelRow = bookingTable.convertRowIndexToModel(selectedRow);
+                if ("Cancelled".equals(tableModel.getValueAt(modelRow, 8))) {
+                        JOptionPane.showMessageDialog(
+                                        this,
+                                        "This booking is already cancelled.",
+                                        "Booking Already Cancelled",
+                                        JOptionPane.INFORMATION_MESSAGE
+                        );
+                        return;
+                }
+
+                int confirmation = JOptionPane.showConfirmDialog(
+                                this,
+                                "Are you sure you want to cancel booking "
+                                                + tableModel.getValueAt(modelRow, 0) + "?",
+                                "Confirm Cancellation",
+                                JOptionPane.YES_NO_OPTION,
+                                JOptionPane.WARNING_MESSAGE
+                );
+
+                if (confirmation == JOptionPane.YES_OPTION) {
+                        tableModel.setValueAt("Cancelled", modelRow, 8);
+                }
+        }
+
+
+    JButton getSearchButton() {
+        return (JButton) ((JPanel) ((BorderLayout) ((JPanel) getComponent(0)).getLayout()).getLayoutComponent(BorderLayout.EAST)).getComponent(1);
     }
 
     // Show all bookings
