@@ -3,7 +3,6 @@ package com.cinemats.dao;
 import com.cinemats.config.DBConnection;
 import com.cinemats.data.ScreenMockData;
 import com.cinemats.model.Screen;
-
 import java.sql.*;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -68,7 +67,7 @@ public class ScreenDAO {
                     + "COALESCE(SUM(CASE WHEN UPPER(st.seat_type) = 'PREMIUM' THEN 1 ELSE 0 END), 0) AS prem_cnt, "
                     + "COALESCE(SUM(CASE WHEN UPPER(st.seat_type) = 'RECLINER' THEN 1 ELSE 0 END), 0) AS rec_cnt, "
                     + "COALESCE(SUM(CASE WHEN UPPER(st.status) = 'BLOCKED' THEN 1 ELSE 0 END), 0) AS blk_cnt, "
-                    + "(SELECT COUNT(*) FROM shows sh WHERE (sh.screen_id = s.id OR sh.screen = s.name) AND UPPER(sh.status) = 'OPEN') AS upcoming_shows "
+                    + "(SELECT COUNT(*) FROM shows sh WHERE sh.screen_id = s.id AND UPPER(sh.status) = 'OPEN') AS upcoming_shows "
                     + "FROM screens s "
                     + "LEFT JOIN screen_seats st ON s.id = st.screen_id "
                     + "GROUP BY s.id, s.name, s.screen_number, s.screen_type, s.status, s.created_at, s.updated_at "

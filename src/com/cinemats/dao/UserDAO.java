@@ -165,4 +165,99 @@ public class UserDAO {
         }
         return DBConnection.getFallbackUsers();
     }
+
+    // Updates an existing staff user account
+    public static boolean updateUser(int id, String username, String newPassword, String role,
+                                     String fullName, String counter, String shift, String phone, String status) {
+        if (id <= 0 && (username == null || username.trim().isEmpty())) return false;
+        username = (username == null) ? "" : username.trim();
+        role = (role == null || role.trim().isEmpty()) ? "STAFF" : role.trim().toUpperCase();
+        fullName = (fullName == null || fullName.trim().isEmpty()) ? username : fullName.trim();
+        counter = (counter == null || counter.trim().isEmpty()) ? "Counter #01 (Main Concourse)" : counter.trim();
+        shift = (shift == null || shift.trim().isEmpty()) ? "Morning Shift (09:00 AM - 04:00 PM)" : shift.trim();
+        phone = (phone == null) ? "" : phone.trim();
+        status = (status == null || status.trim().isEmpty()) ? "ACTIVE" : status.trim().toUpperCase();
+
+        if (DBConnection.isDriverAvailable()) {
+            boolean hasNewPassword = (newPassword != null && !newPassword.trim().isEmpty());
+            String sql = hasNewPassword
+                    ? "UPDATE users SET username = ?, password = ?, role = ?, full_name = ?, counter = ?, shift = ?, phone = ?, status = ? WHERE id = ?"
+                    : "UPDATE users SET username = ?, role = ?, full_name = ?, counter = ?, shift = ?, phone = ?, status = ? WHERE id = ?";
+            try (Connection conn = DBConnection.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+                int idx = 1;
+                stmt.setString(idx++, username);
+                if (hasNewPassword) {
+                    stmt.setString(idx++, newPassword.trim());
+                }
+                stmt.setString(idx++, role);
+                stmt.setString(idx++, fullName);
+                stmt.setString(idx++, counter);
+                stmt.setString(idx++, shift);
+                stmt.setString(idx++, phone);
+                stmt.setString(idx++, status);
+                stmt.setInt(idx, id);
+
+                int rows = stmt.executeUpdate();
+                return rows > 0;
+            } catch (SQLException e) {
+                System.err.println("[UserDAO] Failed to update user in SQLite: " + e.getMessage());
+                return false;
+            }
+        } else {
+            return DBConnection.updateFallbackUser(id, username, role, fullName, counter, shift, phone, status);
+        }
+    }
+
+    // Checks if email or username already exists for another user
+    public static boolean emailExistsForOther(String username, int excludeId) {
+        if (username == null || username.trim().isEmpty()) return false;
+        username = username.trim();
+
+        if (DBConnection.isDriverAvailable()) {
+            String sql = "SELECT COUNT(*) FROM users WHERE LOWER(username) = LOWER(?) AND id != ?";
+            try (Connection conn = DBConnection.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, username);
+                stmt.setInt(2, excludeId);
+                ResultSet rs = stmt.executeQuery();
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            } catch (SQLException e) {
+                System.err.println("[UserDAO] Error checking email uniqueness: " + e.getMessage());
+            }
+        }
+        return false;
+    }
+
+    // Finds user by unique ID
+    public static User getUserById(int id) {
+        if (DBConnection.isDriverAvailable()) {
+            String sql = "SELECT id, username, role, full_name, counter, shift, phone, status, created_at FROM users WHERE id = ?";
+            try (Connection conn = DBConnection.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setInt(1, id);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        return new User(
+                                rs.getInt("id"),
+                                rs.getString("username"),
+                                rs.getString("role"),
+                                rs.getString("full_name"),
+                                rs.getString("counter"),
+                                rs.getString("shift"),
+                                rs.getString("phone"),
+                                rs.getString("status"),
+                                rs.getString("created_at")
+                        );
+                    }
+                }
+            } catch (SQLException e) {
+                System.err.println("[UserDAO] Error finding user by id: " + e.getMessage());
+            }
+        }
+        return null;
+    }
 }
