@@ -222,6 +222,60 @@ public class ShowDAO {
         return list;
     }
 
+    // NEW: Retrieves all shows for a given movie
+public static List<Show> getShowsByMovie(int movieId) {
+    List<Show> list = new ArrayList<>();
+    if (!DBConnection.isDriverAvailable()) return list;
+
+    String sql = "SELECT sh.id, sh.movie_id, sh.screen_id, m.title AS movie_title, "
+            + "sc.name AS screen_name, sc.screen_type, sh.show_date, sh.start_time, sh.end_time, "
+            + "sh.status, sh.created_at, sh.updated_at, "
+            + "COUNT(ss.id) AS total_seats, "
+            + "SUM(CASE WHEN ss.status = 'AVAILABLE' THEN 1 ELSE 0 END) AS available_seats, "
+            + "SUM(CASE WHEN ss.status = 'BOOKED' THEN 1 ELSE 0 END) AS booked_seats "
+            + "FROM shows sh "
+            + "JOIN movies m ON sh.movie_id = m.id "
+            + "JOIN screens sc ON sh.screen_id = sc.id "
+            + "LEFT JOIN show_seats ss ON sh.id = ss.show_id "
+            + "WHERE sh.movie_id = ? AND sh.status != 'CANCELLED' "
+            + "GROUP BY sh.id "
+            + "ORDER BY sh.show_date ASC, sh.start_time ASC";
+
+    try (Connection conn = DBConnection.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(sql)) {
+        stmt.setInt(1, movieId);
+        try (ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                int showId = rs.getInt("id");
+                List<ShowPrice> prices = ShowPriceDAO.getPricesByShowId(showId);
+
+                list.add(new Show(
+                        showId,
+                        rs.getInt("movie_id"),
+                        rs.getInt("screen_id"),
+                        rs.getString("movie_title"),
+                        rs.getString("screen_name"),
+                        rs.getString("screen_type"),
+                        rs.getString("show_date"),
+                        rs.getString("start_time"),
+                        rs.getString("end_time"),
+                        rs.getInt("available_seats"),
+                        rs.getInt("booked_seats"),
+                        rs.getInt("total_seats"),
+                        rs.getString("status"),
+                        prices,
+                        rs.getString("created_at"),
+                        rs.getString("updated_at")
+                ));
+            }
+        }
+    } catch (SQLException e) {
+        System.err.println("[ShowDAO] Error querying shows by movie: " + e.getMessage());
+    }
+    return list;
+}
+
+
     // Retrieves upcoming shows for a given screen
     public static List<Show> getUpcomingShowsByScreenId(int screenId) {
         List<Show> list = new ArrayList<>();
