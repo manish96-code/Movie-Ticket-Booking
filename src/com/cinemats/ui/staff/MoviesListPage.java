@@ -4,7 +4,11 @@ import com.cinemats.dao.CategoryDAO;
 import com.cinemats.dao.MovieDAO;
 import com.cinemats.model.Movie;
 import com.cinemats.util.Theme;
-
+import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.util.ArrayList;
+import java.util.List;
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
@@ -13,11 +17,6 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.util.ArrayList;
-import java.util.List;
 
 // Dynamic, professional movies catalogue page for staff counter terminal
 public class MoviesListPage extends JPanel {
@@ -410,6 +409,10 @@ public class MoviesListPage extends JPanel {
                 }
             }
 
+            String posterDisplay = m.hasImage()
+                    ? "🖼️ " + new java.io.File(m.getImagePath()).getName()
+                    : m.getPosterLabel();
+
             filteredMoviesList.add(m);
             tableModel.addRow(new Object[]{
                     "MOV-" + String.format("%03d", m.getId()),
@@ -418,7 +421,7 @@ public class MoviesListPage extends JPanel {
                     m.getFormattedDuration(),
                     m.getRating(),
                     formatStatus(m.getStatus()),
-                    m.getPosterLabel()
+                    posterDisplay
             });
         }
 
@@ -582,7 +585,36 @@ public class MoviesListPage extends JPanel {
         infoGrid.add(createDetailLabel("Poster Tag:"));
         infoGrid.add(createDetailValue(movie.getPosterLabel()));
 
-        panel.add(infoGrid, BorderLayout.CENTER);
+        // Center panel with Poster Image on left and Info Grid on right
+        JPanel centerContent = new JPanel(new BorderLayout(14, 0));
+        centerContent.setOpaque(false);
+
+        JLabel posterImgLbl = new JLabel("🎬 No Image", SwingConstants.CENTER);
+        posterImgLbl.setPreferredSize(new Dimension(130, 180));
+        posterImgLbl.setBorder(new LineBorder(Theme.BORDER_COLOR, 1, true));
+        posterImgLbl.setOpaque(true);
+        posterImgLbl.setBackground(new Color(248, 250, 252));
+        posterImgLbl.setForeground(Theme.TEXT_MUTED);
+
+        if (movie.hasImage()) {
+            try {
+                java.io.File imgFile = new java.io.File(movie.getImagePath());
+                if (imgFile.exists()) {
+                    ImageIcon icon = new ImageIcon(imgFile.getAbsolutePath());
+                    Image img = icon.getImage();
+                    if (img.getWidth(null) > 0 && img.getHeight(null) > 0) {
+                        Image scaled = img.getScaledInstance(130, 180, Image.SCALE_SMOOTH);
+                        posterImgLbl.setText("");
+                        posterImgLbl.setIcon(new ImageIcon(scaled));
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+
+        centerContent.add(posterImgLbl, BorderLayout.WEST);
+        centerContent.add(infoGrid, BorderLayout.CENTER);
+
+        panel.add(centerContent, BorderLayout.CENTER);
 
         // Dialog Footer Buttons
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
