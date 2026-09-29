@@ -3,6 +3,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "StaffDashboard",
+            "request": "launch",
+            "mainClass": "com.cinemats.ui.staff.StaffDashboard",
+            "projectName": "Movie-Ticket-Booking_612342f7"
+        },
+        {
+            "type": "java",
             "name": "Cinema Express (Main Application)",
             "request": "launch",
             "mainClass": "com.cinemats.Main",
