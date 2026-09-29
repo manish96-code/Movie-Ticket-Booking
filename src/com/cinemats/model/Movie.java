@@ -9,14 +9,20 @@ public class Movie {
     private final String rating;
     private final String posterLabel;
     private final String status;
+    private final String imagePath;
 
     // Compact constructor for adding new movies
     public Movie(String title, String genre, int durationMins) {
-        this(0, title, genre, durationMins, "UA", title.toUpperCase(), "NOW_SHOWING");
+        this(0, title, genre, durationMins, "UA", title.toUpperCase(), "NOW_SHOWING", "");
     }
 
-    // Full constructor for database records
+    // Constructor without imagePath (backward compatibility)
     public Movie(int id, String title, String genre, int durationMins, String rating, String posterLabel, String status) {
+        this(id, title, genre, durationMins, rating, posterLabel, status, "");
+    }
+
+    // Full constructor for database records with imagePath
+    public Movie(int id, String title, String genre, int durationMins, String rating, String posterLabel, String status, String imagePath) {
         this.id = id;
         this.title = (title == null) ? "" : title.trim();
         this.genre = (genre == null) ? "General" : genre.trim();
@@ -24,6 +30,7 @@ public class Movie {
         this.rating = (rating == null || rating.trim().isEmpty()) ? "UA" : rating.trim();
         this.posterLabel = (posterLabel == null || posterLabel.trim().isEmpty()) ? this.title.toUpperCase() : posterLabel.trim();
         this.status = (status == null || status.trim().isEmpty()) ? "NOW_SHOWING" : status.trim().toUpperCase();
+        this.imagePath = (imagePath == null) ? "" : imagePath.trim();
     }
 
     public int getId() {
@@ -64,6 +71,23 @@ public class Movie {
 
     public String getStatus() {
         return status;
+    }
+
+    public String getImagePath() {
+        return imagePath;
+    }
+
+    public boolean hasImage() {
+        return imagePath != null && !imagePath.trim().isEmpty();
+    }
+
+    // Default base ticket price accessor for counter booking compatibility
+    public double getPrice() {
+        return 250.0;
+    }
+
+    public String getFormattedPrice() {
+        return "₹250.00";
     }
 
     @Override
