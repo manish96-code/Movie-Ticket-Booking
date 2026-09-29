@@ -4,7 +4,11 @@ import com.cinemats.dao.CategoryDAO;
 import com.cinemats.dao.MovieDAO;
 import com.cinemats.model.Movie;
 import com.cinemats.util.Theme;
-
+import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.util.ArrayList;
+import java.util.List;
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
@@ -13,11 +17,6 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.util.ArrayList;
-import java.util.List;
 
 // Dynamic, professional movies catalogue page for staff counter terminal
 public class MoviesListPage extends JPanel {
@@ -333,26 +332,325 @@ public class MoviesListPage extends JPanel {
             genreFilterCombo.addItem(cat);
         }
 
-        JTable table = new JTable(model);
-        table.setRowHeight(35);
-        table.setFont(new Font("Segoe UI",Font.PLAIN,14 ) );
-        table.getTableHeader().setFont(new Font("Segoe UI",Font.BOLD,14) );
-
-        table.getTableHeader().setReorderingAllowed(false);
-        table.setGridColor(new Color(220, 220, 220) );
-        table.setSelectionBackground(new Color(230, 240, 255));
-        DefaultTableCellRenderer center = new DefaultTableCellRenderer();
-        center.setHorizontalAlignment(SwingConstants.CENTER );
-
-        for (int i = 0; i < table.getColumnCount(); i++) {
-            table.getColumnModel().getColumn(i).setCellRenderer(center);
+        // Also add any genre from movies that might not be in categories table
+        for (Movie m : allMoviesList) {
+            String g = m.getGenre();
+            if (g != null && !g.trim().isEmpty()) {
+                boolean exists = false;
+                for (int i = 0; i < genreFilterCombo.getItemCount(); i++) {
+                    if (g.equalsIgnoreCase(genreFilterCombo.getItemAt(i))) {
+                        exists = true;
+                        break;
+                    }
+                }
+                if (!exists) {
+                    genreFilterCombo.addItem(g);
+                }
+            }
         }
 
-        JScrollPane scrollPane = new JScrollPane(table);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder() );
-        moviesContainer.add(scrollPane,BorderLayout.CENTER);
-        moviesContainer.revalidate();
-        moviesContainer.repaint();
+        updateKpiMetrics();
+        applyFilters();
+    }
+
+    // Updates KPI summary header values
+    private void updateKpiMetrics() {
+        int total = allMoviesList.size();
+        int nowShowing = 0;
+        int upcoming = 0;
+
+        for (Movie m : allMoviesList) {
+            String status = m.getStatus();
+            if ("NOW_SHOWING".equalsIgnoreCase(status) || "Now Showing".equalsIgnoreCase(status)) {
+                nowShowing++;
+            } else if ("UPCOMING".equalsIgnoreCase(status) || "Upcoming".equalsIgnoreCase(status)) {
+                upcoming++;
+            }
+        }
+
+        kpiTotalMovies.setText(total + " Titles");
+        kpiNowShowing.setText(nowShowing + " Active");
+        kpiUpcoming.setText(upcoming + " Upcoming");
+        kpiCategories.setText((genreFilterCombo.getItemCount() - 1) + " Genres");
+    }
+
+    // Filters movies by search query, status, and genre
+    private void applyFilters() {
+        String query = searchField.getText().trim().toLowerCase();
+        String selectedStatus = (String) statusFilterCombo.getSelectedItem();
+        String selectedGenre = (String) genreFilterCombo.getSelectedItem();
+
+        tableModel.setRowCount(0);
+        filteredMoviesList.clear();
+
+        for (Movie m : allMoviesList) {
+            // Status match
+            if (selectedStatus != null && !"All Statuses".equals(selectedStatus)) {
+                String mStatus = formatStatus(m.getStatus());
+                if (!selectedStatus.equalsIgnoreCase(mStatus)) {
+                    continue;
+                }
+            }
+
+            // Genre match
+            if (selectedGenre != null && !"All Genres".equals(selectedGenre)) {
+                if (m.getGenre() == null || !m.getGenre().toLowerCase().contains(selectedGenre.toLowerCase())) {
+                    continue;
+                }
+            }
+
+            // Keyword query match (Title or Genre)
+            if (!query.isEmpty()) {
+                boolean matchTitle = m.getTitle() != null && m.getTitle().toLowerCase().contains(query);
+                boolean matchGenre = m.getGenre() != null && m.getGenre().toLowerCase().contains(query);
+                boolean matchId = String.valueOf(m.getId()).contains(query) || ("mov-" + m.getId()).contains(query);
+                if (!matchTitle && !matchGenre && !matchId) {
+                    continue;
+                }
+            }
+
+            String posterDisplay = m.hasImage()
+                    ? "🖼️ " + new java.io.File(m.getImagePath()).getName()
+                    : m.getPosterLabel();
+
+            filteredMoviesList.add(m);
+            tableModel.addRow(new Object[]{
+                    "MOV-" + String.format("%03d", m.getId()),
+                    m.getTitle(),
+                    m.getGenre(),
+                    m.getFormattedDuration(),
+                    m.getRating(),
+                    formatStatus(m.getStatus()),
+                    posterDisplay
+            });
+        }
+
+        countBadge.setText(filteredMoviesList.size() + " Titles Found");
+        updateSelectionState();
+    }
+
+    // Handles table selection changes
+    private void updateSelectionState() {
+        int row = movieTable.getSelectedRow();
+        if (row >= 0 && row < filteredMoviesList.size()) {
+            Movie selected = filteredMoviesList.get(row);
+            selectedMovieLbl.setText("Selected: " + selected.getTitle() + " (" + selected.getGenre() + " • " + selected.getFormattedDuration() + ")");
+            selectedMovieLbl.setForeground(Theme.TEXT_DARK);
+            viewDetailsBtn.setEnabled(true);
+            bookTicketsBtn.setEnabled(true);
+        } else {
+            selectedMovieLbl.setText("Select a movie to inspect details or proceed with counter booking.");
+            selectedMovieLbl.setForeground(Theme.TEXT_MUTED);
+            viewDetailsBtn.setEnabled(false);
+            bookTicketsBtn.setEnabled(false);
+        }
+    }
+
+    // Normalizes status string for display
+    private String formatStatus(String status) {
+        if ("NOW_SHOWING".equalsIgnoreCase(status) || "Now Showing".equalsIgnoreCase(status)) {
+            return "Now Showing";
+        } else if ("UPCOMING".equalsIgnoreCase(status) || "Upcoming".equalsIgnoreCase(status)) {
+            return "Upcoming";
+        }
+        return (status != null && !status.isEmpty()) ? status : "Now Showing";
+    }
+
+    // Styles table headers, row heights, and custom status badge renderers
+    private void styleTable(JTable table) {
+        table.setFont(Theme.FONT_REGULAR);
+        table.setRowHeight(38);
+        table.getTableHeader().setFont(Theme.FONT_BOLD_SM);
+        table.getTableHeader().setBackground(new Color(241, 245, 249));
+        table.getTableHeader().setForeground(Theme.TEXT_DARK);
+        table.getTableHeader().setPreferredSize(new Dimension(0, 36));
+        table.setSelectionBackground(new Color(237, 233, 254));
+        table.setSelectionForeground(Theme.TEXT_DARK);
+        table.setShowGrid(true);
+        table.setGridColor(Theme.BORDER_COLOR);
+
+        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
+        centerRenderer.setHorizontalAlignment(JLabel.CENTER);
+
+        // Center ID, Duration, Rating
+        table.getColumnModel().getColumn(0).setCellRenderer(centerRenderer);
+        table.getColumnModel().getColumn(3).setCellRenderer(centerRenderer);
+
+        // Set column widths
+        table.getColumnModel().getColumn(0).setPreferredWidth(90);
+        table.getColumnModel().getColumn(1).setPreferredWidth(220);
+        table.getColumnModel().getColumn(2).setPreferredWidth(160);
+        table.getColumnModel().getColumn(3).setPreferredWidth(100);
+        table.getColumnModel().getColumn(4).setPreferredWidth(90);
+        table.getColumnModel().getColumn(5).setPreferredWidth(120);
+        table.getColumnModel().getColumn(6).setPreferredWidth(150);
+
+        // Age Rating Pill Badge Renderer
+        table.getColumnModel().getColumn(4).setCellRenderer(new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable tbl, Object value, boolean isSelected, boolean hasFocus, int row, int col) {
+                JLabel lbl = (JLabel) super.getTableCellRendererComponent(tbl, value, isSelected, hasFocus, row, col);
+                lbl.setHorizontalAlignment(SwingConstants.CENTER);
+                lbl.setFont(Theme.FONT_BOLD_SM);
+                String rating = value != null ? value.toString() : "UA";
+                lbl.setText(" " + rating + " ");
+                if (!isSelected) {
+                    lbl.setBackground(new Color(238, 242, 255));
+                    lbl.setForeground(new Color(67, 56, 202));
+                    lbl.setOpaque(true);
+                }
+                return lbl;
+            }
+        });
+
+        // Release Status Badge Renderer
+        table.getColumnModel().getColumn(5).setCellRenderer(new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable tbl, Object value, boolean isSelected, boolean hasFocus, int row, int col) {
+                JLabel lbl = (JLabel) super.getTableCellRendererComponent(tbl, value, isSelected, hasFocus, row, col);
+                lbl.setHorizontalAlignment(SwingConstants.CENTER);
+                String status = value != null ? value.toString() : "";
+                lbl.setText(" ● " + status + " ");
+                lbl.setFont(Theme.FONT_BOLD_SM);
+
+                if (!isSelected) {
+                    if ("Now Showing".equalsIgnoreCase(status)) {
+                        lbl.setForeground(Theme.COLOR_SUCCESS);
+                        lbl.setBackground(new Color(240, 253, 244));
+                    } else {
+                        lbl.setForeground(new Color(124, 58, 237));
+                        lbl.setBackground(new Color(243, 232, 255));
+                    }
+                    lbl.setOpaque(true);
+                }
+                return lbl;
+            }
+        });
+    }
+
+    // Displays sleek movie details modal dialog
+    private void openMovieDetailsDialog(Movie movie) {
+        if (movie == null) return;
+
+        Window parentWindow = SwingUtilities.getWindowAncestor(this);
+        JDialog dialog = new JDialog(parentWindow, "Movie Details: " + movie.getTitle(), Dialog.ModalityType.APPLICATION_MODAL);
+        dialog.setLayout(new BorderLayout());
+        dialog.setSize(480, 420);
+        dialog.setLocationRelativeTo(this);
+        dialog.setResizable(false);
+        dialog.getContentPane().setBackground(Color.WHITE);
+
+        JPanel panel = new JPanel(new BorderLayout(0, 16));
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(new EmptyBorder(22, 24, 20, 24));
+
+        // Header Title
+        JPanel titlePanel = new JPanel();
+        titlePanel.setLayout(new BoxLayout(titlePanel, BoxLayout.Y_AXIS));
+        titlePanel.setOpaque(false);
+
+        JLabel titleLbl = new JLabel(movie.getTitle());
+        titleLbl.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        titleLbl.setForeground(Theme.TEXT_DARK);
+
+        JLabel genreLbl = new JLabel(movie.getGenre() + " • " + movie.getFormattedDuration());
+        genreLbl.setFont(Theme.FONT_REGULAR);
+        genreLbl.setForeground(Theme.TEXT_MUTED);
+
+        titlePanel.add(titleLbl);
+        titlePanel.add(Box.createVerticalStrut(4));
+        titlePanel.add(genreLbl);
+        panel.add(titlePanel, BorderLayout.NORTH);
+
+        // Details Grid
+        JPanel infoGrid = new JPanel(new GridLayout(5, 2, 8, 12));
+        infoGrid.setOpaque(false);
+        infoGrid.setBorder(new CompoundBorder(
+                new LineBorder(Theme.BORDER_COLOR, 1, true),
+                new EmptyBorder(14, 16, 14, 16)
+        ));
+
+        infoGrid.add(createDetailLabel("Movie ID:"));
+        infoGrid.add(createDetailValue("MOV-" + String.format("%03d", movie.getId())));
+
+        infoGrid.add(createDetailLabel("Duration:"));
+        infoGrid.add(createDetailValue(movie.getDurationMins() + " Minutes (" + movie.getFormattedDuration() + ")"));
+
+        infoGrid.add(createDetailLabel("Age Rating:"));
+        infoGrid.add(createDetailValue(movie.getRating()));
+
+        infoGrid.add(createDetailLabel("Operational Status:"));
+        infoGrid.add(createDetailValue(formatStatus(movie.getStatus())));
+
+        infoGrid.add(createDetailLabel("Poster Tag:"));
+        infoGrid.add(createDetailValue(movie.getPosterLabel()));
+
+        // Center panel with Poster Image on left and Info Grid on right
+        JPanel centerContent = new JPanel(new BorderLayout(14, 0));
+        centerContent.setOpaque(false);
+
+        JLabel posterImgLbl = new JLabel("🎬 No Image", SwingConstants.CENTER);
+        posterImgLbl.setPreferredSize(new Dimension(130, 180));
+        posterImgLbl.setBorder(new LineBorder(Theme.BORDER_COLOR, 1, true));
+        posterImgLbl.setOpaque(true);
+        posterImgLbl.setBackground(new Color(248, 250, 252));
+        posterImgLbl.setForeground(Theme.TEXT_MUTED);
+
+        if (movie.hasImage()) {
+            try {
+                java.io.File imgFile = new java.io.File(movie.getImagePath());
+                if (imgFile.exists()) {
+                    ImageIcon icon = new ImageIcon(imgFile.getAbsolutePath());
+                    Image img = icon.getImage();
+                    if (img.getWidth(null) > 0 && img.getHeight(null) > 0) {
+                        Image scaled = img.getScaledInstance(130, 180, Image.SCALE_SMOOTH);
+                        posterImgLbl.setText("");
+                        posterImgLbl.setIcon(new ImageIcon(scaled));
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+
+        centerContent.add(posterImgLbl, BorderLayout.WEST);
+        centerContent.add(infoGrid, BorderLayout.CENTER);
+
+        panel.add(centerContent, BorderLayout.CENTER);
+
+        // Dialog Footer Buttons
+        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        footer.setOpaque(false);
+
+        JButton closeBtn = Theme.createSecondaryButton("Close");
+        closeBtn.addActionListener(e -> dialog.dispose());
+
+        JButton bookBtn = Theme.createPrimaryButton("Proceed to Booking");
+        bookBtn.addActionListener(e -> {
+            dialog.dispose();
+            if (dashboard != null) {
+                dashboard.showPage("PAGE_ORDER_BOOKING");
+            }
+        });
+
+        footer.add(closeBtn);
+        footer.add(bookBtn);
+        panel.add(footer, BorderLayout.SOUTH);
+
+        dialog.add(panel);
+        dialog.setVisible(true);
+    }
+
+    private JLabel createDetailLabel(String text) {
+        JLabel lbl = new JLabel(text);
+        lbl.setFont(Theme.FONT_BOLD_SM);
+        lbl.setForeground(Theme.TEXT_MUTED);
+        return lbl;
+    }
+
+    private JLabel createDetailValue(String text) {
+        JLabel lbl = new JLabel(text);
+        lbl.setFont(Theme.FONT_REGULAR);
+        lbl.setForeground(Theme.TEXT_DARK);
+        return lbl;
     }
 
     public StaffDashboard getDashboard() {
