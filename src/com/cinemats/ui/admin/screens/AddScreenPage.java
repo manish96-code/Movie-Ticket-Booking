@@ -4,14 +4,13 @@ import com.cinemats.model.Screen;
 import com.cinemats.service.ScreenService;
 import com.cinemats.ui.admin.AdminDashboard;
 import com.cinemats.util.Theme;
-
+import java.awt.*;
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import java.awt.*;
 
 // Standalone Add Screen page registered in AdminDashboard CardLayout as PAGE_ADD_SCREEN
 public class AddScreenPage extends JPanel {
@@ -54,7 +53,7 @@ public class AddScreenPage extends JPanel {
         numberErrorLbl = createErrorLabel();
 
         typeCombo = new JComboBox<>(new String[]{
-                "Standard", "IMAX", "Dolby Atmos", "4DX", "Gold Class", "VIP Lounge"
+            "Standard", "IMAX", "Dolby Atmos", "4DX", "Gold Class", "VIP Lounge"
         });
         typeCombo.setFont(Theme.FONT_REGULAR);
         typeCombo.setBackground(Color.WHITE);
@@ -135,27 +134,45 @@ public class AddScreenPage extends JPanel {
 
         int row = 0;
 
-        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.35;
+        fgbc.gridx = 0;
+        fgbc.gridy = row;
+        fgbc.weightx = 0.35;
         formFields.add(createFieldLabel("Screen Name *"), fgbc);
-        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.65;
+        fgbc.gridx = 1;
+        fgbc.gridy = row++;
+        fgbc.weightx = 0.65;
         formFields.add(createFieldWrapper(nameField, nameErrorLbl), fgbc);
 
-        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.35;
+        fgbc.gridx = 0;
+        fgbc.gridy = row;
+        fgbc.weightx = 0.35;
         formFields.add(createFieldLabel("Screen Number *"), fgbc);
-        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.65;
+        fgbc.gridx = 1;
+        fgbc.gridy = row++;
+        fgbc.weightx = 0.65;
         formFields.add(createFieldWrapper(numberField, numberErrorLbl), fgbc);
 
-        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.35;
+        fgbc.gridx = 0;
+        fgbc.gridy = row;
+        fgbc.weightx = 0.35;
         formFields.add(createFieldLabel("Screen / Audi Type"), fgbc);
-        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.65;
+        fgbc.gridx = 1;
+        fgbc.gridy = row++;
+        fgbc.weightx = 0.65;
         formFields.add(typeCombo, fgbc);
 
-        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.35;
+        fgbc.gridx = 0;
+        fgbc.gridy = row;
+        fgbc.weightx = 0.35;
         formFields.add(createFieldLabel("Operational Status"), fgbc);
-        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.65;
+        fgbc.gridx = 1;
+        fgbc.gridy = row++;
+        fgbc.weightx = 0.65;
         formFields.add(statusCombo, fgbc);
 
-        fgbc.gridx = 0; fgbc.gridy = row++; fgbc.gridwidth = 2;
+        fgbc.gridx = 0;
+        fgbc.gridy = row++;
+        fgbc.gridwidth = 2;
         formFields.add(statusBox, fgbc);
 
         formCard.add(formFields, BorderLayout.CENTER);
@@ -228,10 +245,10 @@ public class AddScreenPage extends JPanel {
     }
 
     private void setupListeners() {
-        nameField.getDocument().addDocumentListener(new SimpleDocListener(() ->
-                clearFieldError(nameField, nameErrorLbl)));
-        numberField.getDocument().addDocumentListener(new SimpleDocListener(() ->
-                clearFieldError(numberField, numberErrorLbl)));
+        nameField.getDocument().addDocumentListener(new SimpleDocListener(()
+                -> clearFieldError(nameField, nameErrorLbl)));
+        numberField.getDocument().addDocumentListener(new SimpleDocListener(()
+                -> clearFieldError(numberField, numberErrorLbl)));
 
         saveBtn.addActionListener(e -> handleSave());
         resetBtn.addActionListener(e -> handleReset());
@@ -259,14 +276,18 @@ public class AddScreenPage extends JPanel {
         } else {
             try {
                 screenNumber = Integer.parseInt(numberStr.replaceAll("[^0-9]", ""));
-                if (screenNumber <= 0) throw new NumberFormatException();
+                if (screenNumber <= 0) {
+                    throw new NumberFormatException();
+                }
             } catch (NumberFormatException ex) {
                 setFieldError(numberField, numberErrorLbl, "Screen number must be a positive integer.");
                 hasError = true;
             }
         }
 
-        if (hasError) return;
+        if (hasError) {
+            return;
+        }
 
         String screenType = (String) typeCombo.getSelectedItem();
         String status = (String) statusCombo.getSelectedItem();
@@ -283,7 +304,14 @@ public class AddScreenPage extends JPanel {
             }
             handleReset();
         } else {
-            showStatus(error, false);
+            String lower = error.toLowerCase();
+            if (lower.contains("name")) {
+                setFieldError(nameField, nameErrorLbl, error);
+            } else if (lower.contains("number")) {
+                setFieldError(numberField, numberErrorLbl, error);
+            } else {
+                showStatus(error, false);
+            }
         }
     }
 
@@ -393,10 +421,23 @@ public class AddScreenPage extends JPanel {
     }
 
     private static class SimpleDocListener implements DocumentListener {
+
         private final Runnable callback;
-        public SimpleDocListener(Runnable callback) { this.callback = callback; }
-        public void insertUpdate(DocumentEvent e) { callback.run(); }
-        public void removeUpdate(DocumentEvent e) { callback.run(); }
-        public void changedUpdate(DocumentEvent e) { callback.run(); }
+
+        public SimpleDocListener(Runnable callback) {
+            this.callback = callback;
+        }
+
+        public void insertUpdate(DocumentEvent e) {
+            callback.run();
+        }
+
+        public void removeUpdate(DocumentEvent e) {
+            callback.run();
+        }
+
+        public void changedUpdate(DocumentEvent e) {
+            callback.run();
+        }
     }
 }

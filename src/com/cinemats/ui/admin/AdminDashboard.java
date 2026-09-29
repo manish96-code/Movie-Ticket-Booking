@@ -3,15 +3,15 @@ package com.cinemats.ui.admin;
 import com.cinemats.model.Screen;
 import com.cinemats.service.ScreenSeatService;
 import com.cinemats.service.ScreenService;
+import com.cinemats.ui.admin.movies.AddMoviePage;
 import com.cinemats.ui.admin.movies.ManageCategoriesPage;
 import com.cinemats.ui.admin.movies.ManageMoviesPage;
-import com.cinemats.ui.admin.movies.AddMoviePage;
 import com.cinemats.ui.admin.reports.FinancialReportsPage;
-import com.cinemats.ui.admin.screens.ManageScreensPage;
 import com.cinemats.ui.admin.screens.AddScreenPage;
+import com.cinemats.ui.admin.screens.ManageScreensPage;
 import com.cinemats.ui.admin.screens.SeatLayoutPage;
-import com.cinemats.ui.admin.shows.ManageSchedulesPage;
 import com.cinemats.ui.admin.shows.AddShowPage;
+import com.cinemats.ui.admin.shows.ManageSchedulesPage;
 import com.cinemats.ui.admin.staff.AddStaffPage;
 import com.cinemats.ui.admin.staff.StaffAccountsPage;
 import com.cinemats.ui.auth.LoginFrame;
@@ -114,15 +114,15 @@ public class AdminDashboard extends JFrame {
         brandPanel.add(logo);
         brandPanel.add(brandText);
 
-        // Admin Session & Clock (Right)
-        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 18, 6));
+        // Admin Session & Clock & Profile Avatar (Right Corner)
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 14, 4));
         rightPanel.setOpaque(false);
 
         JPanel infoPanel = new JPanel();
         infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
         infoPanel.setOpaque(false);
 
-        JLabel adminLabel = new JLabel("👑 " + adminName);
+        JLabel adminLabel = new JLabel(adminName);
         adminLabel.setFont(Theme.FONT_HEADER);
         adminLabel.setForeground(Theme.TEXT_DARK);
         adminLabel.setAlignmentX(Component.RIGHT_ALIGNMENT);
@@ -135,20 +135,80 @@ public class AdminDashboard extends JFrame {
         infoPanel.add(adminLabel);
         infoPanel.add(clockLabel);
 
-        JButton logoutBtn = Theme.createSecondaryButton("Logout");
-        logoutBtn.addActionListener(e -> {
-            int confirm = JOptionPane.showConfirmDialog(this,
-                    "Do you want to log out of the Administrator session?",
-                    "Confirm Logout",
-                    JOptionPane.YES_NO_OPTION);
-            if (confirm == JOptionPane.YES_OPTION) {
-                dispose();
-                new LoginFrame().setVisible(true);
+        // Circular Profile Avatar in Header (Right Corner)
+        JPanel profileIcon = new JPanel() {
+            private boolean isHovered = false;
+
+            {
+                setPreferredSize(new Dimension(42, 42));
+                setMaximumSize(new Dimension(42, 42));
+                setMinimumSize(new Dimension(42, 42));
+                setOpaque(false);
+                setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+                setToolTipText(adminName + " • Click for options");
+                addMouseListener(new java.awt.event.MouseAdapter() {
+                    @Override
+                    public void mouseEntered(java.awt.event.MouseEvent e) {
+                        isHovered = true;
+                        repaint();
+                    }
+
+                    @Override
+                    public void mouseExited(java.awt.event.MouseEvent e) {
+                        isHovered = false;
+                        repaint();
+                    }
+
+                    @Override
+                    public void mouseClicked(java.awt.event.MouseEvent e) {
+                        showProfileMenu((Component) e.getSource());
+                    }
+                });
             }
-        });
+
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                int size = 38;
+                int x = (getWidth() - size) / 2;
+                int y = (getHeight() - size) / 2;
+
+                // Modern purple gradient background
+                Color c1 = isHovered ? new Color(109, 40, 217) : new Color(124, 58, 237);
+                Color c2 = isHovered ? new Color(76, 29, 149) : new Color(91, 33, 182);
+                g2.setPaint(new GradientPaint(x, y, c1, x + size, y + size, c2));
+                g2.fillOval(x, y, size, size);
+
+                // Subtle ring outline
+                g2.setColor(isHovered ? new Color(221, 214, 254) : new Color(255, 255, 255, 140));
+                g2.setStroke(new BasicStroke(1.5f));
+                g2.drawOval(x, y, size, size);
+
+                // User silhouette icon: Head + Shoulders
+                g2.setColor(Color.WHITE);
+                int cx = x + size / 2;
+                int headR = 6;
+                int headY = y + 8;
+                g2.fillOval(cx - headR, headY, headR * 2, headR * 2);
+
+                // Shoulders clipped inside circular boundary
+                Shape origClip = g2.getClip();
+                g2.setClip(new java.awt.geom.Ellipse2D.Float(x, y, size, size));
+                int shoulderW = 24;
+                int shoulderH = 16;
+                int shoulderY = y + 21;
+                g2.fillOval(cx - shoulderW / 2, shoulderY, shoulderW, shoulderH);
+                g2.setClip(origClip);
+
+                g2.dispose();
+            }
+        };
 
         rightPanel.add(infoPanel);
-        rightPanel.add(logoutBtn);
+        rightPanel.add(profileIcon);
 
         header.add(brandPanel, BorderLayout.WEST);
         header.add(rightPanel, BorderLayout.EAST);
@@ -169,67 +229,11 @@ public class AdminDashboard extends JFrame {
         sidebar.setPreferredSize(new Dimension(265, 0));
         sidebar.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, Theme.BORDER_COLOR));
 
-        // 1. Top Section: Admin Profile Card
-        JPanel topSection = new JPanel();
-        topSection.setLayout(new BoxLayout(topSection, BoxLayout.Y_AXIS));
-        topSection.setOpaque(false);
-        topSection.setBorder(new EmptyBorder(18, 16, 12, 16));
-
-        JPanel profileCard = new JPanel(new BorderLayout(12, 0));
-        profileCard.setBackground(new Color(248, 250, 252));
-        profileCard.setBorder(new CompoundBorder(
-                new LineBorder(Theme.BORDER_COLOR, 1, true),
-                new EmptyBorder(10, 12, 10, 12)
-        ));
-        profileCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
-
-        // Circular Crown Avatar
-        JLabel avatarLabel = new JLabel("SA", SwingConstants.CENTER) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                GradientPaint gp = new GradientPaint(0, 0, new Color(124, 58, 237), getWidth(), getHeight(), new Color(91, 33, 182));
-                g2.setPaint(gp);
-                g2.fillOval(0, 0, getWidth(), getHeight());
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        avatarLabel.setPreferredSize(new Dimension(38, 38));
-        avatarLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        avatarLabel.setForeground(Color.WHITE);
-
-        JPanel profileInfo = new JPanel();
-        profileInfo.setLayout(new BoxLayout(profileInfo, BoxLayout.Y_AXIS));
-        profileInfo.setOpaque(false);
-
-        JLabel nameLabel = new JLabel(adminName);
-        nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        nameLabel.setForeground(Theme.TEXT_DARK);
-
-        JLabel badgeLabel = new JLabel(" SUPER ADMIN ");
-        badgeLabel.setFont(new Font("Segoe UI", Font.BOLD, 9));
-        badgeLabel.setForeground(new Color(124, 58, 237));
-        badgeLabel.setBackground(new Color(243, 232, 255));
-        badgeLabel.setOpaque(true);
-        badgeLabel.setBorder(new EmptyBorder(2, 4, 2, 4));
-
-        profileInfo.add(nameLabel);
-        profileInfo.add(Box.createVerticalStrut(3));
-        profileInfo.add(badgeLabel);
-
-        profileCard.add(avatarLabel, BorderLayout.WEST);
-        profileCard.add(profileInfo, BorderLayout.CENTER);
-
-        topSection.add(profileCard);
-        sidebar.add(topSection, BorderLayout.NORTH);
-
-        // 2. Middle Section: Categorized Nav Items in a sleek vertical panel
+        // Navigation Menu Panel with clean top padding
         JPanel navMenuPanel = new JPanel();
         navMenuPanel.setLayout(new BoxLayout(navMenuPanel, BoxLayout.Y_AXIS));
         navMenuPanel.setOpaque(false);
-        navMenuPanel.setBorder(new EmptyBorder(4, 14, 10, 14));
+        navMenuPanel.setBorder(new EmptyBorder(16, 14, 10, 14));
 
         // Group 1: Core Dashboard
         navMenuPanel.add(createCategoryHeader("CORE DASHBOARD"));
@@ -296,6 +300,7 @@ public class AdminDashboard extends JFrame {
 
         JButton logoutBtn = new JButton("🚪  Sign Out / Logout") {
             private boolean isHovered = false;
+
             {
                 addMouseListener(new java.awt.event.MouseAdapter() {
                     @Override
@@ -303,6 +308,7 @@ public class AdminDashboard extends JFrame {
                         isHovered = true;
                         repaint();
                     }
+
                     @Override
                     public void mouseExited(java.awt.event.MouseEvent e) {
                         isHovered = false;
@@ -350,16 +356,7 @@ public class AdminDashboard extends JFrame {
         logoutBtn.setOpaque(false);
         logoutBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        logoutBtn.addActionListener(e -> {
-            int confirm = JOptionPane.showConfirmDialog(this,
-                    "Do you want to log out of the Administrator session?",
-                    "Confirm Logout",
-                    JOptionPane.YES_NO_OPTION);
-            if (confirm == JOptionPane.YES_OPTION) {
-                dispose();
-                new LoginFrame().setVisible(true);
-            }
-        });
+        logoutBtn.addActionListener(e -> handleLogout());
 
         bottomSection.add(logoutBtn);
         sidebar.add(bottomSection, BorderLayout.SOUTH);
@@ -440,6 +437,7 @@ public class AdminDashboard extends JFrame {
 
     // Custom sidebar navigation button
     private class ModernNavButton extends JButton {
+
         private final String pageKey;
         private final String titleText;
         private boolean isActive = false;
@@ -623,6 +621,49 @@ public class AdminDashboard extends JFrame {
         add(statusBar, BorderLayout.SOUTH);
     }
 
+    private void showProfileMenu(Component invoker) {
+        JPopupMenu menu = new JPopupMenu();
+        menu.setBackground(Color.WHITE);
+        menu.setBorder(new CompoundBorder(
+                new LineBorder(Theme.BORDER_COLOR, 1, true),
+                new EmptyBorder(6, 10, 6, 10)
+        ));
+
+        JMenuItem userItem = new JMenuItem("Signed in as " + adminName);
+        userItem.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        userItem.setForeground(Theme.TEXT_DARK);
+        userItem.setEnabled(false);
+        menu.add(userItem);
+
+        JMenuItem roleItem = new JMenuItem("Role: Super Administrator");
+        roleItem.setFont(Theme.FONT_SMALL);
+        roleItem.setForeground(new Color(124, 58, 237));
+        roleItem.setEnabled(false);
+        menu.add(roleItem);
+
+        menu.addSeparator();
+
+        JMenuItem logoutItem = new JMenuItem("🚪  Sign Out / Logout");
+        logoutItem.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        logoutItem.setForeground(Theme.ACCENT_RED);
+        logoutItem.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        logoutItem.addActionListener(e -> handleLogout());
+        menu.add(logoutItem);
+
+        menu.show(invoker, invoker.getWidth() - 200, invoker.getHeight() + 4);
+    }
+
+    private void handleLogout() {
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Do you want to log out of the Administrator session?",
+                "Confirm Logout",
+                JOptionPane.YES_NO_OPTION);
+        if (confirm == JOptionPane.YES_OPTION) {
+            dispose();
+            new LoginFrame().setVisible(true);
+        }
+    }
+
     private void startClockTimer() {
         SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy • hh:mm:ss a");
         Timer timer = new Timer(1000, e -> clockLabel.setText(sdf.format(new Date())));
@@ -642,14 +683,37 @@ public class AdminDashboard extends JFrame {
     }
 
     // Page component accessors
-    public StaffAccountsPage getStaffAccountsPage() { return staffAccountsPage; }
-    public AddStaffPage getAddStaffPage() { return addStaffPage; }
-    public ManageMoviesPage getMoviesPage() { return moviesPage; }
-    public ManageScreensPage getScreensPage() { return screensPage; }
-    public ManageSchedulesPage getSchedulesPage() { return schedulesPage; }
-    public AddMoviePage getAddMoviePage() { return addMoviePage; }
-    public AddScreenPage getAddScreenPage() { return addScreenPage; }
-    public AddShowPage getAddShowPage() { return addShowPage; }
+    public StaffAccountsPage getStaffAccountsPage() {
+        return staffAccountsPage;
+    }
+
+    public AddStaffPage getAddStaffPage() {
+        return addStaffPage;
+    }
+
+    public ManageMoviesPage getMoviesPage() {
+        return moviesPage;
+    }
+
+    public ManageScreensPage getScreensPage() {
+        return screensPage;
+    }
+
+    public ManageSchedulesPage getSchedulesPage() {
+        return schedulesPage;
+    }
+
+    public AddMoviePage getAddMoviePage() {
+        return addMoviePage;
+    }
+
+    public AddScreenPage getAddScreenPage() {
+        return addScreenPage;
+    }
+
+    public AddShowPage getAddShowPage() {
+        return addShowPage;
+    }
 
     public static void main(String[] args) {
         try {
@@ -659,7 +723,8 @@ public class AdminDashboard extends JFrame {
                     break;
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
 
         SwingUtilities.invokeLater(() -> {
             AdminDashboard frame = new AdminDashboard("System Administrator");
@@ -667,4 +732,3 @@ public class AdminDashboard extends JFrame {
         });
     }
 }
-

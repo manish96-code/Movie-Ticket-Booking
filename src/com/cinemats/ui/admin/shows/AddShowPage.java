@@ -3,6 +3,7 @@ package com.cinemats.ui.admin.shows;
 import com.cinemats.dao.MovieDAO;
 import com.cinemats.dao.ScreenDAO;
 import com.cinemats.dao.ScreenSeatDAO;
+import com.cinemats.dao.ShowDAO;
 import com.cinemats.model.Movie;
 import com.cinemats.model.Screen;
 import com.cinemats.model.Show;
@@ -10,19 +11,18 @@ import com.cinemats.model.ShowPrice;
 import com.cinemats.service.ShowService;
 import com.cinemats.ui.admin.AdminDashboard;
 import com.cinemats.util.Theme;
-
-import javax.swing.*;
-import javax.swing.border.CompoundBorder;
-import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.swing.*;
+import javax.swing.border.CompoundBorder;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 
 // Standalone Add Show / Schedule Show page registered in AdminDashboard CardLayout as PAGE_ADD_SHOW
 public class AddShowPage extends JPanel {
@@ -39,6 +39,7 @@ public class AddShowPage extends JPanel {
 
     private JPanel pricingPanel;
     private final Map<String, JTextField> priceFields = new HashMap<>();
+    private final Map<String, JLabel> priceErrorLabels = new HashMap<>();
 
     private JLabel movieErrorLbl;
     private JLabel screenErrorLbl;
@@ -200,48 +201,72 @@ public class AddShowPage extends JPanel {
 
         int row = 0;
 
-        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.35;
+        fgbc.gridx = 0;
+        fgbc.gridy = row;
+        fgbc.weightx = 0.35;
         formContent.add(createFieldLabel("Select Movie *"), fgbc);
-        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.65;
-        formContent.add(movieCombo, fgbc);
-        fgbc.gridx = 1; fgbc.gridy = row++;
-        formContent.add(movieErrorLbl, fgbc);
+        fgbc.gridx = 1;
+        fgbc.gridy = row++;
+        fgbc.weightx = 0.65;
+        formContent.add(createFieldWrapper(movieCombo, movieErrorLbl), fgbc);
 
-        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.35;
+        fgbc.gridx = 0;
+        fgbc.gridy = row;
+        fgbc.weightx = 0.35;
         formContent.add(createFieldLabel("Select Screen *"), fgbc);
-        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.65;
-        formContent.add(screenCombo, fgbc);
-        fgbc.gridx = 1; fgbc.gridy = row++;
-        formContent.add(screenErrorLbl, fgbc);
+        fgbc.gridx = 1;
+        fgbc.gridy = row++;
+        fgbc.weightx = 0.65;
+        formContent.add(createFieldWrapper(screenCombo, screenErrorLbl), fgbc);
 
-        fgbc.gridx = 0; fgbc.gridy = row++; fgbc.gridwidth = 2;
+        fgbc.gridx = 0;
+        fgbc.gridy = row++;
+        fgbc.gridwidth = 2;
         formContent.add(createSectionSep("Date & Showtime"), fgbc);
         fgbc.gridwidth = 1;
 
-        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.35;
+        fgbc.gridx = 0;
+        fgbc.gridy = row;
+        fgbc.weightx = 0.35;
         formContent.add(createFieldLabel("Show Date *"), fgbc);
-        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.65;
+        fgbc.gridx = 1;
+        fgbc.gridy = row++;
+        fgbc.weightx = 0.65;
         formContent.add(createFieldWrapper(dateField, dateErrorLbl), fgbc);
 
-        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.35;
+        fgbc.gridx = 0;
+        fgbc.gridy = row;
+        fgbc.weightx = 0.35;
         formContent.add(createFieldLabel("Start Time *"), fgbc);
-        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.65;
+        fgbc.gridx = 1;
+        fgbc.gridy = row++;
+        fgbc.weightx = 0.65;
         formContent.add(createFieldWrapper(startTimeField, startTimeErrorLbl), fgbc);
 
-        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.35;
+        fgbc.gridx = 0;
+        fgbc.gridy = row;
+        fgbc.weightx = 0.35;
         formContent.add(createFieldLabel("End Time *"), fgbc);
-        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.65;
+        fgbc.gridx = 1;
+        fgbc.gridy = row++;
+        fgbc.weightx = 0.65;
         formContent.add(createFieldWrapper(endTimeField, endTimeErrorLbl), fgbc);
 
-        fgbc.gridx = 0; fgbc.gridy = row++; fgbc.gridwidth = 2;
+        fgbc.gridx = 0;
+        fgbc.gridy = row++;
+        fgbc.gridwidth = 2;
         formContent.add(createSectionSep("Seat Pricing (Per Seat Type)"), fgbc);
         fgbc.gridwidth = 1;
 
-        fgbc.gridx = 0; fgbc.gridy = row++; fgbc.gridwidth = 2;
+        fgbc.gridx = 0;
+        fgbc.gridy = row++;
+        fgbc.gridwidth = 2;
         formContent.add(pricingPanel, fgbc);
         fgbc.gridwidth = 1;
 
-        fgbc.gridx = 0; fgbc.gridy = row++; fgbc.gridwidth = 2;
+        fgbc.gridx = 0;
+        fgbc.gridy = row++;
+        fgbc.gridwidth = 2;
         formContent.add(statusBox, fgbc);
         fgbc.gridwidth = 1;
 
@@ -322,16 +347,22 @@ public class AddShowPage extends JPanel {
     }
 
     private void setupListeners() {
-        screenCombo.addActionListener(e -> refreshPricingFields());
-        movieCombo.addActionListener(e -> autoCalculateEndTime());
+        screenCombo.addActionListener(e -> {
+            clearFieldError(screenCombo, screenErrorLbl);
+            refreshPricingFields();
+        });
+        movieCombo.addActionListener(e -> {
+            clearFieldError(movieCombo, movieErrorLbl);
+            autoCalculateEndTime();
+        });
         startTimeField.getDocument().addDocumentListener(new SimpleDocListener(this::autoCalculateEndTime));
 
-        dateField.getDocument().addDocumentListener(new SimpleDocListener(() ->
-                clearFieldError(dateField, dateErrorLbl)));
-        startTimeField.getDocument().addDocumentListener(new SimpleDocListener(() ->
-                clearFieldError(startTimeField, startTimeErrorLbl)));
-        endTimeField.getDocument().addDocumentListener(new SimpleDocListener(() ->
-                clearFieldError(endTimeField, endTimeErrorLbl)));
+        dateField.getDocument().addDocumentListener(new SimpleDocListener(()
+                -> clearFieldError(dateField, dateErrorLbl)));
+        startTimeField.getDocument().addDocumentListener(new SimpleDocListener(()
+                -> clearFieldError(startTimeField, startTimeErrorLbl)));
+        endTimeField.getDocument().addDocumentListener(new SimpleDocListener(()
+                -> clearFieldError(endTimeField, endTimeErrorLbl)));
 
         saveBtn.addActionListener(e -> handleSave());
         resetBtn.addActionListener(e -> handleReset());
@@ -354,6 +385,7 @@ public class AddShowPage extends JPanel {
     private void refreshPricingFields() {
         pricingPanel.removeAll();
         priceFields.clear();
+        priceErrorLabels.clear();
 
         Screen screen = (Screen) screenCombo.getSelectedItem();
         if (screen == null) {
@@ -381,16 +413,24 @@ public class AddShowPage extends JPanel {
 
             int r = 0;
             for (String seatType : seatTypes) {
-                gc.gridx = 0; gc.gridy = r; gc.weightx = 0.35;
+                gc.gridx = 0;
+                gc.gridy = r;
+                gc.weightx = 0.35;
                 JLabel lbl = new JLabel(seatType + " Price (₹) *");
                 lbl.setFont(Theme.FONT_BOLD_SM);
                 lbl.setForeground(Theme.TEXT_DARK);
                 grid.add(lbl, gc);
 
-                gc.gridx = 1; gc.gridy = r++; gc.weightx = 0.65;
+                gc.gridx = 1;
+                gc.gridy = r++;
+                gc.weightx = 0.65;
                 JTextField priceField = Theme.createTextField("e.g. 200.00");
+                JLabel priceErrLbl = createErrorLabel();
                 priceFields.put(seatType, priceField);
-                grid.add(priceField, gc);
+                priceErrorLabels.put(seatType, priceErrLbl);
+                priceField.getDocument().addDocumentListener(new SimpleDocListener(()
+                        -> clearFieldError(priceField, priceErrLbl)));
+                grid.add(createFieldWrapper(priceField, priceErrLbl), gc);
             }
             pricingPanel.add(grid);
         }
@@ -406,59 +446,124 @@ public class AddShowPage extends JPanel {
         String startTime = startTimeField.getText().trim();
         String endTime = endTimeField.getText().trim();
 
-        movieErrorLbl.setVisible(false);
-        screenErrorLbl.setVisible(false);
+        clearFieldError(movieCombo, movieErrorLbl);
+        clearFieldError(screenCombo, screenErrorLbl);
         clearFieldError(dateField, dateErrorLbl);
         clearFieldError(startTimeField, startTimeErrorLbl);
         clearFieldError(endTimeField, endTimeErrorLbl);
+        for (Map.Entry<String, JTextField> entry : priceFields.entrySet()) {
+            JLabel errLbl = priceErrorLabels.get(entry.getKey());
+            if (errLbl != null) {
+                clearFieldError(entry.getValue(), errLbl);
+            }
+        }
         statusBox.setVisible(false);
 
         boolean hasError = false;
 
+        // 1. Movie validation
         if (movie == null) {
-            movieErrorLbl.setText("⚠ Please select a movie.");
-            movieErrorLbl.setVisible(true);
+            setFieldError(movieCombo, movieErrorLbl, "Please select a movie.");
             hasError = true;
         }
+
+        // 2. Screen validation
         if (screen == null) {
-            screenErrorLbl.setText("⚠ Please select an active screen.");
-            screenErrorLbl.setVisible(true);
+            setFieldError(screenCombo, screenErrorLbl, "Please select an active screen.");
+            hasError = true;
+        } else if (!screen.isActive()) {
+            setFieldError(screenCombo, screenErrorLbl, "Screen is " + screen.getStatus() + ". Only ACTIVE screens can be scheduled.");
             hasError = true;
         }
+
+        // 3. Date validation
         if (date.isEmpty()) {
             setFieldError(dateField, dateErrorLbl, "Show date is required (YYYY-MM-DD).");
             hasError = true;
+        } else if (!date.matches("^\\d{4}-\\d{2}-\\d{2}$")) {
+            setFieldError(dateField, dateErrorLbl, "Invalid date format. Use YYYY-MM-DD (e.g. 2025-12-25).");
+            hasError = true;
+        } else {
+            try {
+                java.time.LocalDate.parse(date);
+            } catch (Exception ex) {
+                setFieldError(dateField, dateErrorLbl, "Invalid calendar date. Please enter a valid date.");
+                hasError = true;
+            }
         }
+
+        // 4. Start Time validation
+        int startMins = -1;
         if (startTime.isEmpty()) {
-            setFieldError(startTimeField, startTimeErrorLbl, "Start time is required (e.g. 06:00 PM).");
+            setFieldError(startTimeField, startTimeErrorLbl, "Start time is required (e.g. 05:00 PM).");
             hasError = true;
+        } else {
+            startMins = ShowDAO.parseTimeToMinutes(startTime);
+            if (startMins < 0) {
+                setFieldError(startTimeField, startTimeErrorLbl, "Invalid start time format. Example: 05:00 PM.");
+                hasError = true;
+            }
         }
+
+        // 5. End Time validation
+        int endMins = -1;
         if (endTime.isEmpty()) {
-            setFieldError(endTimeField, endTimeErrorLbl, "End time is required (e.g. 09:00 PM).");
+            setFieldError(endTimeField, endTimeErrorLbl, "End time is required (e.g. 08:00 PM).");
             hasError = true;
+        } else {
+            endMins = ShowDAO.parseTimeToMinutes(endTime);
+            if (endMins < 0) {
+                setFieldError(endTimeField, endTimeErrorLbl, "Invalid end time format. Example: 08:00 PM.");
+                hasError = true;
+            } else if (startMins >= 0) {
+                if (endMins <= startMins) {
+                    setFieldError(endTimeField, endTimeErrorLbl, "End time must be after start time.");
+                    hasError = true;
+                } else if (endMins - startMins < 30) {
+                    setFieldError(endTimeField, endTimeErrorLbl, "Show duration must be at least 30 minutes.");
+                    hasError = true;
+                }
+            }
         }
 
-        if (hasError) return;
-
+        // 6. Tiered Pricing validation
         List<ShowPrice> prices = new ArrayList<>();
+        if (priceFields.isEmpty() && screen != null) {
+            showStatus("No seat categories configured on screen '" + screen.getName() + "'.", false);
+            hasError = true;
+        }
         for (Map.Entry<String, JTextField> entry : priceFields.entrySet()) {
             String seatType = entry.getKey();
-            String priceStr = entry.getValue().getText().trim();
+            JTextField pField = entry.getValue();
+            JLabel errLbl = priceErrorLabels.get(seatType);
+            String priceStr = pField.getText().trim();
             if (priceStr.isEmpty()) {
-                showStatus("Please enter a price for " + seatType + " seats.", false);
-                return;
-            }
-            try {
-                BigDecimal price = new BigDecimal(priceStr.replaceAll("[^0-9.]", ""));
-                if (price.compareTo(BigDecimal.ZERO) <= 0) {
-                    showStatus("Price for " + seatType + " must be greater than ₹0.00.", false);
-                    return;
+                if (errLbl != null) {
+                    setFieldError(pField, errLbl, "Please enter a price for " + seatType + ".");
                 }
-                prices.add(new ShowPrice(0, seatType, price));
-            } catch (NumberFormatException ex) {
-                showStatus("Invalid price for " + seatType + ": '" + priceStr + "'. Enter a valid number.", false);
-                return;
+                hasError = true;
+            } else {
+                try {
+                    BigDecimal price = new BigDecimal(priceStr.replaceAll("[^0-9.]", ""));
+                    if (price.compareTo(BigDecimal.ZERO) <= 0) {
+                        if (errLbl != null) {
+                            setFieldError(pField, errLbl, "Price must be greater than ₹0.00.");
+                        }
+                        hasError = true;
+                    } else {
+                        prices.add(new ShowPrice(0, seatType, price));
+                    }
+                } catch (Exception ex) {
+                    if (errLbl != null) {
+                        setFieldError(pField, errLbl, "Enter a valid numeric price.");
+                    }
+                    hasError = true;
+                }
             }
+        }
+
+        if (hasError) {
+            return;
         }
 
         Show show = new Show(
@@ -469,26 +574,67 @@ public class AddShowPage extends JPanel {
 
         String error = showService.createShow(show, prices);
         if (error == null) {
-            showStatus("Show scheduled successfully! " + movie.getTitle() + " on " + screen.getName()
-                    + " at " + startTime + " on " + date + ".", true);
             handleReset();
+            JOptionPane.showMessageDialog(this,
+                    "Show for '" + movie.getTitle() + "' on " + screen.getName() + " scheduled successfully!",
+                    "Show Scheduled", JOptionPane.INFORMATION_MESSAGE);
+            if (dashboard != null) {
+                dashboard.switchToPage("PAGE_SCHEDULES");
+            }
         } else {
-            showStatus(error, false);
+            String lower = error.toLowerCase();
+            if (lower.contains("start time")) {
+                setFieldError(startTimeField, startTimeErrorLbl, error);
+            } else if (lower.contains("end time")) {
+                setFieldError(endTimeField, endTimeErrorLbl, error);
+            } else if (lower.contains("date")) {
+                setFieldError(dateField, dateErrorLbl, error);
+            } else if (lower.contains("screen")) {
+                setFieldError(screenCombo, screenErrorLbl, error);
+            } else if (lower.contains("movie")) {
+                setFieldError(movieCombo, movieErrorLbl, error);
+            } else {
+                boolean mapped = false;
+                for (String seatType : priceFields.keySet()) {
+                    if (lower.contains(seatType.toLowerCase())) {
+                        JTextField pf = priceFields.get(seatType);
+                        JLabel pe = priceErrorLabels.get(seatType);
+                        if (pf != null && pe != null) {
+                            setFieldError(pf, pe, error);
+                            mapped = true;
+                            break;
+                        }
+                    }
+                }
+                if (!mapped) {
+                    showStatus(error, false);
+                }
+            }
         }
     }
 
     private void handleReset() {
-        if (movieCombo.getItemCount() > 0) movieCombo.setSelectedIndex(0);
-        if (screenCombo.getItemCount() > 0) screenCombo.setSelectedIndex(0);
+        if (movieCombo.getItemCount() > 0) {
+            movieCombo.setSelectedIndex(0);
+        }
+        if (screenCombo.getItemCount() > 0) {
+            screenCombo.setSelectedIndex(0);
+        }
         dateField.setText("");
         startTimeField.setText("");
         endTimeField.setText("");
         priceFields.values().forEach(f -> f.setText(""));
-        movieErrorLbl.setVisible(false);
-        screenErrorLbl.setVisible(false);
+        clearFieldError(movieCombo, movieErrorLbl);
+        clearFieldError(screenCombo, screenErrorLbl);
         clearFieldError(dateField, dateErrorLbl);
         clearFieldError(startTimeField, startTimeErrorLbl);
         clearFieldError(endTimeField, endTimeErrorLbl);
+        for (Map.Entry<String, JTextField> entry : priceFields.entrySet()) {
+            JLabel errLbl = priceErrorLabels.get(entry.getKey());
+            if (errLbl != null) {
+                clearFieldError(entry.getValue(), errLbl);
+            }
+        }
         statusBox.setVisible(false);
         refreshCombos();
         refreshPricingFields();
@@ -586,6 +732,10 @@ public class AddShowPage extends JPanel {
                 new LineBorder(Theme.ACCENT_RED, 1, true),
                 new EmptyBorder(8, 10, 8, 10)
         ));
+        if (errorLabel.getParent() != null) {
+            errorLabel.getParent().revalidate();
+            errorLabel.getParent().repaint();
+        }
         field.revalidate();
         field.repaint();
     }
@@ -597,15 +747,32 @@ public class AddShowPage extends JPanel {
                 new LineBorder(Theme.BORDER_COLOR, 1, true),
                 new EmptyBorder(8, 10, 8, 10)
         ));
+        if (errorLabel.getParent() != null) {
+            errorLabel.getParent().revalidate();
+            errorLabel.getParent().repaint();
+        }
         field.revalidate();
         field.repaint();
     }
 
     private static class SimpleDocListener implements DocumentListener {
+
         private final Runnable callback;
-        public SimpleDocListener(Runnable callback) { this.callback = callback; }
-        public void insertUpdate(DocumentEvent e) { callback.run(); }
-        public void removeUpdate(DocumentEvent e) { callback.run(); }
-        public void changedUpdate(DocumentEvent e) { callback.run(); }
+
+        public SimpleDocListener(Runnable callback) {
+            this.callback = callback;
+        }
+
+        public void insertUpdate(DocumentEvent e) {
+            callback.run();
+        }
+
+        public void removeUpdate(DocumentEvent e) {
+            callback.run();
+        }
+
+        public void changedUpdate(DocumentEvent e) {
+            callback.run();
+        }
     }
 }

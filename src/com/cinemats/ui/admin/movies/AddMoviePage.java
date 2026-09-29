@@ -5,7 +5,11 @@ import com.cinemats.dao.MovieDAO;
 import com.cinemats.model.Movie;
 import com.cinemats.ui.admin.AdminDashboard;
 import com.cinemats.util.Theme;
-
+import java.awt.*;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.util.List;
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
@@ -13,11 +17,6 @@ import javax.swing.border.LineBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
-import java.awt.*;
-import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
-import java.util.List;
 
 // Standalone Add Movie page registered in AdminDashboard CardLayout as PAGE_ADD_MOVIE
 public class AddMoviePage extends JPanel {

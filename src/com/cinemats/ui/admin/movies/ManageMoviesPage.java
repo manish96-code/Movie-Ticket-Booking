@@ -63,22 +63,71 @@ public class ManageMoviesPage extends JPanel {
         countBadge.setOpaque(true);
         countBadge.setBorder(new EmptyBorder(3, 8, 3, 8));
 
+        JPanel searchBox = new JPanel(new BorderLayout(6, 0));
+        searchBox.setBackground(Color.WHITE);
+        searchBox.setBorder(new CompoundBorder(
+                new LineBorder(Theme.BORDER_COLOR, 1, true),
+                new EmptyBorder(3, 8, 3, 8)
+        ));
+
         searchField = new JTextField(14);
         searchField.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         searchField.putClientProperty("JTextField.placeholderText", "Search title or category...");
-        searchField.setBorder(new CompoundBorder(
-                new LineBorder(Theme.BORDER_COLOR, 1, true),
-                new EmptyBorder(4, 8, 4, 8)
-        ));
-        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            public void insertUpdate(javax.swing.event.DocumentEvent e) { filterMovies(); }
-            public void removeUpdate(javax.swing.event.DocumentEvent e) { filterMovies(); }
-            public void changedUpdate(javax.swing.event.DocumentEvent e) { filterMovies(); }
+        searchField.setBorder(null);
+        searchField.setOpaque(false);
+
+        JLabel clearBtn = new JLabel("\u2715");
+        clearBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        clearBtn.setForeground(new Color(156, 163, 175));
+        clearBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        clearBtn.setToolTipText("Clear search");
+        clearBtn.setVisible(false);
+
+        clearBtn.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                searchField.setText("");
+                searchField.requestFocusInWindow();
+            }
+
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                clearBtn.setForeground(new Color(75, 85, 99));
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                clearBtn.setForeground(new Color(156, 163, 175));
+            }
         });
+
+        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                onSearchChanged();
+            }
+
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                onSearchChanged();
+            }
+
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+                onSearchChanged();
+            }
+
+            private void onSearchChanged() {
+                filterMovies();
+                clearBtn.setVisible(!searchField.getText().trim().isEmpty());
+                searchBox.revalidate();
+                searchBox.repaint();
+            }
+        });
+
+        searchBox.add(searchField, BorderLayout.CENTER);
+        searchBox.add(clearBtn, BorderLayout.EAST);
 
         leftGroup.add(title);
         leftGroup.add(countBadge);
-        leftGroup.add(searchField);
+        leftGroup.add(searchBox);
 
         JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         btnRow.setOpaque(false);
@@ -91,7 +140,11 @@ public class ManageMoviesPage extends JPanel {
         });
 
         JButton addBtn = Theme.createPrimaryButton("+ Add Movie");
-        addBtn.addActionListener(e -> { if (dashboard != null) dashboard.switchToPage("PAGE_ADD_MOVIE"); });
+        addBtn.addActionListener(e -> {
+            if (dashboard != null) {
+                dashboard.switchToPage("PAGE_ADD_MOVIE");
+        
+            }});
 
         JButton delBtn = Theme.createSecondaryButton("Remove Selected");
         delBtn.setForeground(Theme.ACCENT_RED);
@@ -113,7 +166,9 @@ public class ManageMoviesPage extends JPanel {
         String[] cols = {"Movie ID", "Title", "Category / Genre", "Duration", "Rating", "Status"};
         movieTableModel = new DefaultTableModel(cols, 0) {
             @Override
-            public boolean isCellEditable(int r, int c) { return false; }
+            public boolean isCellEditable(int r, int c) {
+                return false;
+            }
         };
 
         movieTable = new JTable(movieTableModel);
@@ -129,12 +184,12 @@ public class ManageMoviesPage extends JPanel {
         List<Movie> movies = MovieDAO.getAllMovies();
         for (Movie m : movies) {
             movieTableModel.addRow(new Object[]{
-                    "MOV-" + String.format("%03d", m.getId()),
-                    m.getTitle(),
-                    m.getGenre(),
-                    m.getDurationMins() + " min",
-                    m.getRating(),
-                    formatStatus(m.getStatus())
+                "MOV-" + String.format("%03d", m.getId()),
+                m.getTitle(),
+                m.getGenre(),
+                m.getDurationMins() + " min",
+                m.getRating(),
+                formatStatus(m.getStatus())
             });
         }
         countBadge.setText(movies.size() + " Movies");
@@ -149,12 +204,12 @@ public class ManageMoviesPage extends JPanel {
             if (query.isEmpty() || m.getTitle().toLowerCase().contains(query)
                     || m.getGenre().toLowerCase().contains(query)) {
                 movieTableModel.addRow(new Object[]{
-                        "MOV-" + String.format("%03d", m.getId()),
-                        m.getTitle(),
-                        m.getGenre(),
-                        m.getDurationMins() + " min",
-                        m.getRating(),
-                        formatStatus(m.getStatus())
+                    "MOV-" + String.format("%03d", m.getId()),
+                    m.getTitle(),
+                    m.getGenre(),
+                    m.getDurationMins() + " min",
+                    m.getRating(),
+                    formatStatus(m.getStatus())
                 });
                 matched++;
             }
@@ -189,7 +244,9 @@ public class ManageMoviesPage extends JPanel {
             if (choice == JOptionPane.YES_OPTION) {
                 promptQuickAddCategory(null);
                 categories = CategoryDAO.getCategoryNames();
-                if (categories.isEmpty()) return;
+                if (categories.isEmpty()) {
+                    return;
+                }
             } else {
                 return;
             }
@@ -221,11 +278,16 @@ public class ManageMoviesPage extends JPanel {
         JPanel form = new JPanel(new GridLayout(5, 2, 10, 12));
         form.setBorder(new EmptyBorder(8, 8, 8, 8));
 
-        form.add(new JLabel("Movie Title:")); form.add(nameField);
-        form.add(new JLabel("Movie Category / Genre:")); form.add(categoryRow);
-        form.add(new JLabel("Duration (Minutes):")); form.add(durationField);
-        form.add(new JLabel("Age Rating:")); form.add(ratingCombo);
-        form.add(new JLabel("Release Status:")); form.add(statusCombo);
+        form.add(new JLabel("Movie Title:"));
+        form.add(nameField);
+        form.add(new JLabel("Movie Category / Genre:"));
+        form.add(categoryRow);
+        form.add(new JLabel("Duration (Minutes):"));
+        form.add(durationField);
+        form.add(new JLabel("Age Rating:"));
+        form.add(ratingCombo);
+        form.add(new JLabel("Release Status:"));
+        form.add(statusCombo);
 
         int res = JOptionPane.showConfirmDialog(this, form, "Add New Movie Title", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (res == JOptionPane.OK_OPTION) {
@@ -246,7 +308,8 @@ public class ManageMoviesPage extends JPanel {
             int duration = 150;
             try {
                 duration = Integer.parseInt(durStr.replaceAll("[^0-9]", ""));
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
 
             String rating = (String) ratingCombo.getSelectedItem();
             String status = "Now Showing".equals(statusCombo.getSelectedItem()) ? "NOW_SHOWING" : "UPCOMING";

@@ -4,7 +4,11 @@ import com.cinemats.dao.CategoryDAO;
 import com.cinemats.dao.MovieDAO;
 import com.cinemats.model.Movie;
 import com.cinemats.util.Theme;
-
+import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.util.ArrayList;
+import java.util.List;
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
@@ -13,11 +17,6 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.util.ArrayList;
-import java.util.List;
 
 // Dynamic, professional movies catalogue page for staff counter terminal
 public class MoviesListPage extends JPanel {
@@ -189,9 +188,17 @@ public class MoviesListPage extends JPanel {
         searchField = Theme.createTextField("Search title or genre...");
         searchField.setPreferredSize(new Dimension(280, 36));
         searchField.getDocument().addDocumentListener(new DocumentListener() {
-            public void insertUpdate(DocumentEvent e) { applyFilters(); }
-            public void removeUpdate(DocumentEvent e) { applyFilters(); }
-            public void changedUpdate(DocumentEvent e) { applyFilters(); }
+            public void insertUpdate(DocumentEvent e) {
+                applyFilters();
+            }
+
+            public void removeUpdate(DocumentEvent e) {
+                applyFilters();
+            }
+
+            public void changedUpdate(DocumentEvent e) {
+                applyFilters();
+            }
         });
         toolbar.add(searchField, BorderLayout.WEST);
 
@@ -236,7 +243,7 @@ public class MoviesListPage extends JPanel {
 
         // 2. Movies JTable
         String[] cols = {
-                "Movie ID", "Title", "Category / Genre", "Duration", "Age Rating", "Release Status", "Poster Label"
+            "Movie ID", "Title", "Category / Genre", "Duration", "Age Rating", "Release Status", "Poster Label"
         };
 
         tableModel = new DefaultTableModel(cols, 0) {
@@ -416,13 +423,13 @@ public class MoviesListPage extends JPanel {
 
             filteredMoviesList.add(m);
             tableModel.addRow(new Object[]{
-                    "MOV-" + String.format("%03d", m.getId()),
-                    m.getTitle(),
-                    m.getGenre(),
-                    m.getFormattedDuration(),
-                    m.getRating(),
-                    formatStatus(m.getStatus()),
-                    posterDisplay
+                "MOV-" + String.format("%03d", m.getId()),
+                m.getTitle(),
+                m.getGenre(),
+                m.getFormattedDuration(),
+                m.getRating(),
+                formatStatus(m.getStatus()),
+                posterDisplay
             });
         }
 
@@ -531,7 +538,9 @@ public class MoviesListPage extends JPanel {
 
     // Displays sleek movie details modal dialog
     private void openMovieDetailsDialog(Movie movie) {
-        if (movie == null) return;
+        if (movie == null) {
+            return;
+        }
 
         Window parentWindow = SwingUtilities.getWindowAncestor(this);
         JDialog dialog = new JDialog(parentWindow, "Movie Details: " + movie.getTitle(), Dialog.ModalityType.APPLICATION_MODAL);
@@ -609,7 +618,8 @@ public class MoviesListPage extends JPanel {
                         posterImgLbl.setIcon(new ImageIcon(scaled));
                     }
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
 
         centerContent.add(posterImgLbl, BorderLayout.WEST);
