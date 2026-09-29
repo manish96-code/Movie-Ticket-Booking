@@ -1,5 +1,8 @@
 package com.cinemats.ui.admin.movies;
 
+import com.cinemats.dao.CategoryDAO;
+import com.cinemats.dao.MovieDAO;
+import com.cinemats.model.Movie;
 import com.cinemats.ui.admin.AdminDashboard;
 import com.cinemats.util.Theme;
 
@@ -10,16 +13,16 @@ import javax.swing.border.LineBorder;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.util.List;
 
-/**
- * Movie Catalogue Management Page
- * Handles movie listing, interactive addition of new titles, and deletion.
- */
+// Movie catalogue management page
 public class ManageMoviesPage extends JPanel {
 
     private final AdminDashboard dashboard;
     private DefaultTableModel movieTableModel;
     private JTable movieTable;
+    private JTextField searchField;
+    private JLabel countBadge;
 
     public ManageMoviesPage(AdminDashboard dashboard) {
         this.dashboard = dashboard;
@@ -28,10 +31,11 @@ public class ManageMoviesPage extends JPanel {
         setBorder(new EmptyBorder(22, 26, 22, 26));
 
         initUI();
+        refreshMovieTable();
     }
 
     private void initUI() {
-        add(createBanner("🎬 Movie Catalogue Management",
+        add(createBanner("Movie Catalogue Management",
                 "Add, edit, and configure movies, ratings, running durations, and base ticket pricing."),
                 BorderLayout.NORTH);
 
@@ -43,15 +47,49 @@ public class ManageMoviesPage extends JPanel {
         ));
 
         // Top Toolbar
-        JPanel toolbar = new JPanel(new BorderLayout());
+        JPanel toolbar = new JPanel(new BorderLayout(10, 0));
         toolbar.setOpaque(false);
+
+        JPanel leftGroup = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        leftGroup.setOpaque(false);
 
         JLabel title = new JLabel("Currently Running Titles & Upcoming Features");
         title.setFont(Theme.FONT_HEADER);
         title.setForeground(Theme.TEXT_DARK);
 
-        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        countBadge = new JLabel("0 Movies");
+        countBadge.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        countBadge.setForeground(new Color(124, 58, 237));
+        countBadge.setBackground(new Color(243, 232, 255));
+        countBadge.setOpaque(true);
+        countBadge.setBorder(new EmptyBorder(3, 8, 3, 8));
+
+        searchField = new JTextField(14);
+        searchField.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        searchField.putClientProperty("JTextField.placeholderText", "Search title or category...");
+        searchField.setBorder(new CompoundBorder(
+                new LineBorder(Theme.BORDER_COLOR, 1, true),
+                new EmptyBorder(4, 8, 4, 8)
+        ));
+        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { filterMovies(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { filterMovies(); }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { filterMovies(); }
+        });
+
+        leftGroup.add(title);
+        leftGroup.add(countBadge);
+        leftGroup.add(searchField);
+
+        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         btnRow.setOpaque(false);
+
+        JButton categoriesBtn = Theme.createSecondaryButton("Movie Categories");
+        categoriesBtn.addActionListener(e -> {
+            if (dashboard != null) {
+                dashboard.switchToPage("PAGE_CATEGORIES");
+            }
+        });
 
         JButton addBtn = Theme.createPrimaryButton("+ Add Movie");
         addBtn.addActionListener(e -> openAddMovieDialog());
@@ -60,25 +98,24 @@ public class ManageMoviesPage extends JPanel {
         delBtn.setForeground(Theme.ACCENT_RED);
         delBtn.addActionListener(e -> removeSelectedMovie());
 
+        JButton refreshBtn = Theme.createSecondaryButton("Refresh");
+        refreshBtn.addActionListener(e -> refreshMovieTable());
+
+        btnRow.add(categoriesBtn);
         btnRow.add(addBtn);
         btnRow.add(delBtn);
+        btnRow.add(refreshBtn);
 
-        toolbar.add(title, BorderLayout.WEST);
+        toolbar.add(leftGroup, BorderLayout.WEST);
         toolbar.add(btnRow, BorderLayout.EAST);
         card.add(toolbar, BorderLayout.NORTH);
 
         // Movie Table
-        String[] cols = {"Movie ID", "Title", "Genre", "Duration", "Rating", "Base Price", "Status"};
+        String[] cols = {"Movie ID", "Title", "Category / Genre", "Duration", "Rating", "Base Price", "Status"};
         movieTableModel = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
         };
-        movieTableModel.addRow(new Object[]{"MOV-101", "Interstellar", "Sci-Fi / Adventure", "169 min", "PG-13", "$12.00", "Now Showing"});
-        movieTableModel.addRow(new Object[]{"MOV-102", "Dune: Part Two", "Sci-Fi / Action", "166 min", "PG-13", "$14.00", "Now Showing"});
-        movieTableModel.addRow(new Object[]{"MOV-103", "Spider-Man: Across The Spider-Verse", "Animation / Action", "140 min", "PG", "$11.00", "Now Showing"});
-        movieTableModel.addRow(new Object[]{"MOV-104", "Oppenheimer", "Biography / Drama", "180 min", "R", "$13.00", "Now Showing"});
-        movieTableModel.addRow(new Object[]{"MOV-105", "Avatar: The Way of Water", "Action / Adventure", "192 min", "PG-13", "$12.50", "Now Showing"});
-        movieTableModel.addRow(new Object[]{"MOV-106", "Gladiator II", "Action / History", "148 min", "R", "$14.50", "Upcoming"});
 
         movieTable = new JTable(movieTableModel);
         styleTable(movieTable);
@@ -86,40 +123,189 @@ public class ManageMoviesPage extends JPanel {
 
         add(card, BorderLayout.CENTER);
     }
-    private void openAddMovieDialog() {
 
-        
+    // Refreshes movie table with live data
+    public void refreshMovieTable() {
+        movieTableModel.setRowCount(0);
+        List<Movie> movies = MovieDAO.getAllMovies();
+        for (Movie m : movies) {
+            movieTableModel.addRow(new Object[]{
+                    "MOV-" + String.format("%03d", m.getId()),
+                    m.getTitle(),
+                    m.getGenre(),
+                    m.getDurationMins() + " min",
+                    m.getRating(),
+                    m.getFormattedPrice(),
+                    formatStatus(m.getStatus())
+            });
+        }
+        countBadge.setText(movies.size() + " Movies");
+    }
+
+    private void filterMovies() {
+        String query = searchField.getText().trim().toLowerCase();
+        movieTableModel.setRowCount(0);
+        List<Movie> movies = MovieDAO.getAllMovies();
+        int matched = 0;
+        for (Movie m : movies) {
+            if (query.isEmpty() || m.getTitle().toLowerCase().contains(query)
+                    || m.getGenre().toLowerCase().contains(query)) {
+                movieTableModel.addRow(new Object[]{
+                        "MOV-" + String.format("%03d", m.getId()),
+                        m.getTitle(),
+                        m.getGenre(),
+                        m.getDurationMins() + " min",
+                        m.getRating(),
+                        m.getFormattedPrice(),
+                        formatStatus(m.getStatus())
+                });
+                matched++;
+            }
+        }
+        countBadge.setText(matched + " Movies");
+    }
+
+    private String formatStatus(String status) {
+        if ("NOW_SHOWING".equalsIgnoreCase(status) || "Now Showing".equalsIgnoreCase(status)) {
+            return "Now Showing";
+        } else if ("UPCOMING".equalsIgnoreCase(status) || "Upcoming".equalsIgnoreCase(status)) {
+            return "Upcoming";
+        }
+        return status;
+    }
+
+    // Opens dialog to add a movie
+    private void openAddMovieDialog() {
+        List<String> categories = CategoryDAO.getCategoryNames();
+
+        // Check if categories exist
+        if (categories.isEmpty()) {
+            int choice = JOptionPane.showOptionDialog(this,
+                    "No movie categories exist yet.\nBefore adding a movie, you must create at least one movie category.",
+                    "Movie Category Required",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE,
+                    null,
+                    new Object[]{"Create Category Now", "Cancel"},
+                    "Create Category Now");
+
+            if (choice == JOptionPane.YES_OPTION) {
+                promptQuickAddCategory(null);
+                categories = CategoryDAO.getCategoryNames();
+                if (categories.isEmpty()) return;
+            } else {
+                return;
+            }
+        }
+
         JTextField nameField = Theme.createTextField("Title");
-        JTextField genreField = Theme.createTextField("Genre");
-        JTextField durationField = Theme.createTextField("Duration (e.g. 150 min)");
-        JTextField priceField = Theme.createTextField("Base Price (e.g. 12.00)");
-        JComboBox<String> ratingCombo = new JComboBox<>(new String[]{"G", "PG", "PG-13", "R"});
+        JComboBox<String> categoryCombo = new JComboBox<>(categories.toArray(new String[0]));
+        categoryCombo.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+
+        JButton quickAddCatBtn = new JButton("+ New");
+        quickAddCatBtn.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        quickAddCatBtn.setMargin(new Insets(2, 6, 2, 6));
+        quickAddCatBtn.addActionListener(e -> {
+            String newCat = promptQuickAddCategory(categoryCombo);
+            if (newCat != null) {
+                categoryCombo.setSelectedItem(newCat);
+            }
+        });
+
+        JPanel categoryRow = new JPanel(new BorderLayout(6, 0));
+        categoryRow.setOpaque(false);
+        categoryRow.add(categoryCombo, BorderLayout.CENTER);
+        categoryRow.add(quickAddCatBtn, BorderLayout.EAST);
+
+        JTextField durationField = Theme.createTextField("150");
+        JTextField priceField = Theme.createTextField("200.00");
+        JComboBox<String> ratingCombo = new JComboBox<>(new String[]{"U", "UA", "A", "PG", "PG-13", "R"});
         JComboBox<String> statusCombo = new JComboBox<>(new String[]{"Now Showing", "Upcoming"});
 
-        JPanel form = new JPanel(new GridLayout(6, 2, 8, 10));
+        JPanel form = new JPanel(new GridLayout(6, 2, 10, 12));
+        form.setBorder(new EmptyBorder(8, 8, 8, 8));
+
         form.add(new JLabel("Movie Title:")); form.add(nameField);
-        form.add(new JLabel("Genre:")); form.add(genreField);
-        form.add(new JLabel("Duration:")); form.add(durationField);
-        form.add(new JLabel("Rating:")); form.add(ratingCombo);
-        form.add(new JLabel("Base Price ($):")); form.add(priceField);
-        form.add(new JLabel("Status:")); form.add(statusCombo);
+        form.add(new JLabel("Movie Category / Genre:")); form.add(categoryRow);
+        form.add(new JLabel("Duration (Minutes):")); form.add(durationField);
+        form.add(new JLabel("Age Rating:")); form.add(ratingCombo);
+        form.add(new JLabel("Base Ticket Price (₹):")); form.add(priceField);
+        form.add(new JLabel("Release Status:")); form.add(statusCombo);
 
         int res = JOptionPane.showConfirmDialog(this, form, "Add New Movie Title", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (res == JOptionPane.OK_OPTION) {
             String title = nameField.getText().trim();
-            String genre = genreField.getText().trim();
-            String dur = durationField.getText().trim();
-            String price = priceField.getText().trim();
-            if (title.isEmpty() || price.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Title and Price are required.", "Error", JOptionPane.ERROR_MESSAGE);
+            String selectedCategory = (String) categoryCombo.getSelectedItem();
+            String durStr = durationField.getText().trim();
+            String priceStr = priceField.getText().trim();
+
+            if (title.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Movie Title is required.", "Validation Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-            String id = "MOV-" + (100 + movieTableModel.getRowCount() + 1);
-            movieTableModel.addRow(new Object[]{
-                    id, title, genre, dur, ratingCombo.getSelectedItem(), "$" + price, statusCombo.getSelectedItem()
-            });
-            JOptionPane.showMessageDialog(this, "Movie '" + title + "' added successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+
+            if (selectedCategory == null || selectedCategory.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Please select a valid movie category.", "Validation Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            int duration = 150;
+            try {
+                duration = Integer.parseInt(durStr.replaceAll("[^0-9]", ""));
+            } catch (Exception ignored) {}
+
+            double price = 200.0;
+            try {
+                price = Double.parseDouble(priceStr.replaceAll("[^0-9.]", ""));
+            } catch (Exception ignored) {}
+
+            String rating = (String) ratingCombo.getSelectedItem();
+            String status = "Now Showing".equals(statusCombo.getSelectedItem()) ? "NOW_SHOWING" : "UPCOMING";
+
+            Movie newMovie = new Movie(0, title, selectedCategory, duration, price, rating, title.toUpperCase(), status);
+            boolean saved = MovieDAO.addMovie(newMovie);
+
+            if (saved) {
+                JOptionPane.showMessageDialog(this, "Movie '" + title + "' added successfully under category '" + selectedCategory + "'!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                refreshMovieTable();
+            } else {
+                JOptionPane.showMessageDialog(this, "Failed to save movie.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
         }
+    }
+
+    // Dialog to add category on the fly
+    private String promptQuickAddCategory(JComboBox<String> comboToUpdate) {
+        JPanel p = new JPanel(new GridLayout(2, 2, 8, 8));
+        JTextField catField = new JTextField();
+        JTextField descField = new JTextField();
+        p.add(new JLabel("Category Name:"));
+        p.add(catField);
+        p.add(new JLabel("Description (optional):"));
+        p.add(descField);
+
+        int res = JOptionPane.showConfirmDialog(this, p, "Create New Movie Category", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (res == JOptionPane.OK_OPTION) {
+            String name = catField.getText().trim();
+            String desc = descField.getText().trim();
+            if (name.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Category name cannot be empty.", "Error", JOptionPane.ERROR_MESSAGE);
+                return null;
+            }
+            if (CategoryDAO.categoryExists(name)) {
+                JOptionPane.showMessageDialog(this, "Category '" + name + "' already exists.", "Info", JOptionPane.INFORMATION_MESSAGE);
+                return name;
+            }
+            boolean ok = CategoryDAO.addCategory(name, desc);
+            if (ok) {
+                if (comboToUpdate != null) {
+                    comboToUpdate.addItem(name);
+                    comboToUpdate.setSelectedItem(name);
+                }
+                return name;
+            }
+        }
+        return null;
     }
 
     private void removeSelectedMovie() {
@@ -131,7 +317,13 @@ public class ManageMoviesPage extends JPanel {
                     "Confirm Removal",
                     JOptionPane.YES_NO_OPTION);
             if (confirm == JOptionPane.YES_OPTION) {
-                movieTableModel.removeRow(row);
+                boolean deleted = MovieDAO.deleteMovieByTitle(movieTitle);
+                if (deleted) {
+                    refreshMovieTable();
+                    JOptionPane.showMessageDialog(this, "Movie '" + movieTitle + "' was removed.", "Removed", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    movieTableModel.removeRow(row);
+                }
             }
         } else {
             JOptionPane.showMessageDialog(this, "Please select a movie to remove.", "Notice", JOptionPane.INFORMATION_MESSAGE);
@@ -179,7 +371,7 @@ public class ManageMoviesPage extends JPanel {
         DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
         centerRenderer.setHorizontalAlignment(JLabel.CENTER);
         for (int i = 0; i < table.getColumnCount(); i++) {
-            if (i == 0 || i >= table.getColumnCount() - 2) {
+            if (i == 0 || i >= table.getColumnCount() - 3) {
                 table.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
             }
         }
