@@ -2,14 +2,13 @@ package com.cinemats.ui.admin;
 
 import com.cinemats.data.BookingMockData;
 import com.cinemats.util.Theme;
-
+import java.awt.*;
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-import java.awt.*;
 
 // Overview and analytics page
 public class OverviewPage extends JPanel {
@@ -101,11 +100,11 @@ public class OverviewPage extends JPanel {
 
         JButton actAddMovie = Theme.createPrimaryButton("+ Add New Movie Title");
         actAddMovie.setBackground(Theme.ACCENT_BLUE);
-        actAddMovie.addActionListener(e -> dashboard.switchToPage("PAGE_MOVIES"));
+        actAddMovie.addActionListener(e -> dashboard.switchToPage("PAGE_ADD_MOVIE"));
 
         JButton actSchedule = Theme.createPrimaryButton("+ Schedule New Showtime");
         actSchedule.setBackground(new Color(124, 58, 237));
-        actSchedule.addActionListener(e -> dashboard.switchToPage("PAGE_SCHEDULES"));
+        actSchedule.addActionListener(e -> dashboard.switchToPage("PAGE_ADD_SHOW"));
 
         JButton actAddStaff = Theme.createPrimaryButton("+ Register New Staff");
         actAddStaff.setBackground(Theme.COLOR_SUCCESS);
