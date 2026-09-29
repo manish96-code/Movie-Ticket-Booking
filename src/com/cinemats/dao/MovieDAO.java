@@ -3,17 +3,16 @@ package com.cinemats.dao;
 import com.cinemats.config.DBConnection;
 import com.cinemats.data.MovieMockData;
 import com.cinemats.model.Movie;
-
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-// Data access object for movie records
+// Data access object for movie records (pricing decoupled and managed in show_prices)
 public class MovieDAO {
 
     private static final List<Movie> fallbackMovies = new ArrayList<>(MovieMockData.getInitialMovies());
 
-    // Creates movies table and seeds default movies
+    // Creates movies table with image_path and seeds default movies
     public static synchronized void initMoviesTable() {
         if (!DBConnection.isDriverAvailable()) return;
 
@@ -22,9 +21,9 @@ public class MovieDAO {
                 + "title TEXT NOT NULL, "
                 + "genre TEXT NOT NULL, "
                 + "duration_mins INTEGER DEFAULT 150, "
-                + "price REAL NOT NULL DEFAULT 200.0, "
                 + "rating TEXT DEFAULT 'UA', "
                 + "poster_label TEXT DEFAULT 'MOVIE POSTER', "
+                + "image_path TEXT DEFAULT '', "
                 + "status TEXT DEFAULT 'NOW_SHOWING', "
                 + "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
                 + ");";
@@ -34,21 +33,30 @@ public class MovieDAO {
 
             stmt.execute(createSQL);
 
+            // Safe migration: add image_path column if table already existed without it
+            try {
+                stmt.execute("ALTER TABLE movies ADD COLUMN image_path TEXT DEFAULT ''");
+            } catch (SQLException ignored) {}
+
+            // Safe migration: drop legacy price column if present
+            try {
+                stmt.execute("ALTER TABLE movies DROP COLUMN price");
+            } catch (SQLException ignored) {}
+
             // Check if movies table is empty
             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM movies");
             if (rs.next() && rs.getInt(1) == 0) {
-                // Seed initial movies
-                String insertSQL = "INSERT INTO movies (title, genre, duration_mins, price, rating, poster_label, status) "
+                String insertSQL = "INSERT INTO movies (title, genre, duration_mins, rating, poster_label, status, image_path) "
                         + "VALUES (?, ?, ?, ?, ?, ?, ?)";
                 try (PreparedStatement insertStmt = conn.prepareStatement(insertSQL)) {
                     for (Movie m : fallbackMovies) {
                         insertStmt.setString(1, m.getTitle());
                         insertStmt.setString(2, m.getGenre());
                         insertStmt.setInt(3, m.getDurationMins());
-                        insertStmt.setDouble(4, m.getPrice());
-                        insertStmt.setString(5, m.getRating());
-                        insertStmt.setString(6, m.getPosterLabel());
-                        insertStmt.setString(7, m.getStatus());
+                        insertStmt.setString(4, m.getRating());
+                        insertStmt.setString(5, m.getPosterLabel());
+                        insertStmt.setString(6, m.getStatus());
+                        insertStmt.setString(7, m.getImagePath());
                         insertStmt.executeUpdate();
                     }
                     System.out.println("[MovieDAO] Seeded default movies catalogue into cinema.db.");
@@ -59,11 +67,12 @@ public class MovieDAO {
         }
     }
 
-    // Returns all active movies
+    // Returns all active movies with image_path
     public static List<Movie> getAllMovies() {
         if (DBConnection.isDriverAvailable()) {
             List<Movie> list = new ArrayList<>();
-            String sql = "SELECT id, title, genre, duration_mins, price, rating, poster_label, status "
+            String sql = "SELECT id, title, genre, duration_mins, rating, poster_label, status, "
+                    + "COALESCE(image_path, '') AS image_path "
                     + "FROM movies ORDER BY id ASC";
             try (Connection conn = DBConnection.getConnection();
                  Statement stmt = conn.createStatement();
@@ -75,10 +84,10 @@ public class MovieDAO {
                             rs.getString("title"),
                             rs.getString("genre"),
                             rs.getInt("duration_mins"),
-                            rs.getDouble("price"),
                             rs.getString("rating"),
                             rs.getString("poster_label"),
-                            rs.getString("status")
+                            rs.getString("status"),
+                            rs.getString("image_path")
                     ));
                 }
                 if (!list.isEmpty()) {
@@ -89,6 +98,39 @@ public class MovieDAO {
             }
         }
         return new ArrayList<>(fallbackMovies);
+    }
+
+    // Finds movie by ID with image_path
+    public static Movie getMovieById(int id) {
+        if (DBConnection.isDriverAvailable()) {
+            String sql = "SELECT id, title, genre, duration_mins, rating, poster_label, status, "
+                    + "COALESCE(image_path, '') AS image_path "
+                    + "FROM movies WHERE id = ?";
+            try (Connection conn = DBConnection.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setInt(1, id);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        return new Movie(
+                                rs.getInt("id"),
+                                rs.getString("title"),
+                                rs.getString("genre"),
+                                rs.getInt("duration_mins"),
+                                rs.getString("rating"),
+                                rs.getString("poster_label"),
+                                rs.getString("status"),
+                                rs.getString("image_path")
+                        );
+                    }
+                }
+            } catch (SQLException e) {
+                System.err.println("[MovieDAO] Error loading movie by id: " + e.getMessage());
+            }
+        }
+        for (Movie m : fallbackMovies) {
+            if (m.getId() == id) return m;
+        }
+        return null;
     }
 
     // Searches movies by title or genre
@@ -107,12 +149,12 @@ public class MovieDAO {
         return filtered;
     }
 
-    // Adds a new movie
+    // Adds a new movie (with image_path)
     public static synchronized boolean addMovie(Movie movie) {
         if (movie == null || movie.getTitle().isEmpty()) return false;
 
         if (DBConnection.isDriverAvailable()) {
-            String sql = "INSERT INTO movies (title, genre, duration_mins, price, rating, poster_label, status) "
+            String sql = "INSERT INTO movies (title, genre, duration_mins, rating, poster_label, status, image_path) "
                     + "VALUES (?, ?, ?, ?, ?, ?, ?)";
             try (Connection conn = DBConnection.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -120,10 +162,10 @@ public class MovieDAO {
                 stmt.setString(1, movie.getTitle());
                 stmt.setString(2, movie.getGenre());
                 stmt.setInt(3, movie.getDurationMins());
-                stmt.setDouble(4, movie.getPrice());
-                stmt.setString(5, movie.getRating());
-                stmt.setString(6, movie.getPosterLabel());
-                stmt.setString(7, movie.getStatus());
+                stmt.setString(4, movie.getRating());
+                stmt.setString(5, movie.getPosterLabel());
+                stmt.setString(6, movie.getStatus());
+                stmt.setString(7, movie.getImagePath() != null ? movie.getImagePath() : "");
 
                 int rows = stmt.executeUpdate();
                 if (rows > 0) {
@@ -138,10 +180,10 @@ public class MovieDAO {
                             movie.getTitle(),
                             movie.getGenre(),
                             movie.getDurationMins(),
-                            movie.getPrice(),
                             movie.getRating(),
                             movie.getPosterLabel(),
-                            movie.getStatus()
+                            movie.getStatus(),
+                            movie.getImagePath()
                     ));
                     System.out.println("[MovieDAO] Movie saved to database: " + movie.getTitle());
                     return true;
@@ -156,10 +198,10 @@ public class MovieDAO {
                 movie.getTitle(),
                 movie.getGenre(),
                 movie.getDurationMins(),
-                movie.getPrice(),
                 movie.getRating(),
                 movie.getPosterLabel(),
-                movie.getStatus()
+                movie.getStatus(),
+                movie.getImagePath()
         ));
         return true;
     }
@@ -184,18 +226,20 @@ public class MovieDAO {
     // Deletes movie by title
     public static synchronized boolean deleteMovieByTitle(String title) {
         if (title == null || title.trim().isEmpty()) return false;
+        String t = title.trim();
+
         if (DBConnection.isDriverAvailable()) {
             String sql = "DELETE FROM movies WHERE LOWER(title) = LOWER(?)";
             try (Connection conn = DBConnection.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setString(1, title.trim());
+                stmt.setString(1, t);
                 int rows = stmt.executeUpdate();
-                fallbackMovies.removeIf(m -> m.getTitle().equalsIgnoreCase(title.trim()));
+                fallbackMovies.removeIf(m -> m.getTitle().equalsIgnoreCase(t));
                 return rows > 0;
             } catch (SQLException e) {
                 System.err.println("[MovieDAO] Error deleting movie by title: " + e.getMessage());
             }
         }
-        return fallbackMovies.removeIf(m -> m.getTitle().equalsIgnoreCase(title.trim()));
+        return fallbackMovies.removeIf(m -> m.getTitle().equalsIgnoreCase(t));
     }
 }

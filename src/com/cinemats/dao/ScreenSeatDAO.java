@@ -335,4 +335,31 @@ public class ScreenSeatDAO {
         }
         return stats;
     }
+
+    // Returns distinct active seat types configured for a screen
+    public static synchronized List<String> getActiveSeatTypesByScreenId(int screenId) {
+        List<String> list = new ArrayList<>();
+        if (DBConnection.isDriverAvailable()) {
+            String sql = "SELECT DISTINCT UPPER(seat_type) AS st FROM screen_seats "
+                    + "WHERE screen_id = ? AND status = 'ACTIVE' ORDER BY "
+                    + "CASE WHEN UPPER(seat_type) = 'REGULAR' THEN 1 "
+                    + "WHEN UPPER(seat_type) = 'PREMIUM' THEN 2 "
+                    + "WHEN UPPER(seat_type) = 'RECLINER' THEN 3 ELSE 4 END";
+            try (Connection conn = DBConnection.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setInt(1, screenId);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        list.add(rs.getString("st"));
+                    }
+                }
+            } catch (SQLException e) {
+                System.err.println("[ScreenSeatDAO] Error querying seat types: " + e.getMessage());
+            }
+        }
+        if (list.isEmpty()) {
+            list.add("REGULAR");
+        }
+        return list;
+    }
 }

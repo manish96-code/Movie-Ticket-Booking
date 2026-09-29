@@ -136,7 +136,7 @@ public class MoviesPanel extends JPanel {
         int matchCount = 0;
         for (com.cinemats.model.Movie m : movieList) {
             if (q.isEmpty() || m.getTitle().toLowerCase().contains(q) || m.getGenre().toLowerCase().contains(q)) {
-                movieGrid.add(createMovieCard(m.getTitle(), m.getGenre(), m.getFormattedPrice()));
+                movieGrid.add(createMovieCard(m.getTitle(), m.getGenre(), m.getFormattedDuration()));
                 matchCount++;
             }
         }
@@ -161,7 +161,7 @@ public class MoviesPanel extends JPanel {
     // MOVIE CARD
     // =========================================================
 
-    private JPanel createMovieCard(String movieName, String type, String price) {
+    private JPanel createMovieCard(String movieName, String type, String duration) {
 
         JPanel card = new JPanel(new BorderLayout());
         card.setBackground(cardColor);
@@ -204,16 +204,16 @@ public class MoviesPanel extends JPanel {
         typeLabel.setForeground(gray);
 
 
-        JLabel priceLabel = new JLabel("Ticket Price: " + price);
-        priceLabel.setFont(new Font("Arial", Font.BOLD, 14));
-        priceLabel.setForeground(red);
+        JLabel durationLabel = new JLabel("Runtime: " + duration);
+        durationLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        durationLabel.setForeground(new Color(2, 132, 199));
 
 
         informationPanel.add(nameLabel);
         informationPanel.add(Box.createVerticalStrut(4));
         informationPanel.add(typeLabel);
         informationPanel.add(Box.createVerticalStrut(4));
-        informationPanel.add(priceLabel);
+        informationPanel.add(durationLabel);
 
 
         // =====================================================

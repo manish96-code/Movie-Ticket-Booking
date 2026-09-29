@@ -23,6 +23,7 @@ public class StaffDashboard extends JFrame {
     private java.util.Map<String, JButton> pageButtonMap = new java.util.HashMap<>();
     private MoviesListPage moviesListPage;
     private OrderBookingPage orderBookingPage;
+    private BookingHistoryPage bookingHistoryPage;
     private MoviesPanel moviesPanel;
 
     // --- Header & Clock ---
@@ -164,6 +165,7 @@ public class StaffDashboard extends JFrame {
         // Sidebar Navigation Buttons
         JButton orderBookingBtn = createSidebarButton("🎫  Order Booking", "PAGE_ORDER_BOOKING", true);
         JButton moviesBtn = createSidebarButton("🎬  Movies List", "PAGE_MOVIES_LIST", false);
+        JButton historyBtn = createSidebarButton("📜  Booking History", "PAGE_BOOKING_HISTORY", false);
         JButton todayShowsBtn = createSidebarButton("🕒  Today's Shows", "PAGE_TODAY_SHOWS", false);
         JButton searchTicketBtn = createSidebarButton("🔍  Search Ticket", "PAGE_SEARCH_TICKET", false);
         JButton shiftSummaryBtn = createSidebarButton("📊  Shift Summary", "PAGE_SHIFT_SUMMARY", false);
@@ -171,6 +173,8 @@ public class StaffDashboard extends JFrame {
         sidebar.add(orderBookingBtn);
         sidebar.add(Box.createVerticalStrut(8));
         sidebar.add(moviesBtn);
+        sidebar.add(Box.createVerticalStrut(8));
+        sidebar.add(historyBtn);
         sidebar.add(Box.createVerticalStrut(8));
         sidebar.add(todayShowsBtn);
         sidebar.add(Box.createVerticalStrut(8));
@@ -206,11 +210,13 @@ public class StaffDashboard extends JFrame {
         // Instantiate Standalone Page Components
         orderBookingPage = new OrderBookingPage(this);
         moviesListPage = new MoviesListPage(this);
+        bookingHistoryPage = new BookingHistoryPage(this);
         moviesPanel = new MoviesPanel(this);
 
         // Register Pages in CardLayout
         mainContentPanel.add(orderBookingPage, "PAGE_ORDER_BOOKING");
         mainContentPanel.add(moviesListPage, "PAGE_MOVIES_LIST");
+        mainContentPanel.add(bookingHistoryPage, "PAGE_BOOKING_HISTORY");
         mainContentPanel.add(createTodayShowsPagePlaceholder(), "PAGE_TODAY_SHOWS");
         mainContentPanel.add(createSearchTicketPagePlaceholder(), "PAGE_SEARCH_TICKET");
         mainContentPanel.add(createShiftSummaryPagePlaceholder(), "PAGE_SHIFT_SUMMARY");
@@ -269,6 +275,10 @@ public class StaffDashboard extends JFrame {
 
     public OrderBookingPage getOrderBookingPage() {
         return orderBookingPage;
+    }
+
+    public BookingHistoryPage getBookingHistoryPage() {
+        return bookingHistoryPage;
     }
 
     public MoviesPanel getMoviesPanel() {

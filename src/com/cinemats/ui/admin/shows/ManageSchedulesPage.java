@@ -1,24 +1,32 @@
 package com.cinemats.ui.admin.shows;
 
+import com.cinemats.dao.ScreenDAO;
+import com.cinemats.dao.ShowDAO;
 import com.cinemats.ui.admin.AdminDashboard;
-import com.cinemats.data.ScheduleMockData;
+import com.cinemats.model.Screen;
+import com.cinemats.model.Show;
 import com.cinemats.util.Theme;
-
+import java.awt.*;
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-import java.awt.*;
 
 // Schedules and screen allocation page
 public class ManageSchedulesPage extends JPanel {
 
     private final AdminDashboard dashboard;
+    private final DefaultTableModel scheduleModel;
 
     public ManageSchedulesPage(AdminDashboard dashboard) {
         this.dashboard = dashboard;
+        this.scheduleModel = new DefaultTableModel(
+                new String[]{"Show ID", "Movie", "Date", "Showtime", "Screen", "Available Seats", "Occupancy", "Status"}, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) { return false; }
+        };
         setLayout(new BorderLayout(0, 16));
         setBackground(Theme.BG_MAIN);
         setBorder(new EmptyBorder(22, 26, 22, 26));
@@ -39,30 +47,45 @@ public class ManageSchedulesPage extends JPanel {
         ));
 
         // Screen summary badges row
-        JPanel screenRow = new JPanel(new GridLayout(1, 4, 12, 0));
+        JPanel screenRow = new JPanel(new GridLayout(1, 0, 12, 0));
         screenRow.setOpaque(false);
-        screenRow.add(createScreenBadge("Screen 1: IMAX Audi", "300 Seats • Dolby Atmos", Theme.COLOR_SUCCESS));
-        screenRow.add(createScreenBadge("Screen 2: Prime Audi", "180 Seats • 4K Laser", Theme.ACCENT_BLUE));
-        screenRow.add(createScreenBadge("Screen 3: Standard Hall", "150 Seats • 7.1 Surround", Theme.COLOR_GOLD));
-        screenRow.add(createScreenBadge("Screen 4: Gold VIP", "60 Recliners • Butler Svc", new Color(124, 58, 237)));
+        for (Screen screen : ScreenDAO.getAllScreens()) {
+            Color accent = screen.isActive() ? Theme.COLOR_SUCCESS : Theme.COLOR_GOLD;
+            screenRow.add(createScreenBadge(screen.getName() + ": " + screen.getScreenType(),
+                screen.getBookableSeats() + " bookable seats • " + screen.getStatus(), accent));
+        }
 
         card.add(screenRow, BorderLayout.NORTH);
 
         // Schedule Table
-        String[] cols = {"Slot ID", "Screen", "Movie Title", "Showtime", "Available Seats", "Occupancy", "Status"};
-        DefaultTableModel model = new DefaultTableModel(cols, 0) {
-            @Override
-            public boolean isCellEditable(int r, int c) { return false; }
-        };
-        for (Object[] row : ScheduleMockData.getInitialSchedules()) {
-            model.addRow(row);
-        }
-
-        JTable table = new JTable(model);
+        JTable table = new JTable(scheduleModel);
         styleTable(table);
-        card.add(new JScrollPane(table), BorderLayout.CENTER);
+        JPanel tablePanel = new JPanel(new BorderLayout(0, 8));
+        tablePanel.setOpaque(false);
+        JButton refreshButton = Theme.createSecondaryButton("Refresh Schedules");
+        refreshButton.addActionListener(e -> refreshSchedules());
+        JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        actionRow.setOpaque(false);
+        actionRow.add(refreshButton);
+        tablePanel.add(actionRow, BorderLayout.NORTH);
+        tablePanel.add(new JScrollPane(table), BorderLayout.CENTER);
+        card.add(tablePanel, BorderLayout.CENTER);
+        refreshSchedules();
 
         add(card, BorderLayout.CENTER);
+    }
+
+    private void refreshSchedules() {
+        scheduleModel.setRowCount(0);
+        for (Show show : ShowDAO.getAllShows()) {
+            int totalSeats = show.getTotalSeats();
+            String occupancy = totalSeats == 0 ? "No seat inventory" :
+                    show.getBookedSeats() + " / " + totalSeats;
+            scheduleModel.addRow(new Object[]{
+                    show.getId(), show.getMovieTitle(), show.getShowDate(), show.getStartTime(),
+                    show.getScreenName(), show.getAvailableSeats(), occupancy, show.getStatus()
+            });
+        }
     }
 
     private JPanel createScreenBadge(String title, String details, Color accent) {
