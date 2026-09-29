@@ -5,10 +5,13 @@ import com.cinemats.service.ScreenSeatService;
 import com.cinemats.service.ScreenService;
 import com.cinemats.ui.admin.movies.ManageCategoriesPage;
 import com.cinemats.ui.admin.movies.ManageMoviesPage;
+import com.cinemats.ui.admin.movies.AddMoviePage;
 import com.cinemats.ui.admin.reports.FinancialReportsPage;
 import com.cinemats.ui.admin.screens.ManageScreensPage;
+import com.cinemats.ui.admin.screens.AddScreenPage;
 import com.cinemats.ui.admin.screens.SeatLayoutPage;
 import com.cinemats.ui.admin.shows.ManageSchedulesPage;
+import com.cinemats.ui.admin.shows.AddShowPage;
 import com.cinemats.ui.admin.staff.AddStaffPage;
 import com.cinemats.ui.admin.staff.StaffAccountsPage;
 import com.cinemats.ui.auth.LoginFrame;
@@ -46,6 +49,9 @@ public class AdminDashboard extends JFrame {
     private StaffAccountsPage staffAccountsPage;
     private AddStaffPage addStaffPage;
     private FinancialReportsPage reportsPage;
+    private AddMoviePage addMoviePage;
+    private AddScreenPage addScreenPage;
+    private AddShowPage addShowPage;
 
     public AdminDashboard() {
         this("System Administrator");
@@ -235,16 +241,25 @@ public class AdminDashboard extends JFrame {
         // Group 2: Operations
         navMenuPanel.add(createCategoryHeader("THEATER OPERATIONS"));
         ModernNavButton moviesBtn = createNavButton("Manage Movies", "PAGE_MOVIES", false);
+        ModernNavButton addMovieBtn = createNavButton("Add New Movie", "PAGE_ADD_MOVIE", false);
         ModernNavButton categoriesBtn = createNavButton("Movie Categories", "PAGE_CATEGORIES", false);
         ModernNavButton screensBtn = createNavButton("Screens & Seats", "PAGE_SCREENS", false);
+        ModernNavButton addScreenBtn = createNavButton("Add New Screen", "PAGE_ADD_SCREEN", false);
         ModernNavButton schedulesBtn = createNavButton("Show Schedules", "PAGE_SCHEDULES", false);
+        ModernNavButton addShowBtn = createNavButton("Schedule a Show", "PAGE_ADD_SHOW", false);
         navMenuPanel.add(moviesBtn);
+        navMenuPanel.add(Box.createVerticalStrut(4));
+        navMenuPanel.add(addMovieBtn);
         navMenuPanel.add(Box.createVerticalStrut(4));
         navMenuPanel.add(categoriesBtn);
         navMenuPanel.add(Box.createVerticalStrut(4));
         navMenuPanel.add(screensBtn);
         navMenuPanel.add(Box.createVerticalStrut(4));
+        navMenuPanel.add(addScreenBtn);
+        navMenuPanel.add(Box.createVerticalStrut(4));
         navMenuPanel.add(schedulesBtn);
+        navMenuPanel.add(Box.createVerticalStrut(4));
+        navMenuPanel.add(addShowBtn);
 
         navMenuPanel.add(Box.createVerticalStrut(14));
 
@@ -365,6 +380,9 @@ public class AdminDashboard extends JFrame {
         staffAccountsPage = new StaffAccountsPage(this);
         addStaffPage = new AddStaffPage(this);
         reportsPage = new FinancialReportsPage(this);
+        addMoviePage = new AddMoviePage(this);
+        addScreenPage = new AddScreenPage(this);
+        addShowPage = new AddShowPage(this);
 
         // Register in CardLayout
         mainContentPanel.add(overviewPage, "PAGE_OVERVIEW");
@@ -376,6 +394,9 @@ public class AdminDashboard extends JFrame {
         mainContentPanel.add(staffAccountsPage, "PAGE_STAFF");
         mainContentPanel.add(addStaffPage, "PAGE_ADD_STAFF");
         mainContentPanel.add(reportsPage, "PAGE_REPORTS");
+        mainContentPanel.add(addMoviePage, "PAGE_ADD_MOVIE");
+        mainContentPanel.add(addScreenPage, "PAGE_ADD_SCREEN");
+        mainContentPanel.add(addShowPage, "PAGE_ADD_SHOW");
 
         bodyContainer.add(sidebar, BorderLayout.WEST);
         bodyContainer.add(mainContentPanel, BorderLayout.CENTER);
@@ -625,6 +646,10 @@ public class AdminDashboard extends JFrame {
     public AddStaffPage getAddStaffPage() { return addStaffPage; }
     public ManageMoviesPage getMoviesPage() { return moviesPage; }
     public ManageScreensPage getScreensPage() { return screensPage; }
+    public ManageSchedulesPage getSchedulesPage() { return schedulesPage; }
+    public AddMoviePage getAddMoviePage() { return addMoviePage; }
+    public AddScreenPage getAddScreenPage() { return addScreenPage; }
+    public AddShowPage getAddShowPage() { return addShowPage; }
 
     public static void main(String[] args) {
         try {

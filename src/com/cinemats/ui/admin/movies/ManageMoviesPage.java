@@ -91,7 +91,7 @@ public class ManageMoviesPage extends JPanel {
         });
 
         JButton addBtn = Theme.createPrimaryButton("+ Add Movie");
-        addBtn.addActionListener(e -> openAddMovieDialog());
+        addBtn.addActionListener(e -> { if (dashboard != null) dashboard.switchToPage("PAGE_ADD_MOVIE"); });
 
         JButton delBtn = Theme.createSecondaryButton("Remove Selected");
         delBtn.setForeground(Theme.ACCENT_RED);

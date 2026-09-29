@@ -1,25 +1,22 @@
 package com.cinemats.ui.admin.screens;
 
-import com.cinemats.constants.ScreenStatus;
-import com.cinemats.constants.ScreenType;
 import com.cinemats.model.Screen;
 import com.cinemats.service.ScreenSeatService;
 import com.cinemats.service.ScreenService;
 import com.cinemats.service.ShowService;
 import com.cinemats.ui.admin.AdminDashboard;
 import com.cinemats.util.Theme;
-
+import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.util.ArrayList;
+import java.util.List;
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.util.ArrayList;
-import java.util.List;
 
 // Screen management master page listing auditoriums, capacities, and actions
 public class ManageScreensPage extends JPanel {
@@ -404,9 +401,13 @@ public class ManageScreensPage extends JPanel {
 
     // Opens Add or Edit Screen dialog
     private void openScreenFormDialog(Screen screen) {
-        Window win = SwingUtilities.getWindowAncestor(this);
-        ScreenFormDialog dlg = new ScreenFormDialog(win, screen, screenService, this::refreshScreens);
-        dlg.setVisible(true);
+        if (screen == null) {
+            dashboard.switchToPage("PAGE_ADD_SCREEN");
+        } else {
+            Window win = SwingUtilities.getWindowAncestor(this);
+            ScreenFormDialog dlg = new ScreenFormDialog(win, screen, screenService, this::refreshScreens);
+            dlg.setVisible(true);
+        }
     }
 
     // Opens screen details modal

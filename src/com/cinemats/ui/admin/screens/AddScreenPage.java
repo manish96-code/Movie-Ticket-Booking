@@ -1,8 +1,7 @@
-package com.cinemats.ui.admin.movies;
+package com.cinemats.ui.admin.screens;
 
-import com.cinemats.dao.CategoryDAO;
-import com.cinemats.dao.MovieDAO;
-import com.cinemats.model.Movie;
+import com.cinemats.model.Screen;
+import com.cinemats.service.ScreenService;
 import com.cinemats.ui.admin.AdminDashboard;
 import com.cinemats.util.Theme;
 
@@ -13,22 +12,20 @@ import javax.swing.border.LineBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
-import java.util.List;
 
-// Standalone Add Movie page registered in AdminDashboard CardLayout as PAGE_ADD_MOVIE
-public class AddMoviePage extends JPanel {
+// Standalone Add Screen page registered in AdminDashboard CardLayout as PAGE_ADD_SCREEN
+public class AddScreenPage extends JPanel {
 
     private final AdminDashboard dashboard;
+    private final ScreenService screenService;
 
-    private JTextField titleField;
-    private JComboBox<String> categoryCombo;
-    private JTextField durationField;
-    private JComboBox<String> ratingCombo;
+    private JTextField nameField;
+    private JTextField numberField;
+    private JComboBox<String> typeCombo;
     private JComboBox<String> statusCombo;
 
-    private JLabel titleErrorLbl;
-    private JLabel categoryErrorLbl;
-    private JLabel durationErrorLbl;
+    private JLabel nameErrorLbl;
+    private JLabel numberErrorLbl;
 
     private JPanel statusBox;
     private JLabel statusLbl;
@@ -37,8 +34,9 @@ public class AddMoviePage extends JPanel {
     private JButton backBtn;
     private JButton saveBtn;
 
-    public AddMoviePage(AdminDashboard dashboard) {
+    public AddScreenPage(AdminDashboard dashboard) {
         this.dashboard = dashboard;
+        this.screenService = new ScreenService();
         setLayout(new BorderLayout(0, 16));
         setBackground(Theme.BG_MAIN);
         setBorder(new EmptyBorder(22, 26, 22, 26));
@@ -49,25 +47,21 @@ public class AddMoviePage extends JPanel {
     }
 
     private void initComponents() {
-        titleField = Theme.createTextField("e.g. Avengers: Endgame");
-        durationField = Theme.createTextField("e.g. 150");
+        nameField = Theme.createTextField("e.g. IMAX Audi");
+        numberField = Theme.createTextField("e.g. 1");
 
-        titleErrorLbl = createErrorLabel();
-        categoryErrorLbl = createErrorLabel();
-        durationErrorLbl = createErrorLabel();
+        nameErrorLbl = createErrorLabel();
+        numberErrorLbl = createErrorLabel();
 
-        ratingCombo = new JComboBox<>(new String[]{"UA", "U", "A", "PG", "PG-13", "R"});
-        ratingCombo.setFont(Theme.FONT_REGULAR);
-        ratingCombo.setBackground(Color.WHITE);
+        typeCombo = new JComboBox<>(new String[]{
+                "Standard", "IMAX", "Dolby Atmos", "4DX", "Gold Class", "VIP Lounge"
+        });
+        typeCombo.setFont(Theme.FONT_REGULAR);
+        typeCombo.setBackground(Color.WHITE);
 
-        statusCombo = new JComboBox<>(new String[]{"Now Showing", "Upcoming"});
+        statusCombo = new JComboBox<>(new String[]{"ACTIVE", "MAINTENANCE", "INACTIVE"});
         statusCombo.setFont(Theme.FONT_REGULAR);
         statusCombo.setBackground(Color.WHITE);
-
-        categoryCombo = new JComboBox<>();
-        categoryCombo.setFont(Theme.FONT_REGULAR);
-        categoryCombo.setBackground(Color.WHITE);
-        refreshCategoryCombo();
 
         statusBox = new JPanel(new BorderLayout());
         statusBox.setOpaque(false);
@@ -79,22 +73,14 @@ public class AddMoviePage extends JPanel {
         statusBox.add(statusLbl, BorderLayout.CENTER);
 
         resetBtn = Theme.createSecondaryButton("Reset Form");
-        backBtn = Theme.createSecondaryButton("Back to Movies");
-        saveBtn = Theme.createPrimaryButton("Save & Add Movie");
+        backBtn = Theme.createSecondaryButton("Back to Screens");
+        saveBtn = Theme.createPrimaryButton("Save & Create Screen");
         saveBtn.setBackground(Theme.COLOR_SUCCESS);
     }
 
-    private void refreshCategoryCombo() {
-        categoryCombo.removeAllItems();
-        List<String> cats = CategoryDAO.getCategoryNames();
-        for (String c : cats) {
-            categoryCombo.addItem(c);
-        }
-    }
-
     private void initUI() {
-        add(createBanner("Add New Movie Title",
-                "Register a new movie into the cinema catalogue with category, duration, rating, and status."),
+        add(createBanner("Add New Cinema Screen",
+                "Register a new auditorium screen with seating type, number, and operational status."),
                 BorderLayout.NORTH);
 
         JPanel contentGrid = new JPanel(new GridBagLayout());
@@ -128,11 +114,11 @@ public class AddMoviePage extends JPanel {
         formTitleBox.setLayout(new BoxLayout(formTitleBox, BoxLayout.Y_AXIS));
         formTitleBox.setOpaque(false);
 
-        JLabel formHeader = new JLabel("Movie Details & Catalogue Information");
+        JLabel formHeader = new JLabel("Screen Configuration & Identification");
         formHeader.setFont(Theme.FONT_TITLE);
         formHeader.setForeground(Theme.TEXT_DARK);
 
-        JLabel formSub = new JLabel("Fill in the movie details below. All fields marked * are required.");
+        JLabel formSub = new JLabel("Enter screen details. Seat layout is managed separately via the seat editor.");
         formSub.setFont(Theme.FONT_SMALL);
         formSub.setForeground(Theme.TEXT_MUTED);
 
@@ -145,36 +131,28 @@ public class AddMoviePage extends JPanel {
         formFields.setOpaque(false);
         GridBagConstraints fgbc = new GridBagConstraints();
         fgbc.fill = GridBagConstraints.HORIZONTAL;
-        fgbc.insets = new Insets(5, 4, 5, 4);
+        fgbc.insets = new Insets(6, 4, 6, 4);
 
         int row = 0;
 
-        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.32;
-        formFields.add(createFieldLabel("Movie Title *"), fgbc);
-        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.68;
-        formFields.add(createFieldWrapper(titleField, titleErrorLbl), fgbc);
+        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.35;
+        formFields.add(createFieldLabel("Screen Name *"), fgbc);
+        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.65;
+        formFields.add(createFieldWrapper(nameField, nameErrorLbl), fgbc);
 
-        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.32;
-        formFields.add(createFieldLabel("Category / Genre *"), fgbc);
-        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.68;
-        formFields.add(buildCategoryRow(), fgbc);
+        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.35;
+        formFields.add(createFieldLabel("Screen Number *"), fgbc);
+        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.65;
+        formFields.add(createFieldWrapper(numberField, numberErrorLbl), fgbc);
 
-        fgbc.gridx = 1; fgbc.gridy = row++;
-        formFields.add(categoryErrorLbl, fgbc);
+        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.35;
+        formFields.add(createFieldLabel("Screen / Audi Type"), fgbc);
+        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.65;
+        formFields.add(typeCombo, fgbc);
 
-        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.32;
-        formFields.add(createFieldLabel("Duration (Minutes) *"), fgbc);
-        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.68;
-        formFields.add(createFieldWrapper(durationField, durationErrorLbl), fgbc);
-
-        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.32;
-        formFields.add(createFieldLabel("Age Rating"), fgbc);
-        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.68;
-        formFields.add(ratingCombo, fgbc);
-
-        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.32;
-        formFields.add(createFieldLabel("Release Status"), fgbc);
-        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.68;
+        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.35;
+        formFields.add(createFieldLabel("Operational Status"), fgbc);
+        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.65;
         formFields.add(statusCombo, fgbc);
 
         fgbc.gridx = 0; fgbc.gridy = row++; fgbc.gridwidth = 2;
@@ -192,21 +170,6 @@ public class AddMoviePage extends JPanel {
         return formCard;
     }
 
-    private JPanel buildCategoryRow() {
-        JPanel row = new JPanel(new BorderLayout(6, 0));
-        row.setOpaque(false);
-
-        JButton quickAddBtn = new JButton("+ New Category");
-        quickAddBtn.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        quickAddBtn.setMargin(new Insets(4, 8, 4, 8));
-        quickAddBtn.setFocusPainted(false);
-        quickAddBtn.addActionListener(e -> handleQuickAddCategory());
-
-        row.add(categoryCombo, BorderLayout.CENTER);
-        row.add(quickAddBtn, BorderLayout.EAST);
-        return row;
-    }
-
     private JPanel buildGuidelinesCard() {
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
@@ -216,37 +179,34 @@ public class AddMoviePage extends JPanel {
                 new EmptyBorder(20, 20, 20, 20)
         ));
 
-        JLabel guideTitle = new JLabel("Movie Catalogue Guidelines");
+        JLabel guideTitle = new JLabel("Screen Setup Guidelines");
         guideTitle.setFont(Theme.FONT_HEADER);
         guideTitle.setForeground(Theme.TEXT_DARK);
 
         card.add(guideTitle);
         card.add(Box.createVerticalStrut(14));
-        card.add(makeGuidePoint("Title must be unique and descriptive."));
+        card.add(makeGuidePoint("Screen Name must be unique (e.g. 'IMAX Audi', 'Screen 2')."));
         card.add(Box.createVerticalStrut(6));
-        card.add(makeGuidePoint("Select a Category/Genre from the existing list or create one with '+ New Category'."));
+        card.add(makeGuidePoint("Screen Number must be a unique positive integer across all screens."));
         card.add(Box.createVerticalStrut(6));
-        card.add(makeGuidePoint("Duration should be in minutes (e.g. 150 for 2h 30m)."));
+        card.add(makeGuidePoint("Screen Type defines the premium tier shown to customers."));
         card.add(Box.createVerticalStrut(6));
-        card.add(makeGuidePoint("Age Rating: U = All ages, UA = Parental guidance, A = Adults only."));
+        card.add(makeGuidePoint("Only ACTIVE screens can have shows scheduled on them."));
         card.add(Box.createVerticalStrut(6));
-        card.add(makeGuidePoint("Status 'Now Showing' = active in cinema. 'Upcoming' = not yet released."));
+        card.add(makeGuidePoint("After creating a screen, configure its seat layout from Screens & Seats page."));
         card.add(Box.createVerticalStrut(6));
-        card.add(makeGuidePoint("Ticket pricing is configured per-show when scheduling, not per movie."));
+        card.add(makeGuidePoint("You must add seats before you can schedule any shows on this screen."));
         card.add(Box.createVerticalGlue());
 
         card.add(Box.createVerticalStrut(18));
-        JLabel ratingRef = new JLabel("Rating Reference");
-        ratingRef.setFont(Theme.FONT_BOLD_SM);
-        ratingRef.setForeground(Theme.TEXT_DARK);
-        card.add(ratingRef);
+        JLabel statusRef = new JLabel("Status Reference");
+        statusRef.setFont(Theme.FONT_BOLD_SM);
+        statusRef.setForeground(Theme.TEXT_DARK);
+        card.add(statusRef);
         card.add(Box.createVerticalStrut(6));
-        card.add(makeSmallInfo("U   — Suitable for all audiences"));
-        card.add(makeSmallInfo("UA  — Parental guidance suggested"));
-        card.add(makeSmallInfo("A   — Adults only (18+)"));
-        card.add(makeSmallInfo("PG  — Parental guidance (international)"));
-        card.add(makeSmallInfo("PG-13 — Not suitable under 13"));
-        card.add(makeSmallInfo("R   — Restricted (17+ w/ guardian)"));
+        card.add(makeSmallInfo("ACTIVE      — Open for scheduling shows"));
+        card.add(makeSmallInfo("MAINTENANCE — Temporarily under repair"));
+        card.add(makeSmallInfo("INACTIVE    — Not available for booking"));
 
         return card;
     }
@@ -268,122 +228,78 @@ public class AddMoviePage extends JPanel {
     }
 
     private void setupListeners() {
-        titleField.getDocument().addDocumentListener(new SimpleDocListener(() ->
-                clearFieldError(titleField, titleErrorLbl)));
-        durationField.getDocument().addDocumentListener(new SimpleDocListener(() ->
-                clearFieldError(durationField, durationErrorLbl)));
+        nameField.getDocument().addDocumentListener(new SimpleDocListener(() ->
+                clearFieldError(nameField, nameErrorLbl)));
+        numberField.getDocument().addDocumentListener(new SimpleDocListener(() ->
+                clearFieldError(numberField, numberErrorLbl)));
 
         saveBtn.addActionListener(e -> handleSave());
         resetBtn.addActionListener(e -> handleReset());
-        backBtn.addActionListener(e -> dashboard.switchToPage("PAGE_MOVIES"));
-    }
-
-    private void handleQuickAddCategory() {
-        JPanel p = new JPanel(new GridLayout(2, 2, 8, 8));
-        JTextField catField = new JTextField();
-        JTextField descField = new JTextField();
-        p.add(new JLabel("Category Name:"));
-        p.add(catField);
-        p.add(new JLabel("Description (optional):"));
-        p.add(descField);
-
-        int res = JOptionPane.showConfirmDialog(this, p, "Create New Movie Category",
-                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (res == JOptionPane.OK_OPTION) {
-            String name = catField.getText().trim();
-            String desc = descField.getText().trim();
-            if (name.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Category name cannot be empty.", "Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-            if (CategoryDAO.categoryExists(name)) {
-                JOptionPane.showMessageDialog(this, "Category '" + name + "' already exists.", "Info", JOptionPane.INFORMATION_MESSAGE);
-                refreshCategoryCombo();
-                categoryCombo.setSelectedItem(name);
-                return;
-            }
-            boolean ok = CategoryDAO.addCategory(name, desc);
-            if (ok) {
-                refreshCategoryCombo();
-                categoryCombo.setSelectedItem(name);
-                categoryErrorLbl.setVisible(false);
-            } else {
-                JOptionPane.showMessageDialog(this, "Failed to create category.", "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        }
+        backBtn.addActionListener(e -> dashboard.switchToPage("PAGE_SCREENS"));
     }
 
     private void handleSave() {
-        String title = titleField.getText().trim();
-        String selectedCategory = (String) categoryCombo.getSelectedItem();
-        String durStr = durationField.getText().trim();
+        String name = nameField.getText().trim();
+        String numberStr = numberField.getText().trim();
 
         clearAllErrors();
         statusBox.setVisible(false);
 
         boolean hasError = false;
 
-        if (title.isEmpty()) {
-            setFieldError(titleField, titleErrorLbl, "Movie title is required.");
+        if (name.isEmpty()) {
+            setFieldError(nameField, nameErrorLbl, "Screen name is required.");
             hasError = true;
         }
 
-        if (selectedCategory == null || selectedCategory.isEmpty()) {
-            categoryErrorLbl.setText("⚠ Please select or create a movie category.");
-            categoryErrorLbl.setVisible(true);
-            hasError = true;
-        }
-
-        int duration = 150;
-        if (durStr.isEmpty()) {
-            setFieldError(durationField, durationErrorLbl, "Duration is required (in minutes).");
+        int screenNumber = -1;
+        if (numberStr.isEmpty()) {
+            setFieldError(numberField, numberErrorLbl, "Screen number is required.");
             hasError = true;
         } else {
             try {
-                duration = Integer.parseInt(durStr.replaceAll("[^0-9]", ""));
-                if (duration <= 0) throw new NumberFormatException();
+                screenNumber = Integer.parseInt(numberStr.replaceAll("[^0-9]", ""));
+                if (screenNumber <= 0) throw new NumberFormatException();
             } catch (NumberFormatException ex) {
-                setFieldError(durationField, durationErrorLbl, "Duration must be a positive number (e.g. 150).");
+                setFieldError(numberField, numberErrorLbl, "Screen number must be a positive integer.");
                 hasError = true;
             }
         }
 
         if (hasError) return;
 
-        String rating = (String) ratingCombo.getSelectedItem();
-        String status = "Now Showing".equals(statusCombo.getSelectedItem()) ? "NOW_SHOWING" : "UPCOMING";
+        String screenType = (String) typeCombo.getSelectedItem();
+        String status = (String) statusCombo.getSelectedItem();
 
-        Movie newMovie = new Movie(0, title, selectedCategory, duration,
-                rating != null ? rating : "UA", title.toUpperCase(), status);
-        boolean saved = MovieDAO.addMovie(newMovie);
+        Screen newScreen = new Screen(0, name, screenNumber,
+                screenType != null ? screenType : "Standard",
+                status != null ? status : "ACTIVE");
 
-        if (saved) {
-            showStatus("Movie '" + title + "' added successfully to the catalogue!", true);
-            if (dashboard.getMoviesPage() != null) {
-                dashboard.getMoviesPage().refreshMovieTable();
+        String error = screenService.saveScreen(newScreen, false);
+        if (error == null) {
+            showStatus("Screen '" + name + "' created successfully! Configure its seat layout from Screens & Seats.", true);
+            if (dashboard.getScreensPage() != null) {
+                dashboard.getScreensPage().refreshScreens();
             }
             handleReset();
         } else {
-            showStatus("Failed to save movie. Please check logs.", false);
+            showStatus(error, false);
         }
     }
 
     private void handleReset() {
-        titleField.setText("");
-        durationField.setText("");
-        ratingCombo.setSelectedIndex(0);
+        nameField.setText("");
+        numberField.setText("");
+        typeCombo.setSelectedIndex(0);
         statusCombo.setSelectedIndex(0);
-        refreshCategoryCombo();
         clearAllErrors();
         statusBox.setVisible(false);
-        titleField.requestFocus();
+        nameField.requestFocus();
     }
 
     private void clearAllErrors() {
-        clearFieldError(titleField, titleErrorLbl);
-        clearFieldError(durationField, durationErrorLbl);
-        categoryErrorLbl.setText("");
-        categoryErrorLbl.setVisible(false);
+        clearFieldError(nameField, nameErrorLbl);
+        clearFieldError(numberField, numberErrorLbl);
     }
 
     private void showStatus(String msg, boolean success) {
