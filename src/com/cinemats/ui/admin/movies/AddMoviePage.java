@@ -12,7 +12,11 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 
 // Standalone Add Movie page registered in AdminDashboard CardLayout as PAGE_ADD_MOVIE
@@ -20,19 +24,34 @@ public class AddMoviePage extends JPanel {
 
     private final AdminDashboard dashboard;
 
+    // Form inputs
     private JTextField titleField;
     private JComboBox<String> categoryCombo;
     private JTextField durationField;
     private JComboBox<String> ratingCombo;
     private JComboBox<String> statusCombo;
 
+    // Poster Image Picker
+    private JTextField imagePathField;
+    private JButton browseImageBtn;
+    private JButton clearImageBtn;
+    private File selectedImageFile;
+
+    // Validation error labels
     private JLabel titleErrorLbl;
     private JLabel categoryErrorLbl;
     private JLabel durationErrorLbl;
 
+    // Live Preview on the right panel
+    private JLabel previewImageLbl;
+    private JLabel previewTitleLbl;
+    private JLabel previewMetaLbl;
+
+    // Status alert banner
     private JPanel statusBox;
     private JLabel statusLbl;
 
+    // Action buttons
     private JButton resetBtn;
     private JButton backBtn;
     private JButton saveBtn;
@@ -52,6 +71,13 @@ public class AddMoviePage extends JPanel {
         titleField = Theme.createTextField("e.g. Avengers: Endgame");
         durationField = Theme.createTextField("e.g. 150");
 
+        imagePathField = Theme.createTextField("No poster selected (optional)");
+        imagePathField.setEditable(false);
+        imagePathField.setBackground(new Color(248, 250, 252));
+
+        browseImageBtn = Theme.createSecondaryButton("📁 Browse...");
+        clearImageBtn = Theme.createSecondaryButton("✕");
+
         titleErrorLbl = createErrorLabel();
         categoryErrorLbl = createErrorLabel();
         durationErrorLbl = createErrorLabel();
@@ -68,6 +94,28 @@ public class AddMoviePage extends JPanel {
         categoryCombo.setFont(Theme.FONT_REGULAR);
         categoryCombo.setBackground(Color.WHITE);
         refreshCategoryCombo();
+
+        // Right side preview components
+        previewImageLbl = new JLabel("🎞️  No Image Selected", SwingConstants.CENTER);
+        previewImageLbl.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        previewImageLbl.setForeground(Theme.TEXT_MUTED);
+        previewImageLbl.setPreferredSize(new Dimension(160, 220));
+        previewImageLbl.setBorder(new CompoundBorder(
+                new LineBorder(Theme.BORDER_COLOR, 1, true),
+                new EmptyBorder(10, 10, 10, 10)
+        ));
+        previewImageLbl.setOpaque(true);
+        previewImageLbl.setBackground(new Color(248, 250, 252));
+
+        previewTitleLbl = new JLabel("Movie Title Preview", SwingConstants.CENTER);
+        previewTitleLbl.setFont(Theme.FONT_HEADER);
+        previewTitleLbl.setForeground(Theme.TEXT_DARK);
+        previewTitleLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        previewMetaLbl = new JLabel("Genre • 150 mins • UA", SwingConstants.CENTER);
+        previewMetaLbl.setFont(Theme.FONT_SMALL);
+        previewMetaLbl.setForeground(Theme.TEXT_MUTED);
+        previewMetaLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         statusBox = new JPanel(new BorderLayout());
         statusBox.setOpaque(false);
@@ -94,7 +142,7 @@ public class AddMoviePage extends JPanel {
 
     private void initUI() {
         add(createBanner("Add New Movie Title",
-                "Register a new movie into the cinema catalogue with category, duration, rating, and status."),
+                "Register a new movie into the cinema catalogue with poster image, category, duration, rating, and status."),
                 BorderLayout.NORTH);
 
         JPanel contentGrid = new JPanel(new GridBagLayout());
@@ -104,14 +152,16 @@ public class AddMoviePage extends JPanel {
         gbc.insets = new Insets(0, 0, 0, 16);
         gbc.weighty = 1.0;
 
+        // Left form card (60%)
         gbc.gridx = 0;
-        gbc.weightx = 0.62;
+        gbc.weightx = 0.60;
         contentGrid.add(buildFormCard(), gbc);
 
+        // Right guidelines card with live preview (40%)
         gbc.gridx = 1;
-        gbc.weightx = 0.38;
+        gbc.weightx = 0.40;
         gbc.insets = new Insets(0, 0, 0, 0);
-        contentGrid.add(buildGuidelinesCard(), gbc);
+        contentGrid.add(buildRightPanel(), gbc);
 
         add(contentGrid, BorderLayout.CENTER);
     }
@@ -132,7 +182,7 @@ public class AddMoviePage extends JPanel {
         formHeader.setFont(Theme.FONT_TITLE);
         formHeader.setForeground(Theme.TEXT_DARK);
 
-        JLabel formSub = new JLabel("Fill in the movie details below. All fields marked * are required.");
+        JLabel formSub = new JLabel("Fill in the movie details and attach a poster image. All fields marked * are required.");
         formSub.setFont(Theme.FONT_SMALL);
         formSub.setForeground(Theme.TEXT_MUTED);
 
@@ -141,6 +191,7 @@ public class AddMoviePage extends JPanel {
         formTitleBox.add(formSub);
         formCard.add(formTitleBox, BorderLayout.NORTH);
 
+        // Form fields grid
         JPanel formFields = new JPanel(new GridBagLayout());
         formFields.setOpaque(false);
         GridBagConstraints fgbc = new GridBagConstraints();
@@ -149,39 +200,53 @@ public class AddMoviePage extends JPanel {
 
         int row = 0;
 
+        // Movie Title
         fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.32;
         formFields.add(createFieldLabel("Movie Title *"), fgbc);
         fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.68;
         formFields.add(createFieldWrapper(titleField, titleErrorLbl), fgbc);
 
+        // Category
         fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.32;
         formFields.add(createFieldLabel("Category / Genre *"), fgbc);
         fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.68;
         formFields.add(buildCategoryRow(), fgbc);
 
+        // Category error
         fgbc.gridx = 1; fgbc.gridy = row++;
         formFields.add(categoryErrorLbl, fgbc);
 
+        // Duration
         fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.32;
         formFields.add(createFieldLabel("Duration (Minutes) *"), fgbc);
         fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.68;
         formFields.add(createFieldWrapper(durationField, durationErrorLbl), fgbc);
 
+        // Age Rating
         fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.32;
         formFields.add(createFieldLabel("Age Rating"), fgbc);
         fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.68;
         formFields.add(ratingCombo, fgbc);
 
+        // Release Status
         fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.32;
         formFields.add(createFieldLabel("Release Status"), fgbc);
         fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.68;
         formFields.add(statusCombo, fgbc);
 
+        // Movie Poster Image File Picker
+        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.32;
+        formFields.add(createFieldLabel("Movie Poster Image"), fgbc);
+        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.68;
+        formFields.add(buildImagePickerRow(), fgbc);
+
+        // Status banner
         fgbc.gridx = 0; fgbc.gridy = row++; fgbc.gridwidth = 2;
         formFields.add(statusBox, fgbc);
 
         formCard.add(formFields, BorderLayout.CENTER);
 
+        // Action buttons
         JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         actionRow.setOpaque(false);
         actionRow.add(resetBtn);
@@ -190,6 +255,21 @@ public class AddMoviePage extends JPanel {
         formCard.add(actionRow, BorderLayout.SOUTH);
 
         return formCard;
+    }
+
+    private JPanel buildImagePickerRow() {
+        JPanel row = new JPanel(new BorderLayout(6, 0));
+        row.setOpaque(false);
+
+        row.add(imagePathField, BorderLayout.CENTER);
+
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        btnPanel.setOpaque(false);
+        btnPanel.add(browseImageBtn);
+        btnPanel.add(clearImageBtn);
+
+        row.add(btnPanel, BorderLayout.EAST);
+        return row;
     }
 
     private JPanel buildCategoryRow() {
@@ -207,13 +287,52 @@ public class AddMoviePage extends JPanel {
         return row;
     }
 
+    private JPanel buildRightPanel() {
+        JPanel rightContainer = new JPanel(new BorderLayout(0, 12));
+        rightContainer.setOpaque(false);
+
+        // 1. Live Poster & Movie Preview Card
+        JPanel previewCard = new JPanel();
+        previewCard.setLayout(new BoxLayout(previewCard, BoxLayout.Y_AXIS));
+        previewCard.setBackground(Theme.CARD_BG);
+        previewCard.setBorder(new CompoundBorder(
+                new LineBorder(Theme.BORDER_COLOR, 1, true),
+                new EmptyBorder(16, 18, 16, 18)
+        ));
+
+        JLabel previewHead = new JLabel("Live Poster Preview");
+        previewHead.setFont(Theme.FONT_HEADER);
+        previewHead.setForeground(Theme.TEXT_DARK);
+        previewHead.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        previewCard.add(previewHead);
+        previewCard.add(Box.createVerticalStrut(10));
+
+        JPanel centerImg = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        centerImg.setOpaque(false);
+        centerImg.add(previewImageLbl);
+        previewCard.add(centerImg);
+
+        previewCard.add(Box.createVerticalStrut(8));
+        previewCard.add(previewTitleLbl);
+        previewCard.add(Box.createVerticalStrut(4));
+        previewCard.add(previewMetaLbl);
+
+        rightContainer.add(previewCard, BorderLayout.NORTH);
+
+        // 2. Guidelines Card
+        rightContainer.add(buildGuidelinesCard(), BorderLayout.CENTER);
+
+        return rightContainer;
+    }
+
     private JPanel buildGuidelinesCard() {
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(Theme.CARD_BG);
         card.setBorder(new CompoundBorder(
                 new LineBorder(Theme.BORDER_COLOR, 1, true),
-                new EmptyBorder(20, 20, 20, 20)
+                new EmptyBorder(18, 18, 18, 18)
         ));
 
         JLabel guideTitle = new JLabel("Movie Catalogue Guidelines");
@@ -221,32 +340,19 @@ public class AddMoviePage extends JPanel {
         guideTitle.setForeground(Theme.TEXT_DARK);
 
         card.add(guideTitle);
-        card.add(Box.createVerticalStrut(14));
+        card.add(Box.createVerticalStrut(12));
         card.add(makeGuidePoint("Title must be unique and descriptive."));
         card.add(Box.createVerticalStrut(6));
-        card.add(makeGuidePoint("Select a Category/Genre from the existing list or create one with '+ New Category'."));
+        card.add(makeGuidePoint("Poster Image: Recommended ratio ~2:3 (e.g. 300x450 px, JPG or PNG)."));
         card.add(Box.createVerticalStrut(6));
-        card.add(makeGuidePoint("Duration should be in minutes (e.g. 150 for 2h 30m)."));
+        card.add(makeGuidePoint("Select a Category/Genre or create one instantly with '+ New Category'."));
+        card.add(Box.createVerticalStrut(6));
+        card.add(makeGuidePoint("Duration in minutes (e.g. 150 for 2h 30m)."));
         card.add(Box.createVerticalStrut(6));
         card.add(makeGuidePoint("Age Rating: U = All ages, UA = Parental guidance, A = Adults only."));
         card.add(Box.createVerticalStrut(6));
-        card.add(makeGuidePoint("Status 'Now Showing' = active in cinema. 'Upcoming' = not yet released."));
-        card.add(Box.createVerticalStrut(6));
-        card.add(makeGuidePoint("Ticket pricing is configured per-show when scheduling, not per movie."));
+        card.add(makeGuidePoint("Ticket pricing is configured per-show when scheduling."));
         card.add(Box.createVerticalGlue());
-
-        card.add(Box.createVerticalStrut(18));
-        JLabel ratingRef = new JLabel("Rating Reference");
-        ratingRef.setFont(Theme.FONT_BOLD_SM);
-        ratingRef.setForeground(Theme.TEXT_DARK);
-        card.add(ratingRef);
-        card.add(Box.createVerticalStrut(6));
-        card.add(makeSmallInfo("U   — Suitable for all audiences"));
-        card.add(makeSmallInfo("UA  — Parental guidance suggested"));
-        card.add(makeSmallInfo("A   — Adults only (18+)"));
-        card.add(makeSmallInfo("PG  — Parental guidance (international)"));
-        card.add(makeSmallInfo("PG-13 — Not suitable under 13"));
-        card.add(makeSmallInfo("R   — Restricted (17+ w/ guardian)"));
 
         return card;
     }
@@ -259,23 +365,82 @@ public class AddMoviePage extends JPanel {
         return lbl;
     }
 
-    private JLabel makeSmallInfo(String text) {
-        JLabel lbl = new JLabel(text);
-        lbl.setFont(new Font("Monospaced", Font.PLAIN, 11));
-        lbl.setForeground(Theme.TEXT_MUTED);
-        lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
-        return lbl;
-    }
-
     private void setupListeners() {
-        titleField.getDocument().addDocumentListener(new SimpleDocListener(() ->
-                clearFieldError(titleField, titleErrorLbl)));
-        durationField.getDocument().addDocumentListener(new SimpleDocListener(() ->
-                clearFieldError(durationField, durationErrorLbl)));
+        titleField.getDocument().addDocumentListener(new SimpleDocListener(() -> {
+            clearFieldError(titleField, titleErrorLbl);
+            updateLivePreview();
+        }));
+        durationField.getDocument().addDocumentListener(new SimpleDocListener(() -> {
+            clearFieldError(durationField, durationErrorLbl);
+            updateLivePreview();
+        }));
+
+        categoryCombo.addActionListener(e -> updateLivePreview());
+        ratingCombo.addActionListener(e -> updateLivePreview());
+        statusCombo.addActionListener(e -> updateLivePreview());
+
+        browseImageBtn.addActionListener(e -> handleBrowseImage());
+        clearImageBtn.addActionListener(e -> handleClearImage());
 
         saveBtn.addActionListener(e -> handleSave());
         resetBtn.addActionListener(e -> handleReset());
         backBtn.addActionListener(e -> dashboard.switchToPage("PAGE_MOVIES"));
+    }
+
+    private void handleBrowseImage() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Select Movie Poster Image");
+        chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        chooser.setAcceptAllFileFilterUsed(false);
+        chooser.addChoosableFileFilter(new FileNameExtensionFilter("Image Files (*.jpg, *.jpeg, *.png, *.webp)", "jpg", "jpeg", "png", "webp"));
+
+        int res = chooser.showOpenDialog(this);
+        if (res == JFileChooser.APPROVE_OPTION) {
+            selectedImageFile = chooser.getSelectedFile();
+            imagePathField.setText(selectedImageFile.getName());
+            loadAndDisplayPreview(selectedImageFile.getAbsolutePath());
+        }
+    }
+
+    private void handleClearImage() {
+        selectedImageFile = null;
+        imagePathField.setText("No poster selected (optional)");
+        previewImageLbl.setIcon(null);
+        previewImageLbl.setText("🎞️  No Image Selected");
+    }
+
+    private void loadAndDisplayPreview(String path) {
+        try {
+            ImageIcon icon = new ImageIcon(path);
+            Image img = icon.getImage();
+            if (img.getWidth(null) > 0 && img.getHeight(null) > 0) {
+                // Scale smooth to fit 150x210
+                Image scaled = img.getScaledInstance(150, 210, Image.SCALE_SMOOTH);
+                previewImageLbl.setText("");
+                previewImageLbl.setIcon(new ImageIcon(scaled));
+            } else {
+                previewImageLbl.setIcon(null);
+                previewImageLbl.setText("⚠ Invalid Image");
+            }
+        } catch (Exception ex) {
+            previewImageLbl.setIcon(null);
+            previewImageLbl.setText("⚠ Cannot Load");
+        }
+    }
+
+    private void updateLivePreview() {
+        String t = titleField.getText().trim();
+        previewTitleLbl.setText(t.isEmpty() ? "Movie Title Preview" : t);
+
+        String cat = (String) categoryCombo.getSelectedItem();
+        String dur = durationField.getText().trim();
+        String rat = (String) ratingCombo.getSelectedItem();
+
+        String durStr = dur.isEmpty() ? "150 mins" : dur + " mins";
+        String catStr = (cat == null || cat.isEmpty()) ? "General" : cat;
+        String ratStr = (rat == null || rat.isEmpty()) ? "UA" : rat;
+
+        previewMetaLbl.setText(catStr + " • " + durStr + " • " + ratStr);
     }
 
     private void handleQuickAddCategory() {
@@ -350,16 +515,43 @@ public class AddMoviePage extends JPanel {
 
         if (hasError) return;
 
+        // Handle image copying if user selected a poster
+        String savedImagePath = "";
+        if (selectedImageFile != null && selectedImageFile.exists()) {
+            try {
+                File postersDir = new File("assets/posters");
+                if (!postersDir.exists()) {
+                    postersDir.mkdirs();
+                }
+                String originalName = selectedImageFile.getName();
+                String ext = "";
+                int dotIndex = originalName.lastIndexOf('.');
+                if (dotIndex > 0) {
+                    ext = originalName.substring(dotIndex);
+                } else {
+                    ext = ".jpg";
+                }
+                String safeFileName = "poster_" + System.currentTimeMillis() + ext;
+                File targetFile = new File(postersDir, safeFileName);
+                Files.copy(selectedImageFile.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                savedImagePath = "assets/posters/" + safeFileName;
+            } catch (Exception ex) {
+                System.err.println("[AddMoviePage] Failed to copy poster image: " + ex.getMessage());
+                // Fall back to original absolute path
+                savedImagePath = selectedImageFile.getAbsolutePath();
+            }
+        }
+
         String rating = (String) ratingCombo.getSelectedItem();
         String status = "Now Showing".equals(statusCombo.getSelectedItem()) ? "NOW_SHOWING" : "UPCOMING";
 
         Movie newMovie = new Movie(0, title, selectedCategory, duration,
-                rating != null ? rating : "UA", title.toUpperCase(), status);
+                rating != null ? rating : "UA", title.toUpperCase(), status, savedImagePath);
         boolean saved = MovieDAO.addMovie(newMovie);
 
         if (saved) {
-            showStatus("Movie '" + title + "' added successfully to the catalogue!", true);
-            if (dashboard.getMoviesPage() != null) {
+            showStatus("Movie '" + title + "' added successfully with poster image!", true);
+            if (dashboard != null && dashboard.getMoviesPage() != null) {
                 dashboard.getMoviesPage().refreshMovieTable();
             }
             handleReset();
@@ -373,9 +565,11 @@ public class AddMoviePage extends JPanel {
         durationField.setText("");
         ratingCombo.setSelectedIndex(0);
         statusCombo.setSelectedIndex(0);
+        handleClearImage();
         refreshCategoryCombo();
         clearAllErrors();
         statusBox.setVisible(false);
+        updateLivePreview();
         titleField.requestFocus();
     }
 
