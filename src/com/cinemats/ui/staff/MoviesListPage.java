@@ -43,7 +43,7 @@ public class MoviesListPage extends JPanel {
         List<Movie> movies = movieDAO.getAllMovies();
 
         String[] columns = {
-                             "ID","Poster","Title","Genre","Duration","Price","Rating","Status"
+                             "ID","Poster","Title","Genre","Duration","Rating","Status"
                            };
 
         DefaultTableModel model = new DefaultTableModel(columns, 0) {
@@ -60,8 +60,7 @@ public class MoviesListPage extends JPanel {
                 movie.getPosterLabel(),
                 movie.getTitle(),
                 movie.getGenre(),
-                movie.getDurationMins() + " mins",
-                "₹" + movie.getPrice(),
+                movie.getFormattedDuration(),
                 movie.getRating(),
                 movie.getStatus()
             });
