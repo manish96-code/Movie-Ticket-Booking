@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS movies (
     duration_mins INTEGER DEFAULT 150,
     rating TEXT DEFAULT 'UA',
     poster_label TEXT DEFAULT 'MOVIE POSTER',
+    image_path TEXT DEFAULT '',
     status TEXT DEFAULT 'NOW_SHOWING',             -- 'NOW_SHOWING', 'UPCOMING', 'ARCHIVED'
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
