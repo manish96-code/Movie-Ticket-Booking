@@ -70,11 +70,31 @@ public class SearchTicketPage extends JPanel {
     }
 
     private void initData() {
-        allRecords.add(new BookingRecord("TICK-1042", "Ananya Verma", "Dune: Part Two", "Screen 1 (IMAX)", "06:30 PM", "A1, A2 (VIP)", "₹700.00", "CONFIRMED"));
-        allRecords.add(new BookingRecord("TICK-1041", "Rajesh Kumar", "Interstellar", "Screen 2 (Dolby)", "09:00 PM", "B5, B6 (Regular)", "₹500.00", "CONFIRMED"));
-        allRecords.add(new BookingRecord("TICK-1040", "Priya Singh", "Oppenheimer", "Screen 3 (4DX)", "03:15 PM", "C4 (Regular)", "₹250.00", "CONFIRMED"));
-        allRecords.add(new BookingRecord("TICK-1039", "Amitabh Sen", "Spider-Man", "Screen 4 (Standard)", "07:45 PM", "D1, D2, D3", "₹750.00", "CANCELLED"));
-        allRecords.add(new BookingRecord("TICK-1038", "Siddharth J.", "Avatar: Water", "Screen 1 (IMAX)", "01:30 PM", "F8, F9", "₹600.00", "CONFIRMED"));
+        allRecords.clear();
+        displayedRecords.clear();
+        try {
+            java.util.List<com.cinemats.model.Booking> liveList = com.cinemats.dao.BookingDAO.getRecentBookings(100);
+            for (com.cinemats.model.Booking b : liveList) {
+                allRecords.add(new BookingRecord(
+                        b.getBookingNumber(),
+                        b.getCustomerName(),
+                        b.getMovieTitle(),
+                        b.getScreenName(),
+                        b.getStartTime(),
+                        b.getFormattedSeats(),
+                        "₹" + b.getTotalAmount().toPlainString(),
+                        b.getStatus()
+                ));
+            }
+        } catch (Exception ignored) {}
+
+        if (allRecords.isEmpty()) {
+            allRecords.add(new BookingRecord("TICK-1042", "Ananya Verma", "Dune: Part Two", "Screen 1 (IMAX)", "06:30 PM", "A1, A2 (VIP)", "₹700.00", "CONFIRMED"));
+            allRecords.add(new BookingRecord("TICK-1041", "Rajesh Kumar", "Interstellar", "Screen 2 (Dolby)", "09:00 PM", "B5, B6 (Regular)", "₹500.00", "CONFIRMED"));
+            allRecords.add(new BookingRecord("TICK-1040", "Priya Singh", "Oppenheimer", "Screen 3 (4DX)", "03:15 PM", "C4 (Regular)", "₹250.00", "CONFIRMED"));
+            allRecords.add(new BookingRecord("TICK-1039", "Amitabh Sen", "Spider-Man", "Screen 4 (Standard)", "07:45 PM", "D1, D2, D3", "₹750.00", "CANCELLED"));
+            allRecords.add(new BookingRecord("TICK-1038", "Siddharth J.", "Avatar: Water", "Screen 1 (IMAX)", "01:30 PM", "F8, F9", "₹600.00", "CONFIRMED"));
+        }
         displayedRecords.addAll(allRecords);
     }
 

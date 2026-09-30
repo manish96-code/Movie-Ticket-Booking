@@ -361,6 +361,9 @@ public class TodayShowsPage extends JPanel {
         if (row >= 0 && row < filteredShowsList.size()) {
             Show s = filteredShowsList.get(row);
             if (dashboard != null) {
+                if (dashboard.getOrderBookingPage() != null) {
+                    dashboard.getOrderBookingPage().selectShowFromExternal(s);
+                }
                 dashboard.showPage("PAGE_ORDER_BOOKING");
             }
         }

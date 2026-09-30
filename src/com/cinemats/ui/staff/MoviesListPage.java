@@ -308,6 +308,9 @@ public class MoviesListPage extends JPanel {
             if (row >= 0 && row < filteredMoviesList.size()) {
                 Movie selected = filteredMoviesList.get(row);
                 if (dashboard != null) {
+                    if (dashboard.getOrderBookingPage() != null) {
+                        dashboard.getOrderBookingPage().selectMovieFromExternal(selected.getId());
+                    }
                     dashboard.showPage("PAGE_ORDER_BOOKING");
                 } else {
                     JOptionPane.showMessageDialog(this,

@@ -95,6 +95,8 @@ public class DBConnection {
             com.cinemats.dao.ScreenSeatDAO.initScreenSeatsTable();
             com.cinemats.dao.ShowDAO.initShowsTable();
             com.cinemats.dao.ShowSeatDAO.initShowSeatsTable();
+            com.cinemats.dao.CustomerDAO.initCustomersTable();
+            com.cinemats.dao.BookingDAO.initBookingsTables();
             initShowsAndBookingsTables(stmt);
 
         } catch (SQLException e) {
@@ -118,24 +120,8 @@ public class DBConnection {
                     + "FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE CASCADE"
                     + ");";
             stmt.execute(createShows);
-
-            String createBookings = "CREATE TABLE IF NOT EXISTS bookings ("
-                    + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-                    + "booking_code TEXT UNIQUE NOT NULL, "
-                    + "show_id INTEGER NOT NULL, "
-                    + "customer_name TEXT NOT NULL, "
-                    + "customer_phone TEXT NOT NULL, "
-                    + "seat_numbers TEXT NOT NULL, "
-                    + "seat_count INTEGER NOT NULL DEFAULT 1, "
-                    + "total_amount REAL NOT NULL, "
-                    + "payment_mode TEXT DEFAULT 'CASH', "
-                    + "booked_by_staff TEXT DEFAULT 'staff', "
-                    + "booked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
-                    + "FOREIGN KEY (show_id) REFERENCES shows(id) ON DELETE CASCADE"
-                    + ");";
-            stmt.execute(createBookings);
         } catch (SQLException e) {
-            System.err.println("[DBConnection] Error initializing shows/bookings tables: " + e.getMessage());
+            System.err.println("[DBConnection] Error initializing shows table: " + e.getMessage());
         }
     }
 
@@ -173,9 +159,7 @@ public class DBConnection {
         }
     }
 
-    // =========================================================================
     // Backward Compatibility Delegates (forwarding to com.cinemats.dao.UserDAO)
-    // =========================================================================
 
     public static User authenticate(String username, String password) {
         return com.cinemats.dao.UserDAO.authenticate(username, password);
