@@ -6,27 +6,34 @@ import java.awt.*;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 
-// Staff dashboard main window
+// Professional staff counter terminal and point-of-sale controller
 public class StaffDashboard extends JFrame {
 
     // --- Navigation & CardLayout ---
     private CardLayout cardLayout;
     private JPanel mainContentPanel;
-    private List<JButton> sidebarButtons = new ArrayList<>();
-    private java.util.Map<String, JButton> pageButtonMap = new java.util.HashMap<>();
-    private MoviesListPage moviesListPage;
-    private OrderBookingPage orderBookingPage;
-    private BookingHistoryPage bookingHistoryPage;
-    private MoviesPanel moviesPanel;
-    private ReportsPage reportsPage;
+    private final List<ModernNavButton> sidebarButtons = new ArrayList<>();
+    private final Map<String, ModernNavButton> pageButtonMap = new HashMap<>();
 
-    // --- Header & Clock ---
+    // Standalone Page Components
+    private OrderBookingPage orderBookingPage;
+    private MoviesListPage moviesListPage;
+    private BookingHistoryPage bookingHistoryPage;
+    private TodayShowsPage todayShowsPage;
+    private SearchTicketPage searchTicketPage;
+    private ShiftSummaryPage shiftSummaryPage;
+    private ReportsPage reportsPage;
+    private MoviesPanel moviesPanel;
+
+    // --- Header & User Session ---
     private JLabel clockLabel;
     private String staffName = "Rahul Sharma";
     private String counterName = "Counter #02";
@@ -48,38 +55,71 @@ public class StaffDashboard extends JFrame {
         }
         initWindow();
         buildHeader();
-        buildBodyWithSidebarAndMainPanel();
+        buildBodyWithSidebar();
         buildStatusBar();
         startClockTimer();
     }
 
-    // Window frame setup
     private void initWindow() {
-        setTitle("Cinema Express - Staff Counter Terminal (Light Theme)");
-        setSize(1360, 820);
-        setMinimumSize(new Dimension(1100, 700));
+        setTitle("Cinema Express - Staff Counter Terminal (POS)");
+        setSize(1380, 850);
+        setMinimumSize(new Dimension(1120, 720));
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         getContentPane().setBackground(Theme.BG_MAIN);
         setLayout(new BorderLayout());
     }
 
-    // Top header bar
+    // ==========================================
+    // TOP HEADER BAR
+    // ==========================================
     private void buildHeader() {
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(Theme.PANEL_BG);
-        header.setPreferredSize(new Dimension(0, 70));
+        header.setPreferredSize(new Dimension(0, 72));
         header.setBorder(new CompoundBorder(
                 BorderFactory.createMatteBorder(0, 0, 1, 0, Theme.BORDER_COLOR),
                 new EmptyBorder(10, 24, 10, 24)
         ));
 
         // Brand & Counter ID (Left)
-        JPanel brandPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 6));
+        JPanel brandPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 4));
         brandPanel.setOpaque(false);
 
-        JLabel logo = new JLabel("🎬");
-        logo.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 28));
+        // Vector Logo Emblem
+        JPanel logoBadge = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                int size = 40;
+                int x = (getWidth() - size) / 2;
+                int y = (getHeight() - size) / 2;
+
+                // Royal Blue to Electric Blue gradient
+                GradientPaint gp = new GradientPaint(x, y, new Color(37, 99, 235), x + size, y + size, new Color(29, 78, 216));
+                g2.setPaint(gp);
+                g2.fillRoundRect(x, y, size, size, 10, 10);
+
+                // Play / Ticket film icon
+                g2.setColor(Color.WHITE);
+                g2.setStroke(new BasicStroke(1.8f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                g2.drawRoundRect(x + 10, y + 10, 20, 18, 4, 4);
+
+                // Play triangle
+                Polygon p = new Polygon(
+                        new int[]{x + 18, x + 25, x + 18},
+                        new int[]{y + 15, y + 19, y + 23},
+                        3
+                );
+                g2.fillPolygon(p);
+                g2.dispose();
+            }
+        };
+        logoBadge.setPreferredSize(new Dimension(42, 42));
+        logoBadge.setOpaque(false);
 
         JPanel brandText = new JPanel();
         brandText.setLayout(new BoxLayout(brandText, BoxLayout.Y_AXIS));
@@ -89,25 +129,44 @@ public class StaffDashboard extends JFrame {
         title.setFont(Theme.FONT_TITLE);
         title.setForeground(Theme.TEXT_DARK);
 
-        String terminalRole = "ADMIN".equalsIgnoreCase(role) ? "ADMIN TERMINAL" : "STAFF TERMINAL";
-        JLabel subtitle = new JLabel(terminalRole + " • " + counterName.toUpperCase());
+        JPanel subtitleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        subtitleRow.setOpaque(false);
+
+        String terminalRole = "ADMIN".equalsIgnoreCase(role) ? "ADMIN TERMINAL" : "BOX OFFICE POS";
+        JLabel subtitle = new JLabel(terminalRole);
         subtitle.setFont(Theme.FONT_BOLD_SM);
-        subtitle.setForeground(Theme.ACCENT_BLUE);
+        subtitle.setForeground(new Color(37, 99, 235));
+
+        // Pill badge for counter
+        JLabel counterPill = new JLabel(" " + counterName.toUpperCase() + " ");
+        counterPill.setFont(new Font("Segoe UI", Font.BOLD, 10));
+        counterPill.setForeground(new Color(29, 78, 216));
+        counterPill.setOpaque(true);
+        counterPill.setBackground(new Color(239, 246, 255));
+        counterPill.setBorder(new CompoundBorder(
+                new LineBorder(new Color(191, 219, 254), 1, true),
+                new EmptyBorder(1, 6, 1, 6)
+        ));
+
+        subtitleRow.add(subtitle);
+        subtitleRow.add(counterPill);
 
         brandText.add(title);
-        brandText.add(subtitle);
-        brandPanel.add(logo);
+        brandText.add(Box.createVerticalStrut(2));
+        brandText.add(subtitleRow);
+
+        brandPanel.add(logoBadge);
         brandPanel.add(brandText);
 
-        // Staff Session & Live Clock (Right)
-        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 16, 6));
+        // Staff Session & Live Clock & Interactive Profile Avatar (Right)
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 14, 4));
         rightPanel.setOpaque(false);
 
         JPanel infoPanel = new JPanel();
         infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
         infoPanel.setOpaque(false);
 
-        JLabel staffLabel = new JLabel("👤 " + staffName);
+        JLabel staffLabel = new JLabel(staffName);
         staffLabel.setFont(Theme.FONT_HEADER);
         staffLabel.setForeground(Theme.TEXT_DARK);
         staffLabel.setAlignmentX(Component.RIGHT_ALIGNMENT);
@@ -120,20 +179,73 @@ public class StaffDashboard extends JFrame {
         infoPanel.add(staffLabel);
         infoPanel.add(clockLabel);
 
-        JButton logoutBtn = Theme.createSecondaryButton("Logout");
-        logoutBtn.addActionListener(e -> {
-            int confirm = JOptionPane.showConfirmDialog(this,
-                    "Do you want to log out of the current session?",
-                    "Confirm Logout",
-                    JOptionPane.YES_NO_OPTION);
-            if (confirm == JOptionPane.YES_OPTION) {
-                dispose();
-                new LoginFrame().setVisible(true);
+        // Interactive Circular Profile Avatar (Right Corner)
+        JPanel profileIcon = new JPanel() {
+            private boolean isHovered = false;
+
+            {
+                setPreferredSize(new Dimension(42, 42));
+                setMaximumSize(new Dimension(42, 42));
+                setMinimumSize(new Dimension(42, 42));
+                setOpaque(false);
+                setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+                setToolTipText(staffName + " • Click for options");
+                addMouseListener(new java.awt.event.MouseAdapter() {
+                    @Override
+                    public void mouseEntered(java.awt.event.MouseEvent e) {
+                        isHovered = true;
+                        repaint();
+                    }
+
+                    @Override
+                    public void mouseExited(java.awt.event.MouseEvent e) {
+                        isHovered = false;
+                        repaint();
+                    }
+
+                    @Override
+                    public void mouseClicked(java.awt.event.MouseEvent e) {
+                        showProfileMenu((Component) e.getSource());
+                    }
+                });
             }
-        });
+
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                int size = 38;
+                int x = (getWidth() - size) / 2;
+                int y = (getHeight() - size) / 2;
+
+                // Blue gradient background
+                Color c1 = isHovered ? new Color(29, 78, 216) : new Color(37, 99, 235);
+                Color c2 = isHovered ? new Color(30, 64, 175) : new Color(29, 78, 216);
+                g2.setPaint(new GradientPaint(x, y, c1, x + size, y + size, c2));
+                g2.fillOval(x, y, size, size);
+
+                // Ring outline
+                g2.setColor(isHovered ? new Color(191, 219, 254) : new Color(255, 255, 255, 160));
+                g2.setStroke(new BasicStroke(1.5f));
+                g2.drawOval(x, y, size, size);
+
+                // Initials in avatar center
+                String initials = getInitials(staffName);
+                g2.setColor(Color.WHITE);
+                g2.setFont(new Font("Segoe UI", Font.BOLD, 13));
+                FontMetrics fm = g2.getFontMetrics();
+                int tx = x + (size - fm.stringWidth(initials)) / 2;
+                int ty = y + (size - fm.getHeight()) / 2 + fm.getAscent();
+                g2.drawString(initials, tx, ty);
+
+                g2.dispose();
+            }
+        };
 
         rightPanel.add(infoPanel);
-        rightPanel.add(logoutBtn);
+        rightPanel.add(profileIcon);
 
         header.add(brandPanel, BorderLayout.WEST);
         header.add(rightPanel, BorderLayout.EAST);
@@ -141,89 +253,199 @@ public class StaffDashboard extends JFrame {
         add(header, BorderLayout.NORTH);
     }
 
-    // Sidebar and main content layout
-    private void buildBodyWithSidebarAndMainPanel() {
+    private String getInitials(String name) {
+        if (name == null || name.trim().isEmpty()) return "ST";
+        String[] parts = name.trim().split("\\s+");
+        if (parts.length == 1) {
+            return parts[0].substring(0, Math.min(2, parts[0].length())).toUpperCase();
+        }
+        return ("" + parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+    }
+
+    // ==========================================
+    // SIDEBAR & CARDLAYOUT BODY
+    // ==========================================
+    private void buildBodyWithSidebar() {
         JPanel bodyContainer = new JPanel(new BorderLayout());
         bodyContainer.setOpaque(false);
 
-        // --- A. Left Sidebar ---
-        JPanel sidebar = new JPanel();
-        sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.Y_AXIS));
-        sidebar.setBackground(Theme.PANEL_BG);
-        sidebar.setPreferredSize(new Dimension(240, 0));
-        sidebar.setBorder(new CompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 0, 1, Theme.BORDER_COLOR),
-                new EmptyBorder(20, 14, 20, 14)
-        ));
+        // Modern Left Navigation Sidebar
+        JPanel sidebar = new JPanel(new BorderLayout());
+        sidebar.setBackground(Color.WHITE);
+        sidebar.setPreferredSize(new Dimension(265, 0));
+        sidebar.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, Theme.BORDER_COLOR));
 
-        JLabel menuTitle = new JLabel("MAIN MENU");
-        menuTitle.setFont(Theme.FONT_BOLD_SM);
-        menuTitle.setForeground(Theme.TEXT_MUTED);
-        menuTitle.setBorder(new EmptyBorder(0, 12, 10, 0));
-        sidebar.add(menuTitle);
+        // Navigation Menu Panel with clean category groups
+        JPanel navMenuPanel = new JPanel();
+        navMenuPanel.setLayout(new BoxLayout(navMenuPanel, BoxLayout.Y_AXIS));
+        navMenuPanel.setOpaque(false);
+        navMenuPanel.setBorder(new EmptyBorder(16, 14, 10, 14));
 
-        // Sidebar Navigation Buttons
-        JButton orderBookingBtn = createSidebarButton("🎫  Order Booking", "PAGE_ORDER_BOOKING", true);
-        JButton moviesBtn = createSidebarButton("🎬  Movies List", "PAGE_MOVIES_LIST", false);
-        JButton historyBtn = createSidebarButton("📜  Booking History", "PAGE_BOOKING_HISTORY", false);
-        JButton todayShowsBtn = createSidebarButton("🕒  Today's Shows", "PAGE_TODAY_SHOWS", false);
-        JButton searchTicketBtn = createSidebarButton("🔍  Search Ticket", "PAGE_SEARCH_TICKET", false);
-        JButton shiftSummaryBtn = createSidebarButton("📊  Shift Summary", "PAGE_SHIFT_SUMMARY", false);
-        JButton reportsBtn = createSidebarButton("📈  Reports", "PAGE_REPORTS", false);
+        // Category 1: Point of Sale & Ticketing
+        navMenuPanel.add(createCategoryHeader("POINT OF SALE (POS)"));
+        ModernNavButton orderBookingBtn = createNavButton("Ticket Booking", "PAGE_ORDER_BOOKING", true);
+        ModernNavButton historyBtn = createNavButton("Booking History", "PAGE_BOOKING_HISTORY", false);
+        ModernNavButton searchTicketBtn = createNavButton("Search & Re-Print", "PAGE_SEARCH_TICKET", false);
+        navMenuPanel.add(orderBookingBtn);
+        navMenuPanel.add(Box.createVerticalStrut(4));
+        navMenuPanel.add(historyBtn);
+        navMenuPanel.add(Box.createVerticalStrut(4));
+        navMenuPanel.add(searchTicketBtn);
 
-        sidebar.add(orderBookingBtn);
-        sidebar.add(Box.createVerticalStrut(8));
-        sidebar.add(moviesBtn);
-        sidebar.add(Box.createVerticalStrut(8));
-        sidebar.add(historyBtn);
-        sidebar.add(Box.createVerticalStrut(8));
-        sidebar.add(todayShowsBtn);
-        sidebar.add(Box.createVerticalStrut(8));
-        sidebar.add(searchTicketBtn);
-        sidebar.add(Box.createVerticalStrut(8));
-        sidebar.add(shiftSummaryBtn);
-        sidebar.add(Box.createVerticalStrut(8));
-        sidebar.add(reportsBtn);
+        navMenuPanel.add(Box.createVerticalStrut(14));
 
-        sidebar.add(Box.createVerticalGlue()); // Push bottom badge downwards
+        // Category 2: Cinema Schedules & Catalog
+        navMenuPanel.add(createCategoryHeader("SCHEDULES & MOVIES"));
+        ModernNavButton moviesBtn = createNavButton("Movies Catalogue", "PAGE_MOVIES_LIST", false);
+        ModernNavButton todayShowsBtn = createNavButton("Today's Showtimes", "PAGE_TODAY_SHOWS", false);
+        navMenuPanel.add(moviesBtn);
+        navMenuPanel.add(Box.createVerticalStrut(4));
+        navMenuPanel.add(todayShowsBtn);
 
-        // Shift Status Badge at bottom of sidebar
-        JPanel shiftBadge = new JPanel(new BorderLayout());
-        shiftBadge.setBackground(Theme.CARD_HOVER);
-        shiftBadge.setBorder(new CompoundBorder(
+        navMenuPanel.add(Box.createVerticalStrut(14));
+
+        // Category 3: Register & Audit
+        navMenuPanel.add(createCategoryHeader("REGISTER & AUDIT"));
+        ModernNavButton shiftSummaryBtn = createNavButton("Shift Summary", "PAGE_SHIFT_SUMMARY", false);
+        ModernNavButton reportsBtn = createNavButton("Sales Reports", "PAGE_REPORTS", false);
+        navMenuPanel.add(shiftSummaryBtn);
+        navMenuPanel.add(Box.createVerticalStrut(4));
+        navMenuPanel.add(reportsBtn);
+
+        navMenuPanel.add(Box.createVerticalGlue());
+
+        JScrollPane navScrollPane = new JScrollPane(navMenuPanel);
+        navScrollPane.setBorder(null);
+        navScrollPane.setOpaque(false);
+        navScrollPane.getViewport().setOpaque(false);
+        navScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        navScrollPane.getVerticalScrollBar().setUnitIncrement(14);
+        sidebar.add(navScrollPane, BorderLayout.CENTER);
+
+        // Bottom Section: Terminal Status Card & Logout Button
+        JPanel bottomSection = new JPanel();
+        bottomSection.setLayout(new BoxLayout(bottomSection, BoxLayout.Y_AXIS));
+        bottomSection.setOpaque(false);
+        bottomSection.setBorder(new EmptyBorder(10, 14, 16, 14));
+
+        // Modern Terminal & Shift Card
+        JPanel shiftCard = new JPanel(new BorderLayout());
+        shiftCard.setBackground(Theme.CARD_HOVER);
+        shiftCard.setBorder(new CompoundBorder(
                 new LineBorder(Theme.BORDER_COLOR, 1, true),
                 new EmptyBorder(10, 12, 10, 12)
         ));
-        JLabel shiftLbl = new JLabel("Active Shift: Morning");
+
+        JPanel shiftTop = new JPanel(new BorderLayout());
+        shiftTop.setOpaque(false);
+        JLabel shiftLbl = new JLabel("Morning Shift (POS-01)");
         shiftLbl.setFont(Theme.FONT_SMALL);
         shiftLbl.setForeground(Theme.TEXT_MUTED);
-        JLabel shiftStatus = new JLabel("● Online (Counter #02)");
-        shiftStatus.setFont(Theme.FONT_BOLD_SM);
-        shiftStatus.setForeground(Theme.COLOR_SUCCESS);
 
-        shiftBadge.add(shiftLbl, BorderLayout.NORTH);
-        shiftBadge.add(shiftStatus, BorderLayout.SOUTH);
-        sidebar.add(shiftBadge);
+        JLabel liveIndicator = new JLabel("● ONLINE");
+        liveIndicator.setFont(new Font("Segoe UI", Font.BOLD, 10));
+        liveIndicator.setForeground(new Color(22, 163, 74));
 
-        // --- B. Center Main Content Panel (CardLayout) ---
+        shiftTop.add(shiftLbl, BorderLayout.WEST);
+        shiftTop.add(liveIndicator, BorderLayout.EAST);
+
+        JLabel counterInfo = new JLabel(counterName + " • " + staffName);
+        counterInfo.setFont(Theme.FONT_BOLD_SM);
+        counterInfo.setForeground(Theme.TEXT_DARK);
+        counterInfo.setBorder(new EmptyBorder(3, 0, 0, 0));
+
+        shiftCard.add(shiftTop, BorderLayout.NORTH);
+        shiftCard.add(counterInfo, BorderLayout.CENTER);
+        shiftCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, 56));
+
+        bottomSection.add(shiftCard);
+        bottomSection.add(Box.createVerticalStrut(10));
+
+        // Styled Sign Out / End Shift Button
+        JButton logoutBtn = new JButton("Sign Out / End Shift") {
+            private boolean isHovered = false;
+
+            {
+                addMouseListener(new java.awt.event.MouseAdapter() {
+                    @Override
+                    public void mouseEntered(java.awt.event.MouseEvent e) {
+                        isHovered = true;
+                        repaint();
+                    }
+
+                    @Override
+                    public void mouseExited(java.awt.event.MouseEvent e) {
+                        isHovered = false;
+                        repaint();
+                    }
+                });
+            }
+
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                int width = getWidth();
+                int height = getHeight();
+
+                if (isHovered) {
+                    g2.setColor(new Color(254, 226, 226));
+                    g2.fillRoundRect(2, 2, width - 4, height - 4, 10, 10);
+                    g2.setColor(new Color(244, 63, 94));
+                    g2.drawRoundRect(2, 2, width - 4, height - 4, 10, 10);
+                    g2.setColor(new Color(225, 29, 72));
+                } else {
+                    g2.setColor(new Color(255, 241, 242));
+                    g2.fillRoundRect(2, 2, width - 4, height - 4, 10, 10);
+                    g2.setColor(new Color(254, 205, 211));
+                    g2.drawRoundRect(2, 2, width - 4, height - 4, 10, 10);
+                    g2.setColor(new Color(225, 29, 72));
+                }
+
+                g2.setFont(new Font("Segoe UI", Font.BOLD, 12));
+                FontMetrics fm = g2.getFontMetrics();
+                String text = getText();
+                int textX = (width - fm.stringWidth(text)) / 2;
+                int textY = (height - fm.getHeight()) / 2 + fm.getAscent();
+                g2.drawString(text, textX, textY);
+                g2.dispose();
+            }
+        };
+
+        logoutBtn.setPreferredSize(new Dimension(236, 38));
+        logoutBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
+        logoutBtn.setFocusPainted(false);
+        logoutBtn.setContentAreaFilled(false);
+        logoutBtn.setBorderPainted(false);
+        logoutBtn.setOpaque(false);
+        logoutBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        logoutBtn.addActionListener(e -> handleLogout());
+
+        bottomSection.add(logoutBtn);
+        sidebar.add(bottomSection, BorderLayout.SOUTH);
+
+        // Center Content Area (CardLayout)
         cardLayout = new CardLayout();
         mainContentPanel = new JPanel(cardLayout);
         mainContentPanel.setBackground(Theme.BG_MAIN);
 
-        // Instantiate Standalone Page Components
+        // Instantiate Page Components
         orderBookingPage = new OrderBookingPage(this);
         moviesListPage = new MoviesListPage(this);
         bookingHistoryPage = new BookingHistoryPage(this);
-        moviesPanel = new MoviesPanel(this);
+        todayShowsPage = new TodayShowsPage(this);
+        searchTicketPage = new SearchTicketPage(this);
+        shiftSummaryPage = new ShiftSummaryPage(this, staffName, counterName);
         reportsPage = new ReportsPage();
+        moviesPanel = new MoviesPanel(this);
 
         // Register Pages in CardLayout
         mainContentPanel.add(orderBookingPage, "PAGE_ORDER_BOOKING");
         mainContentPanel.add(moviesListPage, "PAGE_MOVIES_LIST");
         mainContentPanel.add(bookingHistoryPage, "PAGE_BOOKING_HISTORY");
-        mainContentPanel.add(createTodayShowsPagePlaceholder(), "PAGE_TODAY_SHOWS");
-        mainContentPanel.add(createSearchTicketPagePlaceholder(), "PAGE_SEARCH_TICKET");
-        mainContentPanel.add(createShiftSummaryPagePlaceholder(), "PAGE_SHIFT_SUMMARY");
+        mainContentPanel.add(todayShowsPage, "PAGE_TODAY_SHOWS");
+        mainContentPanel.add(searchTicketPage, "PAGE_SEARCH_TICKET");
+        mainContentPanel.add(shiftSummaryPage, "PAGE_SHIFT_SUMMARY");
         mainContentPanel.add(reportsPage, "PAGE_REPORTS");
 
         bodyContainer.add(sidebar, BorderLayout.WEST);
@@ -235,23 +457,169 @@ public class StaffDashboard extends JFrame {
         showPage("PAGE_ORDER_BOOKING");
     }
 
-    // Sidebar navigation button factory
-    private JButton createSidebarButton(String text, String pageKey, boolean active) {
-        JButton btn = new JButton(text);
-        btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
-        btn.setPreferredSize(new Dimension(210, 44));
-        btn.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        btn.setHorizontalAlignment(SwingConstants.LEFT);
-        btn.setFocusPainted(false);
-        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+    private JLabel createCategoryHeader(String title) {
+        JLabel lbl = new JLabel(title);
+        lbl.setFont(new Font("Segoe UI", Font.BOLD, 10));
+        lbl.setForeground(new Color(148, 163, 184));
+        lbl.setBorder(new EmptyBorder(4, 8, 6, 4));
+        lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return lbl;
+    }
 
-        setSidebarButtonState(btn, active);
+    private ModernNavButton createNavButton(String title, String pageKey, boolean active) {
+        ModernNavButton btn = new ModernNavButton(title, pageKey, active);
+        btn.setAlignmentX(Component.LEFT_ALIGNMENT);
         sidebarButtons.add(btn);
         pageButtonMap.put(pageKey, btn);
-
-        btn.addActionListener(e -> showPage(pageKey));
-
         return btn;
+    }
+
+    // Custom sidebar navigation button with Java2D vector icons
+    private class ModernNavButton extends JButton {
+
+        private final String pageKey;
+        private final String titleText;
+        private boolean isActive = false;
+        private boolean isHovered = false;
+
+        public ModernNavButton(String titleText, String pageKey, boolean active) {
+            super();
+            this.titleText = titleText;
+            this.pageKey = pageKey;
+            this.isActive = active;
+
+            setOpaque(false);
+            setContentAreaFilled(false);
+            setBorderPainted(false);
+            setFocusPainted(false);
+            setCursor(new Cursor(Cursor.HAND_CURSOR));
+            setPreferredSize(new Dimension(236, 42));
+            setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
+
+            addMouseListener(new java.awt.event.MouseAdapter() {
+                @Override
+                public void mouseEntered(java.awt.event.MouseEvent e) {
+                    isHovered = true;
+                    repaint();
+                }
+
+                @Override
+                public void mouseExited(java.awt.event.MouseEvent e) {
+                    isHovered = false;
+                    repaint();
+                }
+            });
+
+            addActionListener(e -> showPage(pageKey));
+        }
+
+        public void setActive(boolean active) {
+            this.isActive = active;
+            repaint();
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_HRGB);
+
+            int width = getWidth();
+            int height = getHeight();
+            int centerY = height / 2;
+
+            if (isActive) {
+                // Royal Blue POS active gradient
+                GradientPaint gp = new GradientPaint(
+                        0, 0, new Color(37, 99, 235),
+                        width, height, new Color(29, 78, 216)
+                );
+                g2.setPaint(gp);
+                g2.fillRoundRect(2, 2, width - 4, height - 4, 10, 10);
+
+                // Left glowing indicator pill
+                g2.setColor(new Color(191, 219, 254));
+                g2.fillRoundRect(6, 8, 4, height - 16, 4, 4);
+
+            } else if (isHovered) {
+                g2.setColor(new Color(241, 245, 249));
+                g2.fillRoundRect(2, 2, width - 4, height - 4, 10, 10);
+                g2.setColor(new Color(226, 232, 240));
+                g2.drawRoundRect(2, 2, width - 4, height - 4, 10, 10);
+            }
+
+            // Draw crisp Java2D vector icon (independent of system fonts/tofu boxes)
+            int iconX = 18;
+            Color iconColor = isActive ? Color.WHITE : (isHovered ? new Color(37, 99, 235) : new Color(100, 116, 139));
+            drawVectorIcon(g2, pageKey, iconX, centerY, iconColor);
+
+            // Draw Title Text
+            g2.setFont(new Font("Segoe UI", isActive ? Font.BOLD : Font.PLAIN, 13));
+            g2.setColor(isActive ? Color.WHITE : (isHovered ? Theme.TEXT_DARK : new Color(51, 65, 85)));
+            int titleX = iconX + 26;
+            g2.drawString(titleText, titleX, centerY + 5);
+
+            g2.dispose();
+        }
+
+        private void drawVectorIcon(Graphics2D g2, String key, int x, int centerY, Color color) {
+            g2.setColor(color);
+            Stroke oldStroke = g2.getStroke();
+
+            if ("PAGE_ORDER_BOOKING".equals(key)) {
+                // Movie Ticket with tear notches
+                g2.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                g2.drawRoundRect(x, centerY - 6, 15, 12, 3, 3);
+                g2.drawLine(x + 5, centerY - 6, x + 5, centerY + 6);
+                g2.drawLine(x + 8, centerY - 2, x + 12, centerY - 2);
+                g2.drawLine(x + 8, centerY + 2, x + 12, centerY + 2);
+            } else if ("PAGE_BOOKING_HISTORY".equals(key)) {
+                // Receipt / Clock History
+                g2.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                g2.drawRoundRect(x + 1, centerY - 7, 13, 14, 2, 2);
+                g2.drawLine(x + 4, centerY - 3, x + 11, centerY - 3);
+                g2.drawLine(x + 4, centerY, x + 11, centerY);
+                g2.drawLine(x + 4, centerY + 3, x + 9, centerY + 3);
+            } else if ("PAGE_SEARCH_TICKET".equals(key)) {
+                // Magnifying Search Glass
+                g2.setStroke(new BasicStroke(1.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                g2.drawOval(x + 1, centerY - 7, 9, 9);
+                g2.drawLine(x + 8, centerY, x + 14, centerY + 6);
+            } else if ("PAGE_MOVIES_LIST".equals(key)) {
+                // Film Display Card with Play Triangle
+                g2.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                g2.drawRoundRect(x, centerY - 7, 15, 13, 3, 3);
+                Polygon p = new Polygon(
+                        new int[]{x + 6, x + 11, x + 6},
+                        new int[]{centerY - 4, centerY - 1, centerY + 2},
+                        3
+                );
+                g2.fillPolygon(p);
+            } else if ("PAGE_TODAY_SHOWS".equals(key)) {
+                // Clock / Timetable
+                g2.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                g2.drawOval(x, centerY - 7, 14, 14);
+                g2.drawLine(x + 7, centerY, x + 7, centerY - 4);
+                g2.drawLine(x + 7, centerY, x + 10, centerY);
+            } else if ("PAGE_SHIFT_SUMMARY".equals(key)) {
+                // Cash Register / Drawer
+                g2.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                g2.drawRoundRect(x, centerY - 6, 15, 12, 2, 2);
+                g2.drawLine(x, centerY + 2, x + 15, centerY + 2);
+                g2.fillOval(x + 6, centerY + 4, 3, 3);
+                g2.drawLine(x + 4, centerY - 2, x + 11, centerY - 2);
+            } else if ("PAGE_REPORTS".equals(key)) {
+                // Analytics Trendline Arrow
+                g2.setStroke(new BasicStroke(1.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                g2.drawLine(x, centerY + 4, x + 4, centerY);
+                g2.drawLine(x + 4, centerY, x + 8, centerY + 2);
+                g2.drawLine(x + 8, centerY + 2, x + 14, centerY - 6);
+                g2.drawLine(x + 10, centerY - 6, x + 14, centerY - 6);
+                g2.drawLine(x + 14, centerY - 2, x + 14, centerY - 6);
+            }
+
+            g2.setStroke(oldStroke);
+        }
     }
 
     // Switches active tab in main panel
@@ -264,145 +632,70 @@ public class StaffDashboard extends JFrame {
                 targetKey = "PAGE_MOVIES_LIST";
             }
             cardLayout.show(mainContentPanel, targetKey);
-            JButton activeBtn = pageButtonMap.get(targetKey);
+            ModernNavButton activeBtn = pageButtonMap.get(targetKey);
             if (activeBtn == null) {
                 activeBtn = pageButtonMap.get(pageKey);
             }
-            for (JButton b : sidebarButtons) {
-                setSidebarButtonState(b, b == activeBtn);
+            for (ModernNavButton b : sidebarButtons) {
+                b.setActive(b == activeBtn);
+            }
+
+            // Auto-refresh dynamic views
+            if ("PAGE_TODAY_SHOWS".equals(targetKey) && todayShowsPage != null) {
+                todayShowsPage.refreshShows();
+            } else if ("PAGE_MOVIES_LIST".equals(targetKey) && moviesListPage != null) {
+                moviesListPage.loadMoviesFromDatabase();
             }
         }
     }
 
-    public MoviesListPage getMoviesListPage() {
-        return moviesListPage;
+    private void showProfileMenu(Component invoker) {
+        JPopupMenu menu = new JPopupMenu();
+        menu.setBackground(Color.WHITE);
+        menu.setBorder(new CompoundBorder(
+                new LineBorder(Theme.BORDER_COLOR, 1, true),
+                new EmptyBorder(6, 10, 6, 10)
+        ));
+
+        JMenuItem userItem = new JMenuItem("Signed in as " + staffName);
+        userItem.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        userItem.setForeground(Theme.TEXT_DARK);
+        userItem.setEnabled(false);
+        menu.add(userItem);
+
+        JMenuItem roleItem = new JMenuItem("Terminal: " + counterName + " (" + role + ")");
+        roleItem.setFont(Theme.FONT_SMALL);
+        roleItem.setForeground(new Color(37, 99, 235));
+        roleItem.setEnabled(false);
+        menu.add(roleItem);
+
+        JMenuItem shiftItem = new JMenuItem("Shift: Morning Shift • Online");
+        shiftItem.setFont(Theme.FONT_SMALL);
+        shiftItem.setForeground(new Color(22, 163, 74));
+        shiftItem.setEnabled(false);
+        menu.add(shiftItem);
+
+        menu.addSeparator();
+
+        JMenuItem logoutItem = new JMenuItem("Sign Out / End Shift");
+        logoutItem.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        logoutItem.setForeground(Theme.ACCENT_RED);
+        logoutItem.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        logoutItem.addActionListener(e -> handleLogout());
+        menu.add(logoutItem);
+
+        menu.show(invoker, invoker.getWidth() - 200, invoker.getHeight() + 4);
     }
 
-    public OrderBookingPage getOrderBookingPage() {
-        return orderBookingPage;
-    }
-
-    public BookingHistoryPage getBookingHistoryPage() {
-        return bookingHistoryPage;
-    }
-
-    public MoviesPanel getMoviesPanel() {
-        return moviesPanel;
-    }
-
-    private void setSidebarButtonState(JButton btn, boolean active) {
-        if (active) {
-            btn.setBackground(Theme.ACCENT_BLUE);
-            btn.setForeground(Color.WHITE);
-            btn.setBorder(new EmptyBorder(10, 16, 10, 16));
-        } else {
-            btn.setBackground(Theme.PANEL_BG);
-            btn.setForeground(Theme.TEXT_DARK);
-            btn.setBorder(new CompoundBorder(
-                    new LineBorder(Theme.BORDER_COLOR, 1, true),
-                    new EmptyBorder(10, 16, 10, 16)
-            ));
+    private void handleLogout() {
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Do you want to log out of the current POS counter session?",
+                "Confirm Sign Out",
+                JOptionPane.YES_NO_OPTION);
+        if (confirm == JOptionPane.YES_OPTION) {
+            dispose();
+            new LoginFrame().setVisible(true);
         }
-    }
-
-    // --- 5. Page Placeholders (Viewed one-by-one in Main Panel) ---
-
-    // Ticket booking page
-    private JPanel createBookTicketPagePlaceholder() {
-        return createPageTemplate(
-                "🎫 Book Ticket Page",
-                "This is where the 3-Column Booking Flow will live (Movie Selector, Seat Matrix, Checkout Bill).",
-                Theme.ACCENT_BLUE
-        );
-    }
-
-    // Today's shows page
-    private JPanel createTodayShowsPagePlaceholder() {
-        return createPageTemplate(
-                "🎬 Today's Shows Page",
-                "Displays today's schedule table across all screens, showtimes, and seat availability.",
-                Theme.COLOR_GOLD
-        );
-    }
-
-    // Search and print ticket page
-    private JPanel createSearchTicketPagePlaceholder() {
-        return createPageTemplate(
-                "🔍 Search & Re-print Ticket Page",
-                "Lookup booked tickets by Ticket Number or Customer Mobile, view history, and re-print receipts.",
-                Theme.ACCENT_RED
-        );
-    }
-
-    // Shift summary page
-    private JPanel createShiftSummaryPagePlaceholder() {
-        return createPageTemplate(
-                "📊 Shift Summary Page",
-                "View total tickets sold during your shift, cash drawer balance, card/UPI totals, and generate handover reports.",
-                Theme.COLOR_SUCCESS
-        );
-    }
-
-    // Reusable page container template
-    private JPanel createPageTemplate(String titleText, String descText, Color accentColor) {
-        JPanel page = new JPanel(new BorderLayout(0, 16));
-        page.setBackground(Theme.BG_MAIN);
-        page.setBorder(new EmptyBorder(24, 28, 24, 28));
-
-        // Top page banner (Clean White Card)
-        JPanel banner = new JPanel(new BorderLayout());
-        banner.setBackground(Theme.CARD_BG);
-        banner.setBorder(new CompoundBorder(
-                new LineBorder(Theme.BORDER_COLOR, 1, true),
-                new EmptyBorder(18, 22, 18, 22)
-        ));
-
-        JLabel title = new JLabel(titleText);
-        title.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        title.setForeground(Theme.TEXT_DARK);
-
-        JLabel desc = new JLabel(descText);
-        desc.setFont(Theme.FONT_REGULAR);
-        desc.setForeground(Theme.TEXT_MUTED);
-
-        JPanel titleBlock = new JPanel();
-        titleBlock.setLayout(new BoxLayout(titleBlock, BoxLayout.Y_AXIS));
-        titleBlock.setOpaque(false);
-        titleBlock.add(title);
-        titleBlock.add(Box.createVerticalStrut(4));
-        titleBlock.add(desc);
-
-        banner.add(titleBlock, BorderLayout.WEST);
-
-        // Center card (Clean White Card with subtle border)
-        JPanel centerCard = new JPanel();
-        centerCard.setLayout(new BoxLayout(centerCard, BoxLayout.Y_AXIS));
-        centerCard.setBackground(Theme.CARD_BG);
-        centerCard.setBorder(new CompoundBorder(
-                new LineBorder(Theme.BORDER_COLOR, 1, true),
-                new EmptyBorder(50, 20, 50, 20)
-        ));
-
-        JLabel infoLabel = new JLabel("● Page active in Main Panel");
-        infoLabel.setFont(Theme.FONT_HEADER);
-        infoLabel.setForeground(accentColor);
-        infoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JLabel subInfo = new JLabel("Click any menu item in the left sidebar to switch views smoothly.");
-        subInfo.setFont(Theme.FONT_REGULAR);
-        subInfo.setForeground(Theme.TEXT_MUTED);
-        subInfo.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        centerCard.add(Box.createVerticalGlue());
-        centerCard.add(infoLabel);
-        centerCard.add(Box.createVerticalStrut(10));
-        centerCard.add(subInfo);
-        centerCard.add(Box.createVerticalGlue());
-
-        page.add(banner, BorderLayout.NORTH);
-        page.add(centerCard, BorderLayout.CENTER);
-
-        return page;
     }
 
     // Bottom status bar
@@ -414,13 +707,13 @@ public class StaffDashboard extends JFrame {
                 new EmptyBorder(8, 20, 8, 20)
         ));
 
-        JLabel statusText = new JLabel("Ready • Logged in as: " + staffName + " (" + role + " • " + counterName + ")");
+        JLabel statusText = new JLabel("POS Terminal Ready • Cashier: " + staffName + " (" + role + " • " + counterName + ")");
         statusText.setFont(Theme.FONT_SMALL);
         statusText.setForeground(Theme.TEXT_MUTED);
 
-        JLabel hintText = new JLabel("Navigate pages via Sidebar Menu");
+        JLabel hintText = new JLabel("● Database: SQLite (cinema.db) • System Status: Active • Version 2.4");
         hintText.setFont(Theme.FONT_SMALL);
-        hintText.setForeground(Theme.TEXT_MUTED);
+        hintText.setForeground(new Color(37, 99, 235));
 
         statusBar.add(statusText, BorderLayout.WEST);
         statusBar.add(hintText, BorderLayout.EAST);
@@ -434,8 +727,16 @@ public class StaffDashboard extends JFrame {
         timer.start();
     }
 
+    // Getters for child pages
+    public MoviesListPage getMoviesListPage() { return moviesListPage; }
+    public OrderBookingPage getOrderBookingPage() { return orderBookingPage; }
+    public BookingHistoryPage getBookingHistoryPage() { return bookingHistoryPage; }
+    public TodayShowsPage getTodayShowsPage() { return todayShowsPage; }
+    public SearchTicketPage getSearchTicketPage() { return searchTicketPage; }
+    public ShiftSummaryPage getShiftSummaryPage() { return shiftSummaryPage; }
+    public MoviesPanel getMoviesPanel() { return moviesPanel; }
+
     public static void main(String[] args) {
-        // Set Look & Feel for crisp rendering
         try {
             for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
                 if ("Nimbus".equals(info.getName())) {

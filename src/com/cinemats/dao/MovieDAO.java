@@ -21,10 +21,12 @@ public class MovieDAO {
                 + "title TEXT NOT NULL, "
                 + "genre TEXT NOT NULL, "
                 + "duration_mins INTEGER DEFAULT 150, "
-                + "rating TEXT DEFAULT 'UA', "
+                + "rating TEXT DEFAULT 'UA 13+', "
                 + "poster_label TEXT DEFAULT 'MOVIE POSTER', "
                 + "image_path TEXT DEFAULT '', "
                 + "status TEXT DEFAULT 'NOW_SHOWING', "
+                + "language TEXT DEFAULT 'Hindi', "
+                + "release_date TEXT DEFAULT '', "
                 + "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
                 + ");";
 
@@ -38,6 +40,16 @@ public class MovieDAO {
                 stmt.execute("ALTER TABLE movies ADD COLUMN image_path TEXT DEFAULT ''");
             } catch (SQLException ignored) {}
 
+            // Safe migration: add language column if table already existed without it
+            try {
+                stmt.execute("ALTER TABLE movies ADD COLUMN language TEXT DEFAULT 'Hindi'");
+            } catch (SQLException ignored) {}
+
+            // Safe migration: add release_date column if table already existed without it
+            try {
+                stmt.execute("ALTER TABLE movies ADD COLUMN release_date TEXT DEFAULT ''");
+            } catch (SQLException ignored) {}
+
             // Safe migration: drop legacy price column if present
             try {
                 stmt.execute("ALTER TABLE movies DROP COLUMN price");
@@ -46,8 +58,8 @@ public class MovieDAO {
             // Check if movies table is empty
             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM movies");
             if (rs.next() && rs.getInt(1) == 0) {
-                String insertSQL = "INSERT INTO movies (title, genre, duration_mins, rating, poster_label, status, image_path) "
-                        + "VALUES (?, ?, ?, ?, ?, ?, ?)";
+                String insertSQL = "INSERT INTO movies (title, genre, duration_mins, rating, poster_label, status, image_path, language, release_date) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 try (PreparedStatement insertStmt = conn.prepareStatement(insertSQL)) {
                     for (Movie m : fallbackMovies) {
                         insertStmt.setString(1, m.getTitle());
@@ -57,6 +69,8 @@ public class MovieDAO {
                         insertStmt.setString(5, m.getPosterLabel());
                         insertStmt.setString(6, m.getStatus());
                         insertStmt.setString(7, m.getImagePath());
+                        insertStmt.setString(8, m.getLanguage());
+                        insertStmt.setString(9, m.getReleaseDate());
                         insertStmt.executeUpdate();
                     }
                     System.out.println("[MovieDAO] Seeded default movies catalogue into cinema.db.");
@@ -67,12 +81,14 @@ public class MovieDAO {
         }
     }
 
-    // Returns all active movies with image_path
+    // Returns all active movies with image_path, language, and release_date
     public static List<Movie> getAllMovies() {
         if (DBConnection.isDriverAvailable()) {
             List<Movie> list = new ArrayList<>();
             String sql = "SELECT id, title, genre, duration_mins, rating, poster_label, status, "
-                    + "COALESCE(image_path, '') AS image_path "
+                    + "COALESCE(image_path, '') AS image_path, "
+                    + "COALESCE(language, 'Hindi') AS language, "
+                    + "COALESCE(release_date, '') AS release_date "
                     + "FROM movies ORDER BY id ASC";
             try (Connection conn = DBConnection.getConnection();
                  Statement stmt = conn.createStatement();
@@ -87,7 +103,9 @@ public class MovieDAO {
                             rs.getString("rating"),
                             rs.getString("poster_label"),
                             rs.getString("status"),
-                            rs.getString("image_path")
+                            rs.getString("image_path"),
+                            rs.getString("language"),
+                            rs.getString("release_date")
                     ));
                 }
                 if (!list.isEmpty()) {
@@ -100,15 +118,17 @@ public class MovieDAO {
         return new ArrayList<>(fallbackMovies);
     }
 
-    // Finds movie by ID with image_path
+    // Finds movie by ID with image_path, language, and release_date
     public static Movie getMovieById(int id) {
         if (DBConnection.isDriverAvailable()) {
             String sql = "SELECT id, title, genre, duration_mins, rating, poster_label, status, "
-                    + "COALESCE(image_path, '') AS image_path "
+                    + "COALESCE(image_path, '') AS image_path, "
+                    + "COALESCE(language, 'Hindi') AS language, "
+                    + "COALESCE(release_date, '') AS release_date "
                     + "FROM movies WHERE id = ?";
             try (Connection conn = DBConnection.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setInt(1, id);
+                 stmt.setInt(1, id);
                 try (ResultSet rs = stmt.executeQuery()) {
                     if (rs.next()) {
                         return new Movie(
@@ -119,7 +139,9 @@ public class MovieDAO {
                                 rs.getString("rating"),
                                 rs.getString("poster_label"),
                                 rs.getString("status"),
-                                rs.getString("image_path")
+                                rs.getString("image_path"),
+                                rs.getString("language"),
+                                rs.getString("release_date")
                         );
                     }
                 }
@@ -149,13 +171,13 @@ public class MovieDAO {
         return filtered;
     }
 
-    // Adds a new movie (with image_path)
+    // Adds a new movie (with image_path, language, release_date)
     public static synchronized boolean addMovie(Movie movie) {
         if (movie == null || movie.getTitle().isEmpty()) return false;
 
         if (DBConnection.isDriverAvailable()) {
-            String sql = "INSERT INTO movies (title, genre, duration_mins, rating, poster_label, status, image_path) "
-                    + "VALUES (?, ?, ?, ?, ?, ?, ?)";
+            String sql = "INSERT INTO movies (title, genre, duration_mins, rating, poster_label, status, image_path, language, release_date) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
             try (Connection conn = DBConnection.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
@@ -166,6 +188,8 @@ public class MovieDAO {
                 stmt.setString(5, movie.getPosterLabel());
                 stmt.setString(6, movie.getStatus());
                 stmt.setString(7, movie.getImagePath() != null ? movie.getImagePath() : "");
+                stmt.setString(8, movie.getLanguage() != null ? movie.getLanguage() : "Hindi");
+                stmt.setString(9, movie.getReleaseDate() != null ? movie.getReleaseDate() : "");
 
                 int rows = stmt.executeUpdate();
                 if (rows > 0) {
@@ -183,7 +207,9 @@ public class MovieDAO {
                             movie.getRating(),
                             movie.getPosterLabel(),
                             movie.getStatus(),
-                            movie.getImagePath()
+                            movie.getImagePath(),
+                            movie.getLanguage(),
+                            movie.getReleaseDate()
                     ));
                     System.out.println("[MovieDAO] Movie saved to database: " + movie.getTitle());
                     return true;
@@ -201,7 +227,9 @@ public class MovieDAO {
                 movie.getRating(),
                 movie.getPosterLabel(),
                 movie.getStatus(),
-                movie.getImagePath()
+                movie.getImagePath(),
+                movie.getLanguage(),
+                movie.getReleaseDate()
         ));
         return true;
     }

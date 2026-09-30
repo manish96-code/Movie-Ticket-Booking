@@ -20,15 +20,25 @@ public class DateTimePicker {
      * Opens a clean visual calendar popup to choose a date.
      */
     public static void showDatePicker(Component parent, JTextField targetField) {
+        showDatePicker(parent, targetField, "yyyy-MM-dd");
+    }
+
+    public static void showDatePicker(Component parent, JTextField targetField, String pattern) {
+        DateTimeFormatter outFmt = (pattern != null && !pattern.isEmpty()) ? DateTimeFormatter.ofPattern(pattern) : DATE_FMT;
         Window window = SwingUtilities.getWindowAncestor(parent);
-        JDialog dialog = new JDialog(window, "Select Show Date", Dialog.ModalityType.APPLICATION_MODAL);
+        JDialog dialog = new JDialog(window, "Select Date", Dialog.ModalityType.APPLICATION_MODAL);
         dialog.setResizable(false);
 
         LocalDate initialDate;
+        String curText = targetField.getText().trim();
         try {
-            initialDate = LocalDate.parse(targetField.getText().trim(), DATE_FMT);
-        } catch (Exception e) {
-            initialDate = LocalDate.now();
+            initialDate = LocalDate.parse(curText, outFmt);
+        } catch (Exception e1) {
+            try {
+                initialDate = LocalDate.parse(curText, DATE_FMT);
+            } catch (Exception e2) {
+                initialDate = LocalDate.now();
+            }
         }
 
         final LocalDate[] selectedDate = {initialDate};
@@ -103,7 +113,7 @@ public class DateTimePicker {
                 }
 
                 dayBtn.addActionListener(e -> {
-                    targetField.setText(date.format(DATE_FMT));
+                    targetField.setText(date.format(outFmt));
                     dialog.dispose();
                 });
 

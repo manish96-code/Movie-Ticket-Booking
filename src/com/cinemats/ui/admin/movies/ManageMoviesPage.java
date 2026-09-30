@@ -163,7 +163,7 @@ public class ManageMoviesPage extends JPanel {
         card.add(toolbar, BorderLayout.NORTH);
 
         // Movie Table
-        String[] cols = {"Movie ID", "Title", "Category / Genre", "Duration", "Rating", "Status"};
+        String[] cols = {"Movie ID", "Title", "Language", "Category / Genre", "Duration", "Certificate", "Release Date", "Status"};
         movieTableModel = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) {
@@ -186,9 +186,11 @@ public class ManageMoviesPage extends JPanel {
             movieTableModel.addRow(new Object[]{
                 "MOV-" + String.format("%03d", m.getId()),
                 m.getTitle(),
+                m.getLanguage(),
                 m.getGenre(),
-                m.getDurationMins() + " min",
-                m.getRating(),
+                m.getShortDuration(),
+                m.getCertificate(),
+                m.getReleaseDate().isEmpty() ? "—" : m.getReleaseDate(),
                 formatStatus(m.getStatus())
             });
         }
@@ -202,13 +204,16 @@ public class ManageMoviesPage extends JPanel {
         int matched = 0;
         for (Movie m : movies) {
             if (query.isEmpty() || m.getTitle().toLowerCase().contains(query)
-                    || m.getGenre().toLowerCase().contains(query)) {
+                    || m.getGenre().toLowerCase().contains(query)
+                    || m.getLanguage().toLowerCase().contains(query)) {
                 movieTableModel.addRow(new Object[]{
                     "MOV-" + String.format("%03d", m.getId()),
                     m.getTitle(),
+                    m.getLanguage(),
                     m.getGenre(),
-                    m.getDurationMins() + " min",
-                    m.getRating(),
+                    m.getShortDuration(),
+                    m.getCertificate(),
+                    m.getReleaseDate().isEmpty() ? "—" : m.getReleaseDate(),
                     formatStatus(m.getStatus())
                 });
                 matched++;
