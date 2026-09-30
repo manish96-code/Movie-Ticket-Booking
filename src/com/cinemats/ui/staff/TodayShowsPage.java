@@ -330,7 +330,7 @@ public class TodayShowsPage extends JPanel {
             String seatInfo = s.getAvailableSeats() + " / " + s.getTotalSeats();
             tableModel.addRow(new Object[]{
                     "#" + s.getId(),
-                    s.getMovieTitle(),
+                    OrderBookingPage.capitalizeTitle(s.getMovieTitle()),
                     s.getScreenName() + " (" + s.getScreenType() + ")",
                     s.getShowDate(),
                     timing,
@@ -346,7 +346,7 @@ public class TodayShowsPage extends JPanel {
         int row = showTable.getSelectedRow();
         if (row >= 0 && row < filteredShowsList.size()) {
             Show s = filteredShowsList.get(row);
-            selectedShowLbl.setText("Selected: " + s.getMovieTitle() + " (" + s.getScreenName() + " • " + s.getStartTime() + ")");
+            selectedShowLbl.setText("Selected: " + OrderBookingPage.capitalizeTitle(s.getMovieTitle()) + " (" + s.getScreenName() + " • " + s.getStartTime() + ")");
             selectedShowLbl.setForeground(Theme.TEXT_DARK);
             bookShowBtn.setEnabled("OPEN".equalsIgnoreCase(s.getStatus()));
         } else {

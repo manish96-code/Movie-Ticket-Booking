@@ -54,10 +54,11 @@ public class ShowSeatDAO {
             }
         }
 
-        // Query active physical seats for this screen
-        String seatSql = "SELECT id, seat_type FROM screen_seats WHERE screen_id = ? AND status = 'ACTIVE'";
+        // Query all physical seats for this screen preserving exact layout and blocked status
+        String seatSql = "SELECT id, seat_type, status FROM screen_seats WHERE screen_id = ? ORDER BY row_name ASC, seat_number ASC";
         List<int[]> seats = new ArrayList<>();
         List<String> types = new ArrayList<>();
+        List<String> statuses = new ArrayList<>();
 
         try (PreparedStatement seatStmt = conn.prepareStatement(seatSql)) {
             seatStmt.setInt(1, screenId);
@@ -65,23 +66,26 @@ public class ShowSeatDAO {
                 while (rs.next()) {
                     seats.add(new int[]{rs.getInt("id")});
                     types.add(rs.getString("seat_type"));
+                    statuses.add(rs.getString("status"));
                 }
             }
         }
 
         // Batch insert into show_seats
         String insertSQL = "INSERT INTO show_seats (show_id, screen_seat_id, price, status, created_at, updated_at) "
-                + "VALUES (?, ?, ?, 'AVAILABLE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
+                + "VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
 
         try (PreparedStatement insertStmt = conn.prepareStatement(insertSQL)) {
             for (int i = 0; i < seats.size(); i++) {
                 int screenSeatId = seats.get(i)[0];
                 String seatType = types.get(i).toUpperCase();
+                String seatStatus = "BLOCKED".equalsIgnoreCase(statuses.get(i)) ? "BLOCKED" : "AVAILABLE";
                 BigDecimal seatPrice = priceMap.getOrDefault(seatType, defaultPrice);
 
                 insertStmt.setInt(1, showId);
                 insertStmt.setInt(2, screenSeatId);
                 insertStmt.setDouble(3, seatPrice.doubleValue());
+                insertStmt.setString(4, seatStatus);
                 insertStmt.addBatch();
             }
             insertStmt.executeBatch();

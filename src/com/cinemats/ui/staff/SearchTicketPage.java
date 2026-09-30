@@ -78,7 +78,7 @@ public class SearchTicketPage extends JPanel {
                 allRecords.add(new BookingRecord(
                         b.getBookingNumber(),
                         b.getCustomerName(),
-                        b.getMovieTitle(),
+                        OrderBookingPage.capitalizeTitle(b.getMovieTitle()),
                         b.getScreenName(),
                         b.getStartTime(),
                         b.getFormattedSeats(),
