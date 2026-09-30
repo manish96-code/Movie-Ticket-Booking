@@ -53,8 +53,12 @@ public class AddShowPage extends JPanel {
     private JLabel startTimeErrorLbl;
     private JLabel endTimeErrorLbl;
 
+    // Modern Alert Banner
     private JPanel statusBox;
-    private JLabel statusLbl;
+    private JLabel statusIconLbl;
+    private JLabel statusTitleLbl;
+    private JLabel statusMsgLbl;
+    private boolean isSuccessStatus = false;
 
     private JButton resetBtn;
     private JButton backBtn;
@@ -64,9 +68,9 @@ public class AddShowPage extends JPanel {
         this.dashboard = dashboard;
         this.showService = new ShowService();
 
-        setLayout(new BorderLayout(0, 16));
+        setLayout(new BorderLayout(0, 14));
         setBackground(Theme.BG_MAIN);
-        setBorder(new EmptyBorder(20, 24, 20, 24));
+        setBorder(new EmptyBorder(18, 22, 18, 22));
 
         initComponents();
         initUI();
@@ -138,15 +142,6 @@ public class AddShowPage extends JPanel {
         pricingPanel = new JPanel(new BorderLayout());
         pricingPanel.setOpaque(false);
 
-        statusBox = new JPanel(new BorderLayout());
-        statusBox.setOpaque(false);
-        statusBox.setVisible(false);
-
-        statusLbl = new JLabel("");
-        statusLbl.setFont(Theme.FONT_SMALL);
-        statusLbl.setHorizontalAlignment(SwingConstants.LEFT);
-        statusBox.add(statusLbl, BorderLayout.CENTER);
-
         resetBtn = Theme.createSecondaryButton("Reset Form");
         backBtn = Theme.createSecondaryButton("Back to Schedules");
         saveBtn = Theme.createPrimaryButton("Save & Schedule Show");
@@ -184,11 +179,11 @@ public class AddShowPage extends JPanel {
         gbc.weighty = 1.0;
 
         gbc.gridx = 0;
-        gbc.weightx = 0.62;
+        gbc.weightx = 0.64;
         contentGrid.add(buildFormCard(), gbc);
 
         gbc.gridx = 1;
-        gbc.weightx = 0.38;
+        gbc.weightx = 0.36;
         gbc.insets = new Insets(0, 0, 0, 0);
         contentGrid.add(buildGuidelinesCard(), gbc);
 
@@ -196,17 +191,22 @@ public class AddShowPage extends JPanel {
     }
 
     private JPanel buildFormCard() {
-        JPanel formCard = new JPanel(new BorderLayout(0, 12));
+        JPanel formCard = new JPanel(new BorderLayout(0, 10));
         formCard.setBackground(Theme.CARD_BG);
         formCard.setBorder(new CompoundBorder(
                 new LineBorder(Theme.BORDER_COLOR, 1, true),
-                new EmptyBorder(26, 32, 26, 32)
+                new EmptyBorder(18, 24, 18, 24)
         ));
+
+        // Header section (Title + Subtitle + Alert Banner)
+        JPanel northPanel = new JPanel();
+        northPanel.setLayout(new BoxLayout(northPanel, BoxLayout.Y_AXIS));
+        northPanel.setOpaque(false);
 
         JPanel headerBox = new JPanel();
         headerBox.setLayout(new BoxLayout(headerBox, BoxLayout.Y_AXIS));
         headerBox.setOpaque(false);
-        headerBox.setBorder(new EmptyBorder(0, 4, 16, 4));
+        headerBox.setBorder(new EmptyBorder(0, 2, 8, 2));
 
         JLabel formHeader = new JLabel("Show Scheduling & Seat Pricing");
         formHeader.setFont(Theme.FONT_TITLE);
@@ -217,119 +217,196 @@ public class AddShowPage extends JPanel {
         formSub.setForeground(Theme.TEXT_MUTED);
 
         headerBox.add(formHeader);
-        headerBox.add(Box.createVerticalStrut(4));
+        headerBox.add(Box.createVerticalStrut(3));
         headerBox.add(formSub);
-        formCard.add(headerBox, BorderLayout.NORTH);
+        northPanel.add(headerBox);
 
+        // Modern Alert Banner placed at the top (under header)
+        northPanel.add(buildAlertBanner());
+        formCard.add(northPanel, BorderLayout.NORTH);
+
+        // Form fields in 2-column GridBagLayout
         JPanel formContent = new JPanel(new GridBagLayout());
         formContent.setOpaque(false);
-        formContent.setBorder(new EmptyBorder(8, 10, 14, 10));
+        formContent.setBorder(new EmptyBorder(4, 2, 4, 2));
         GridBagConstraints fgbc = new GridBagConstraints();
         fgbc.fill = GridBagConstraints.HORIZONTAL;
-        fgbc.insets = new Insets(10, 8, 10, 8);
+        fgbc.insets = new Insets(6, 6, 6, 6);
 
         int row = 0;
 
-        // 1. Movie
-        fgbc.gridx = 0;
-        fgbc.gridy = row;
-        fgbc.weightx = 0.30;
-        formContent.add(createFieldLabel("Select Movie *"), fgbc);
-        fgbc.gridx = 1;
-        fgbc.gridy = row++;
-        fgbc.weightx = 0.70;
-        formContent.add(createFieldWrapper(movieCombo, movieErrorLbl), fgbc);
+        // Row 0: Movie (Left) & Screen (Right)
+        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.5; fgbc.gridwidth = 1;
+        formContent.add(createFieldBlock("Select Movie *", movieCombo, movieErrorLbl), fgbc);
 
-        // 2. Screen
-        fgbc.gridx = 0;
-        fgbc.gridy = row;
-        fgbc.weightx = 0.30;
-        formContent.add(createFieldLabel("Select Screen *"), fgbc);
-        fgbc.gridx = 1;
-        fgbc.gridy = row++;
-        fgbc.weightx = 0.70;
-        formContent.add(createFieldWrapper(screenCombo, screenErrorLbl), fgbc);
+        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.5; fgbc.gridwidth = 1;
+        formContent.add(createFieldBlock("Select Screen *", screenCombo, screenErrorLbl), fgbc);
 
-        // Section: Date & Showtime
-        fgbc.gridx = 0;
-        fgbc.gridy = row++;
-        fgbc.gridwidth = 2;
-        formContent.add(createSectionSep("Date & Showtime"), fgbc);
-        fgbc.gridwidth = 1;
+        // Row 1: Divider (Date & Time)
+        fgbc.gridx = 0; fgbc.gridy = row++; fgbc.gridwidth = 2; fgbc.weightx = 1.0;
+        fgbc.insets = new Insets(8, 6, 4, 6);
+        formContent.add(createSectionSep("Show Date & Showtime Schedule"), fgbc);
 
-        // 3. Date Row (Field + Calendar Picker)
-        fgbc.gridx = 0;
-        fgbc.gridy = row;
-        fgbc.weightx = 0.30;
-        formContent.add(createFieldLabel("Show Date *"), fgbc);
-        fgbc.gridx = 1;
-        fgbc.gridy = row++;
-        fgbc.weightx = 0.70;
+        // Row 2: Date (Left) & Start Time (Right)
+        fgbc.insets = new Insets(6, 6, 6, 6);
+        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.5; fgbc.gridwidth = 1;
         JPanel dateRow = buildPickerRow(dateField, calendarBtn);
-        formContent.add(createFieldWrapper(dateRow, dateErrorLbl), fgbc);
+        formContent.add(createFieldBlock("Show Date *", dateRow, dateErrorLbl), fgbc);
 
-        // 4. Start Time Row (Field + Time Picker)
-        fgbc.gridx = 0;
-        fgbc.gridy = row;
-        fgbc.weightx = 0.30;
-        formContent.add(createFieldLabel("Start Time *"), fgbc);
-        fgbc.gridx = 1;
-        fgbc.gridy = row++;
-        fgbc.weightx = 0.70;
+        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.5; fgbc.gridwidth = 1;
         JPanel startTimeRow = buildPickerRow(startTimeField, timePickerBtn);
-        formContent.add(createFieldWrapper(startTimeRow, startTimeErrorLbl), fgbc);
+        formContent.add(createFieldBlock("Start Time *", startTimeRow, startTimeErrorLbl), fgbc);
 
-        // 5. End Time Row (Field + Auto Calc)
-        fgbc.gridx = 0;
-        fgbc.gridy = row;
-        fgbc.weightx = 0.30;
-        formContent.add(createFieldLabel("End Time *"), fgbc);
-        fgbc.gridx = 1;
-        fgbc.gridy = row++;
-        fgbc.weightx = 0.70;
+        // Row 3: End Time (Left) & Buffer Info Pill (Right)
+        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.5; fgbc.gridwidth = 1;
         JPanel endTimeRow = buildPickerRow(endTimeField, autoCalcBtn);
-        formContent.add(createFieldWrapper(endTimeRow, endTimeErrorLbl), fgbc);
+        formContent.add(createFieldBlock("End Time *", endTimeRow, endTimeErrorLbl), fgbc);
 
-        // Section: Seat Pricing
-        fgbc.gridx = 0;
-        fgbc.gridy = row++;
-        fgbc.gridwidth = 2;
+        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.5; fgbc.gridwidth = 1;
+        formContent.add(buildBufferInfoCard(), fgbc);
+
+        // Row 4: Divider (Seat Pricing)
+        fgbc.gridx = 0; fgbc.gridy = row++; fgbc.gridwidth = 2; fgbc.weightx = 1.0;
+        fgbc.insets = new Insets(8, 6, 4, 6);
         formContent.add(createSectionSep("Seat Pricing (Per Seat Type)"), fgbc);
-        fgbc.gridwidth = 1;
 
-        // Dynamic Pricing Panel
-        fgbc.gridx = 0;
-        fgbc.gridy = row++;
-        fgbc.gridwidth = 2;
+        // Row 5: Dynamic Pricing Panel (Horizontal columns)
+        fgbc.insets = new Insets(6, 6, 6, 6);
+        fgbc.gridx = 0; fgbc.gridy = row++; fgbc.gridwidth = 2; fgbc.weightx = 1.0;
         formContent.add(pricingPanel, fgbc);
-        fgbc.gridwidth = 1;
 
-        // Status Box
-        fgbc.gridx = 0;
-        fgbc.gridy = row++;
-        fgbc.gridwidth = 2;
-        formContent.add(statusBox, fgbc);
-        fgbc.gridwidth = 1;
-
-        // Put formContent in a clean vertical-only scrollpane to avoid cutoffs on smaller displays
+        // ScrollPane with modern sleek scrollbar (active only if viewport is tiny)
         JScrollPane scrollPane = new JScrollPane(formContent);
         scrollPane.setBorder(null);
         scrollPane.setOpaque(false);
         scrollPane.getViewport().setOpaque(false);
         scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
         scrollPane.getVerticalScrollBar().setUnitIncrement(14);
+        scrollPane.getVerticalScrollBar().setUI(new ModernScrollBarUI());
+        scrollPane.getVerticalScrollBar().setPreferredSize(new Dimension(6, 0));
         formCard.add(scrollPane, BorderLayout.CENTER);
 
         // Action Buttons Row
         JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         actionRow.setOpaque(false);
-        actionRow.setBorder(new EmptyBorder(16, 0, 4, 0));
+        actionRow.setBorder(new EmptyBorder(10, 0, 0, 0));
         actionRow.add(resetBtn);
         actionRow.add(backBtn);
         actionRow.add(saveBtn);
         formCard.add(actionRow, BorderLayout.SOUTH);
 
         return formCard;
+    }
+
+    private JPanel buildBufferInfoCard() {
+        JPanel card = new JPanel(new BorderLayout(10, 0));
+        card.setOpaque(false);
+        card.setBorder(new CompoundBorder(
+                new LineBorder(Theme.BORDER_COLOR, 1, true),
+                new EmptyBorder(8, 12, 8, 12)
+        ));
+
+        JLabel icon = new JLabel("⏱");
+        icon.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 18));
+
+        JLabel info = new JLabel("<html><b style='color:#334155;'>15-Minute Turnaround Buffer</b><br/><span style='color:#64748B;'>Buffer between shows is automatically verified.</span></html>");
+        info.setFont(Theme.FONT_SMALL);
+
+        card.add(icon, BorderLayout.WEST);
+        card.add(info, BorderLayout.CENTER);
+
+        JPanel wrap = new JPanel(new BorderLayout(0, 4));
+        wrap.setOpaque(false);
+        JLabel titleLbl = new JLabel("Turnaround Window");
+        titleLbl.setFont(Theme.FONT_BOLD_SM);
+        titleLbl.setForeground(Theme.TEXT_MUTED);
+        wrap.add(titleLbl, BorderLayout.NORTH);
+        wrap.add(card, BorderLayout.CENTER);
+        return wrap;
+    }
+
+    private JPanel buildAlertBanner() {
+        statusBox = new JPanel(new BorderLayout(12, 0)) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                // Rounded background
+                g2.setColor(getBackground());
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
+                // Left vertical accent bar
+                g2.setColor(isSuccessStatus ? Theme.COLOR_SUCCESS : Theme.ACCENT_RED);
+                g2.fillRoundRect(0, 0, 6, getHeight(), 8, 8);
+                g2.fillRect(3, 0, 3, getHeight());
+                // Subtle outline
+                g2.setColor(isSuccessStatus ? new Color(187, 247, 208) : new Color(254, 202, 202));
+                g2.setStroke(new BasicStroke(1.2f));
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 10, 10);
+                g2.dispose();
+            }
+        };
+        statusBox.setOpaque(false);
+        statusBox.setBorder(new EmptyBorder(10, 16, 10, 14));
+        statusBox.setVisible(false);
+
+        // Icon
+        statusIconLbl = new JLabel("⚠");
+        statusIconLbl.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 20));
+        statusIconLbl.setVerticalAlignment(SwingConstants.TOP);
+
+        // Text content
+        JPanel textPanel = new JPanel();
+        textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
+        textPanel.setOpaque(false);
+
+        statusTitleLbl = new JLabel("Scheduling Conflict Detected");
+        statusTitleLbl.setFont(Theme.FONT_BOLD_SM);
+
+        statusMsgLbl = new JLabel("");
+        statusMsgLbl.setFont(Theme.FONT_SMALL);
+
+        textPanel.add(statusTitleLbl);
+        textPanel.add(Box.createVerticalStrut(2));
+        textPanel.add(statusMsgLbl);
+
+        // Dismiss button
+        JButton closeAlertBtn = new JButton("✕");
+        closeAlertBtn.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        closeAlertBtn.setForeground(new Color(156, 163, 175));
+        closeAlertBtn.setBorder(null);
+        closeAlertBtn.setContentAreaFilled(false);
+        closeAlertBtn.setFocusPainted(false);
+        closeAlertBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        closeAlertBtn.setToolTipText("Dismiss alert");
+        closeAlertBtn.addActionListener(e -> {
+            statusBox.setVisible(false);
+            if (statusBox.getParent() != null) {
+                statusBox.getParent().revalidate();
+                statusBox.getParent().repaint();
+            }
+        });
+
+        statusBox.add(statusIconLbl, BorderLayout.WEST);
+        statusBox.add(textPanel, BorderLayout.CENTER);
+        statusBox.add(closeAlertBtn, BorderLayout.EAST);
+
+        return statusBox;
+    }
+
+    private JPanel createFieldBlock(String labelText, JComponent component, JLabel errorLabel) {
+        JPanel block = new JPanel(new BorderLayout(0, 4));
+        block.setOpaque(false);
+        JLabel lbl = new JLabel(labelText);
+        lbl.setFont(Theme.FONT_BOLD_SM);
+        lbl.setForeground(Theme.TEXT_DARK);
+        block.add(lbl, BorderLayout.NORTH);
+        block.add(component, BorderLayout.CENTER);
+        if (errorLabel != null) {
+            block.add(errorLabel, BorderLayout.SOUTH);
+        }
+        return block;
     }
 
     private JPanel buildPickerRow(JTextField field, JButton button) {
@@ -346,7 +423,7 @@ public class AddShowPage extends JPanel {
         card.setBackground(Theme.CARD_BG);
         card.setBorder(new CompoundBorder(
                 new LineBorder(Theme.BORDER_COLOR, 1, true),
-                new EmptyBorder(20, 20, 20, 20)
+                new EmptyBorder(18, 20, 18, 20)
         ));
 
         JLabel guideTitle = new JLabel("Show Scheduling Guidelines");
@@ -354,7 +431,7 @@ public class AddShowPage extends JPanel {
         guideTitle.setForeground(Theme.TEXT_DARK);
 
         card.add(guideTitle);
-        card.add(Box.createVerticalStrut(14));
+        card.add(Box.createVerticalStrut(12));
         card.add(makeGuidePoint("Only ACTIVE screens with configured seats can be scheduled."));
         card.add(Box.createVerticalStrut(6));
         card.add(makeGuidePoint("Date format: YYYY-MM-DD. Use 📅 Pick Date for calendar selection."));
@@ -372,15 +449,15 @@ public class AddShowPage extends JPanel {
         card.add(makeGuidePoint("Prices must be greater than ₹0.00. Different tiers can have different prices."));
         card.add(Box.createVerticalGlue());
 
-        card.add(Box.createVerticalStrut(18));
+        card.add(Box.createVerticalStrut(14));
         JLabel tierRef = new JLabel("Common Seat Tiers");
         tierRef.setFont(Theme.FONT_BOLD_SM);
         tierRef.setForeground(Theme.TEXT_DARK);
         card.add(tierRef);
         card.add(Box.createVerticalStrut(6));
-        card.add(makeSmallInfo("REGULAR   — Standard front/back rows"));
+        card.add(makeSmallInfo("REGULAR   — Standard front rows"));
         card.add(makeSmallInfo("PREMIUM   — Centre prime seating"));
-        card.add(makeSmallInfo("RECLINER  — Luxury recliner seats"));
+        card.add(makeSmallInfo("RECLINER  — Luxury back recliner seats"));
 
         return card;
     }
@@ -404,20 +481,28 @@ public class AddShowPage extends JPanel {
     private void setupListeners() {
         screenCombo.addActionListener(e -> {
             clearFieldError(screenCombo, screenErrorLbl);
+            statusBox.setVisible(false);
             refreshPricingFields();
         });
         movieCombo.addActionListener(e -> {
             clearFieldError(movieCombo, movieErrorLbl);
+            statusBox.setVisible(false);
             autoCalculateEndTime();
         });
         startTimeField.getDocument().addDocumentListener(new SimpleDocListener(this::autoCalculateEndTime));
 
-        dateField.getDocument().addDocumentListener(new SimpleDocListener(()
-                -> clearFieldError(dateField, dateErrorLbl)));
-        startTimeField.getDocument().addDocumentListener(new SimpleDocListener(()
-                -> clearFieldError(startTimeField, startTimeErrorLbl)));
-        endTimeField.getDocument().addDocumentListener(new SimpleDocListener(()
-                -> clearFieldError(endTimeField, endTimeErrorLbl)));
+        dateField.getDocument().addDocumentListener(new SimpleDocListener(() -> {
+            clearFieldError(dateField, dateErrorLbl);
+            statusBox.setVisible(false);
+        }));
+        startTimeField.getDocument().addDocumentListener(new SimpleDocListener(() -> {
+            clearFieldError(startTimeField, startTimeErrorLbl);
+            statusBox.setVisible(false);
+        }));
+        endTimeField.getDocument().addDocumentListener(new SimpleDocListener(() -> {
+            clearFieldError(endTimeField, endTimeErrorLbl);
+            statusBox.setVisible(false);
+        }));
 
         calendarBtn.addActionListener(e -> DateTimePicker.showDatePicker(this, dateField));
         timePickerBtn.addActionListener(e -> {
@@ -469,33 +554,24 @@ public class AddShowPage extends JPanel {
             noSeatsLbl.setBorder(new EmptyBorder(6, 4, 6, 4));
             pricingPanel.add(noSeatsLbl, BorderLayout.CENTER);
         } else {
-            JPanel grid = new JPanel(new GridBagLayout());
+            // Horizontal columns for each tier
+            int cols = Math.max(1, seatTypes.size());
+            JPanel grid = new JPanel(new GridLayout(1, cols, 14, 0));
             grid.setOpaque(false);
             grid.setBorder(new EmptyBorder(2, 0, 2, 0));
-            GridBagConstraints gc = new GridBagConstraints();
-            gc.fill = GridBagConstraints.HORIZONTAL;
-            gc.insets = new Insets(10, 8, 10, 8);
 
-            int r = 0;
             for (String seatType : seatTypes) {
-                gc.gridx = 0;
-                gc.gridy = r;
-                gc.weightx = 0.30;
-                JLabel lbl = new JLabel(seatType + " Price (₹) *");
-                lbl.setFont(Theme.FONT_BOLD_SM);
-                lbl.setForeground(Theme.TEXT_DARK);
-                grid.add(lbl, gc);
-
-                gc.gridx = 1;
-                gc.gridy = r++;
-                gc.weightx = 0.70;
                 JTextField priceField = Theme.createTextField("e.g. 200.00");
                 JLabel priceErrLbl = createErrorLabel();
                 priceFields.put(seatType, priceField);
                 priceErrorLabels.put(seatType, priceErrLbl);
-                priceField.getDocument().addDocumentListener(new SimpleDocListener(()
-                        -> clearFieldError(priceField, priceErrLbl)));
-                grid.add(createFieldWrapper(priceField, priceErrLbl), gc);
+                priceField.getDocument().addDocumentListener(new SimpleDocListener(() -> {
+                    clearFieldError(priceField, priceErrLbl);
+                    statusBox.setVisible(false);
+                }));
+
+                JPanel block = createFieldBlock(seatType + " Price (₹) *", priceField, priceErrLbl);
+                grid.add(block);
             }
             pricingPanel.add(grid, BorderLayout.CENTER);
         }
@@ -713,23 +789,31 @@ public class AddShowPage extends JPanel {
     }
 
     private void showStatus(String msg, boolean success) {
-        statusLbl.setText("<html><div style='padding:2px 0;'><b>" + (success ? "✓ Success: " : "⚠ Alert: ") + "</b>" + msg + "</div></html>");
-        statusBox.setBorder(new CompoundBorder(
-                new LineBorder(success ? Theme.COLOR_SUCCESS : Theme.ACCENT_RED, 1, true),
-                new EmptyBorder(10, 14, 10, 14)
-        ));
-        statusBox.setBackground(success ? new Color(240, 253, 244) : new Color(254, 242, 242));
-        statusBox.setOpaque(true);
-        statusLbl.setForeground(success ? Theme.COLOR_SUCCESS : Theme.ACCENT_RED);
+        this.isSuccessStatus = success;
+
+        Color accentColor = success ? Theme.COLOR_SUCCESS : Theme.ACCENT_RED;
+        Color bgColor = success ? new Color(240, 253, 244) : new Color(254, 242, 242);
+
+        statusIconLbl.setText(success ? "✓" : "⚠");
+        statusIconLbl.setForeground(accentColor);
+
+        statusTitleLbl.setText(success ? "Show Scheduled Successfully" : "Scheduling Conflict Detected");
+        statusTitleLbl.setForeground(accentColor);
+
+        statusMsgLbl.setText("<html><div style='line-height:1.25; color:#334155;'>" + msg + "</div></html>");
+
+        statusBox.setBackground(bgColor);
         statusBox.setVisible(true);
-        statusBox.revalidate();
-        statusBox.repaint();
+        if (statusBox.getParent() != null) {
+            statusBox.getParent().revalidate();
+            statusBox.getParent().repaint();
+        }
     }
 
     private JPanel createSectionSep(String title) {
         JPanel sep = new JPanel(new BorderLayout(8, 0));
         sep.setOpaque(false);
-        sep.setBorder(new EmptyBorder(16, 8, 8, 8));
+        sep.setBorder(new EmptyBorder(10, 2, 4, 2));
 
         JLabel lbl = new JLabel(title);
         lbl.setFont(Theme.FONT_BOLD_SM);
@@ -748,11 +832,11 @@ public class AddShowPage extends JPanel {
         banner.setBackground(Theme.CARD_BG);
         banner.setBorder(new CompoundBorder(
                 new LineBorder(Theme.BORDER_COLOR, 1, true),
-                new EmptyBorder(18, 22, 18, 22)
+                new EmptyBorder(16, 20, 16, 20)
         ));
 
         JLabel title = new JLabel("+ " + titleText);
-        title.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        title.setFont(new Font("Segoe UI", Font.BOLD, 20));
         title.setForeground(Theme.TEXT_DARK);
 
         JLabel desc = new JLabel(descText);
@@ -763,45 +847,31 @@ public class AddShowPage extends JPanel {
         titleBlock.setLayout(new BoxLayout(titleBlock, BoxLayout.Y_AXIS));
         titleBlock.setOpaque(false);
         titleBlock.add(title);
-        titleBlock.add(Box.createVerticalStrut(4));
+        titleBlock.add(Box.createVerticalStrut(3));
         titleBlock.add(desc);
 
         banner.add(titleBlock, BorderLayout.WEST);
         return banner;
     }
 
-    private JPanel createFieldWrapper(JComponent field, JLabel errorLabel) {
-        JPanel wrapper = new JPanel(new BorderLayout(0, 3));
-        wrapper.setOpaque(false);
-        wrapper.add(field, BorderLayout.CENTER);
-        wrapper.add(errorLabel, BorderLayout.SOUTH);
-        return wrapper;
-    }
-
     private JLabel createErrorLabel() {
         JLabel lbl = new JLabel("");
-        lbl.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        lbl.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         lbl.setForeground(Theme.ACCENT_RED);
         lbl.setBorder(new EmptyBorder(2, 2, 0, 0));
         lbl.setVisible(false);
         return lbl;
     }
 
-    private JLabel createFieldLabel(String text) {
-        JLabel label = new JLabel(text);
-        label.setFont(Theme.FONT_BOLD_SM);
-        label.setForeground(Theme.TEXT_DARK);
-        return label;
-    }
-
     private void setFieldError(JComponent field, JLabel errorLabel, String message) {
-        errorLabel.setText("<html><div style='padding-top:2px;'>⚠ " + message + "</div></html>");
-        errorLabel.setVisible(true);
+        if (errorLabel != null) {
+            errorLabel.setText("<html><div style='padding-top:2px;'>⚠ " + message + "</div></html>");
+            errorLabel.setVisible(true);
+        }
         if (field instanceof JComboBox) {
             field.setBorder(new LineBorder(Theme.ACCENT_RED, 1, true));
         } else if (field instanceof JPanel) {
-            // For compound picker rows, highlight the textfield inside
-            for (Component c : field.getComponents()) {
+            for (Component c : ((JPanel) field).getComponents()) {
                 if (c instanceof JTextField) {
                     ((JTextField) c).setBorder(new CompoundBorder(
                             new LineBorder(Theme.ACCENT_RED, 1, true),
@@ -815,7 +885,7 @@ public class AddShowPage extends JPanel {
                     new EmptyBorder(8, 10, 8, 10)
             ));
         }
-        if (errorLabel.getParent() != null) {
+        if (errorLabel != null && errorLabel.getParent() != null) {
             errorLabel.getParent().revalidate();
             errorLabel.getParent().repaint();
         }
@@ -824,12 +894,14 @@ public class AddShowPage extends JPanel {
     }
 
     private void clearFieldError(JComponent field, JLabel errorLabel) {
-        errorLabel.setText("");
-        errorLabel.setVisible(false);
+        if (errorLabel != null) {
+            errorLabel.setText("");
+            errorLabel.setVisible(false);
+        }
         if (field instanceof JComboBox) {
             field.setBorder(new LineBorder(Theme.BORDER_COLOR, 1, true));
         } else if (field instanceof JPanel) {
-            for (Component c : field.getComponents()) {
+            for (Component c : ((JPanel) field).getComponents()) {
                 if (c instanceof JTextField) {
                     ((JTextField) c).setBorder(new CompoundBorder(
                             new LineBorder(Theme.BORDER_COLOR, 1, true),
@@ -843,12 +915,56 @@ public class AddShowPage extends JPanel {
                     new EmptyBorder(8, 10, 8, 10)
             ));
         }
-        if (errorLabel.getParent() != null) {
+        if (errorLabel != null && errorLabel.getParent() != null) {
             errorLabel.getParent().revalidate();
             errorLabel.getParent().repaint();
         }
         field.revalidate();
         field.repaint();
+    }
+
+    // Modern slim rounded scrollbar UI with zero chunky arrow buttons
+    private static class ModernScrollBarUI extends javax.swing.plaf.basic.BasicScrollBarUI {
+
+        @Override
+        protected void configureScrollBarColors() {
+            this.thumbColor = new Color(203, 213, 225);
+        }
+
+        @Override
+        protected JButton createDecreaseButton(int orientation) {
+            return createZeroButton();
+        }
+
+        @Override
+        protected JButton createIncreaseButton(int orientation) {
+            return createZeroButton();
+        }
+
+        private JButton createZeroButton() {
+            JButton btn = new JButton();
+            btn.setPreferredSize(new Dimension(0, 0));
+            btn.setMinimumSize(new Dimension(0, 0));
+            btn.setMaximumSize(new Dimension(0, 0));
+            return btn;
+        }
+
+        @Override
+        protected void paintTrack(Graphics g, JComponent c, Rectangle trackBounds) {
+            // Transparent track
+        }
+
+        @Override
+        protected void paintThumb(Graphics g, JComponent c, Rectangle thumbBounds) {
+            if (thumbBounds.isEmpty() || !scrollbar.isEnabled()) {
+                return;
+            }
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(isThumbRollover() ? new Color(148, 163, 184) : new Color(203, 213, 225));
+            g2.fillRoundRect(thumbBounds.x + 1, thumbBounds.y + 1, thumbBounds.width - 2, thumbBounds.height - 2, 6, 6);
+            g2.dispose();
+        }
     }
 
     private static class SimpleDocListener implements DocumentListener {

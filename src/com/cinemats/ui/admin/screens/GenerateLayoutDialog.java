@@ -230,6 +230,7 @@ public class GenerateLayoutDialog extends JDialog {
     }
 
     // Determines seat tier based on row position and selected distribution preset
+    // Back rows (top, row A) = premium/recliner, Front rows (bottom, near screen) = regular
     private String determineTier(int rowIndex, int totalRows, String preset) {
         if (preset == null) {
             return "REGULAR";
@@ -240,34 +241,34 @@ public class GenerateLayoutDialog extends JDialog {
         } else if (preset.startsWith("All Premium")) {
             return "PREMIUM";
         } else if (preset.startsWith("Balanced Mix")) {
-            // 60% Regular, 30% Premium, 10% Recliner
-            int regLimit = (int) Math.round(totalRows * 0.60);
-            int premLimit = (int) Math.round(totalRows * 0.90);
-            if (rowIndex < regLimit) {
-                return "REGULAR";
+            // 10% Recliner (back), 30% Premium, 60% Regular (front near screen)
+            int recLimit = (int) Math.round(totalRows * 0.10);
+            int premLimit = (int) Math.round(totalRows * 0.40);
+            if (rowIndex < recLimit) {
+                return "RECLINER";
             }
             if (rowIndex < premLimit) {
                 return "PREMIUM";
             }
-            return "RECLINER";
+            return "REGULAR";
         } else if (preset.startsWith("VIP & Premium")) {
-            // 40% Regular, 40% Premium, 20% Recliner
-            int regLimit = (int) Math.round(totalRows * 0.40);
-            int premLimit = (int) Math.round(totalRows * 0.80);
-            if (rowIndex < regLimit) {
-                return "REGULAR";
+            // 20% Recliner (back), 40% Premium, 40% Regular (front near screen)
+            int recLimit = (int) Math.round(totalRows * 0.20);
+            int premLimit = (int) Math.round(totalRows * 0.60);
+            if (rowIndex < recLimit) {
+                return "RECLINER";
             }
             if (rowIndex < premLimit) {
                 return "PREMIUM";
             }
-            return "RECLINER";
+            return "REGULAR";
         } else if (preset.startsWith("Front Regular & Rear Recliner")) {
-            // 80% Regular, 20% Recliner
-            int regLimit = (int) Math.round(totalRows * 0.80);
-            if (rowIndex < regLimit) {
-                return "REGULAR";
+            // 20% Recliner (back), 80% Regular (front near screen)
+            int recLimit = (int) Math.round(totalRows * 0.20);
+            if (rowIndex < recLimit) {
+                return "RECLINER";
             }
-            return "RECLINER";
+            return "REGULAR";
         }
         return "REGULAR";
     }
