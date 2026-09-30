@@ -57,9 +57,9 @@ public class AddMoviePage extends JPanel {
 
     public AddMoviePage(AdminDashboard dashboard) {
         this.dashboard = dashboard;
-        setLayout(new BorderLayout(0, 16));
+        setLayout(new BorderLayout(0, 14));
         setBackground(Theme.BG_MAIN);
-        setBorder(new EmptyBorder(22, 26, 22, 26));
+        setBorder(new EmptyBorder(18, 24, 18, 24));
 
         initComponents();
         initUI();
@@ -126,7 +126,7 @@ public class AddMoviePage extends JPanel {
         statusBox.add(statusLbl, BorderLayout.CENTER);
 
         resetBtn = Theme.createSecondaryButton("Reset Form");
-        backBtn = Theme.createSecondaryButton("Back to Movies");
+        backBtn = Theme.createSecondaryButton("← Back to Movies");
         saveBtn = Theme.createPrimaryButton("Save & Add Movie");
         saveBtn.setBackground(Theme.COLOR_SUCCESS);
     }
@@ -140,9 +140,8 @@ public class AddMoviePage extends JPanel {
     }
 
     private void initUI() {
-        add(createBanner("Add New Movie Title",
-                "Register a new movie into the cinema catalogue with poster image, category, duration, rating, and status."),
-                BorderLayout.NORTH);
+        // Single unified page header at top
+        add(buildPageHeader(), BorderLayout.NORTH);
 
         JPanel contentGrid = new JPanel(new GridBagLayout());
         contentGrid.setOpaque(false);
@@ -165,50 +164,63 @@ public class AddMoviePage extends JPanel {
         add(contentGrid, BorderLayout.CENTER);
     }
 
+    private JPanel buildPageHeader() {
+        JPanel header = new JPanel(new BorderLayout(16, 0));
+        header.setOpaque(false);
+        header.setBorder(new EmptyBorder(0, 2, 8, 2));
+
+        JPanel titleBlock = new JPanel();
+        titleBlock.setLayout(new BoxLayout(titleBlock, BoxLayout.Y_AXIS));
+        titleBlock.setOpaque(false);
+
+        JLabel title = new JLabel("Add New Movie");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        title.setForeground(Theme.TEXT_DARK);
+
+        JLabel subtitle = new JLabel("Register a new movie into the cinema catalogue with poster and metadata.");
+        subtitle.setFont(Theme.FONT_REGULAR);
+        subtitle.setForeground(Theme.TEXT_MUTED);
+
+        titleBlock.add(title);
+        titleBlock.add(Box.createVerticalStrut(3));
+        titleBlock.add(subtitle);
+
+        JPanel rightActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        rightActions.setOpaque(false);
+        rightActions.add(backBtn);
+
+        header.add(titleBlock, BorderLayout.WEST);
+        header.add(rightActions, BorderLayout.EAST);
+        return header;
+    }
+
     private JPanel buildFormCard() {
-        JPanel formCard = new JPanel(new BorderLayout(0, 14));
+        JPanel formCard = new JPanel(new BorderLayout(0, 12));
         formCard.setBackground(Theme.CARD_BG);
         formCard.setBorder(new CompoundBorder(
                 new LineBorder(Theme.BORDER_COLOR, 1, true),
-                new EmptyBorder(22, 24, 22, 24)
+                new EmptyBorder(20, 24, 20, 24)
         ));
 
-        JPanel formTitleBox = new JPanel();
-        formTitleBox.setLayout(new BoxLayout(formTitleBox, BoxLayout.Y_AXIS));
-        formTitleBox.setOpaque(false);
-
-        JLabel formHeader = new JLabel("Movie Details & Catalogue Information");
-        formHeader.setFont(Theme.FONT_TITLE);
-        formHeader.setForeground(Theme.TEXT_DARK);
-
-        JLabel formSub = new JLabel("Fill in the movie details and attach a poster image. All fields marked * are required.");
-        formSub.setFont(Theme.FONT_SMALL);
-        formSub.setForeground(Theme.TEXT_MUTED);
-
-        formTitleBox.add(formHeader);
-        formTitleBox.add(Box.createVerticalStrut(3));
-        formTitleBox.add(formSub);
-        formCard.add(formTitleBox, BorderLayout.NORTH);
-
-        // Form fields grid
+        // Form fields grid - pinned to top, no empty vertical gap
         JPanel formFields = new JPanel(new GridBagLayout());
         formFields.setOpaque(false);
         GridBagConstraints fgbc = new GridBagConstraints();
         fgbc.fill = GridBagConstraints.HORIZONTAL;
-        fgbc.insets = new Insets(5, 4, 5, 4);
+        fgbc.insets = new Insets(8, 4, 8, 4);
 
         int row = 0;
 
         // Movie Title
-        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.32;
+        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.28;
         formFields.add(createFieldLabel("Movie Title *"), fgbc);
-        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.68;
+        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.72;
         formFields.add(createFieldWrapper(titleField, titleErrorLbl), fgbc);
 
         // Category
-        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.32;
+        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.28;
         formFields.add(createFieldLabel("Category / Genre *"), fgbc);
-        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.68;
+        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.72;
         formFields.add(buildCategoryRow(), fgbc);
 
         // Category error
@@ -216,40 +228,44 @@ public class AddMoviePage extends JPanel {
         formFields.add(categoryErrorLbl, fgbc);
 
         // Duration
-        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.32;
+        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.28;
         formFields.add(createFieldLabel("Duration (Minutes) *"), fgbc);
-        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.68;
+        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.72;
         formFields.add(createFieldWrapper(durationField, durationErrorLbl), fgbc);
 
         // Age Rating
-        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.32;
+        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.28;
         formFields.add(createFieldLabel("Age Rating"), fgbc);
-        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.68;
+        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.72;
         formFields.add(ratingCombo, fgbc);
 
         // Release Status
-        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.32;
+        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.28;
         formFields.add(createFieldLabel("Release Status"), fgbc);
-        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.68;
+        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.72;
         formFields.add(statusCombo, fgbc);
 
         // Movie Poster Image File Picker
-        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.32;
+        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.28;
         formFields.add(createFieldLabel("Movie Poster Image"), fgbc);
-        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.68;
+        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.72;
         formFields.add(buildImagePickerRow(), fgbc);
 
         // Status banner
         fgbc.gridx = 0; fgbc.gridy = row++; fgbc.gridwidth = 2;
         formFields.add(statusBox, fgbc);
 
+        // Glue spacer at bottom to pin fields tightly to top and remove giant empty gap
+        fgbc.gridx = 0; fgbc.gridy = row++; fgbc.gridwidth = 2; fgbc.weighty = 1.0;
+        formFields.add(Box.createVerticalGlue(), fgbc);
+
         formCard.add(formFields, BorderLayout.CENTER);
 
         // Action buttons
         JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         actionRow.setOpaque(false);
+        actionRow.setBorder(new EmptyBorder(12, 0, 0, 0));
         actionRow.add(resetBtn);
-        actionRow.add(backBtn);
         actionRow.add(saveBtn);
         formCard.add(actionRow, BorderLayout.SOUTH);
 
@@ -287,71 +303,68 @@ public class AddMoviePage extends JPanel {
     }
 
     private JPanel buildRightPanel() {
-        JPanel rightContainer = new JPanel(new BorderLayout(0, 12));
-        rightContainer.setOpaque(false);
-
-        // 1. Live Poster & Movie Preview Card
-        JPanel previewCard = new JPanel();
-        previewCard.setLayout(new BoxLayout(previewCard, BoxLayout.Y_AXIS));
-        previewCard.setBackground(Theme.CARD_BG);
-        previewCard.setBorder(new CompoundBorder(
+        JPanel card = new JPanel(new BorderLayout(0, 16));
+        card.setBackground(Theme.CARD_BG);
+        card.setBorder(new CompoundBorder(
                 new LineBorder(Theme.BORDER_COLOR, 1, true),
-                new EmptyBorder(16, 18, 16, 18)
+                new EmptyBorder(20, 20, 20, 20)
         ));
+
+        // 1. Live Poster & Movie Preview
+        JPanel previewSection = new JPanel();
+        previewSection.setLayout(new BoxLayout(previewSection, BoxLayout.Y_AXIS));
+        previewSection.setOpaque(false);
 
         JLabel previewHead = new JLabel("Live Poster Preview");
         previewHead.setFont(Theme.FONT_HEADER);
         previewHead.setForeground(Theme.TEXT_DARK);
         previewHead.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        previewCard.add(previewHead);
-        previewCard.add(Box.createVerticalStrut(10));
+        previewSection.add(previewHead);
+        previewSection.add(Box.createVerticalStrut(12));
 
         JPanel centerImg = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
         centerImg.setOpaque(false);
         centerImg.add(previewImageLbl);
-        previewCard.add(centerImg);
+        previewSection.add(centerImg);
 
-        previewCard.add(Box.createVerticalStrut(8));
-        previewCard.add(previewTitleLbl);
-        previewCard.add(Box.createVerticalStrut(4));
-        previewCard.add(previewMetaLbl);
+        previewSection.add(Box.createVerticalStrut(10));
+        previewSection.add(previewTitleLbl);
+        previewSection.add(Box.createVerticalStrut(4));
+        previewSection.add(previewMetaLbl);
 
-        rightContainer.add(previewCard, BorderLayout.NORTH);
+        card.add(previewSection, BorderLayout.NORTH);
 
-        // 2. Guidelines Card
-        rightContainer.add(buildGuidelinesCard(), BorderLayout.CENTER);
+        // 2. Guidelines Section inside the same cohesive card
+        JPanel guideSection = new JPanel();
+        guideSection.setLayout(new BoxLayout(guideSection, BoxLayout.Y_AXIS));
+        guideSection.setOpaque(false);
 
-        return rightContainer;
-    }
-
-    private JPanel buildGuidelinesCard() {
-        JPanel card = new JPanel();
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBackground(Theme.CARD_BG);
-        card.setBorder(new CompoundBorder(
-                new LineBorder(Theme.BORDER_COLOR, 1, true),
-                new EmptyBorder(18, 18, 18, 18)
-        ));
+        JSeparator sep = new JSeparator();
+        sep.setForeground(Theme.BORDER_COLOR);
+        guideSection.add(sep);
+        guideSection.add(Box.createVerticalStrut(12));
 
         JLabel guideTitle = new JLabel("Movie Catalogue Guidelines");
-        guideTitle.setFont(Theme.FONT_HEADER);
+        guideTitle.setFont(Theme.FONT_BOLD_SM);
         guideTitle.setForeground(Theme.TEXT_DARK);
+        guideSection.add(guideTitle);
+        guideSection.add(Box.createVerticalStrut(10));
 
-        card.add(guideTitle);
-        card.add(Box.createVerticalStrut(12));
-        card.add(makeGuidePoint("Title must be unique and descriptive."));
-        card.add(Box.createVerticalStrut(6));
-        card.add(makeGuidePoint("Poster Image: Recommended ratio ~2:3 (e.g. 300x450 px, JPG or PNG)."));
-        card.add(Box.createVerticalStrut(6));
-        card.add(makeGuidePoint("Select a Category/Genre or create one instantly with '+ New Category'."));
-        card.add(Box.createVerticalStrut(6));
-        card.add(makeGuidePoint("Duration in minutes (e.g. 150 for 2h 30m)."));
-        card.add(Box.createVerticalStrut(6));
-        card.add(makeGuidePoint("Age Rating: U = All ages, UA = Parental guidance, A = Adults only."));
-        card.add(Box.createVerticalStrut(6));
-        card.add(makeGuidePoint("Ticket pricing is configured per-show when scheduling."));
-        card.add(Box.createVerticalGlue());
+        guideSection.add(makeGuidePoint("Title must be unique and descriptive."));
+        guideSection.add(Box.createVerticalStrut(6));
+        guideSection.add(makeGuidePoint("Poster: Recommended ratio ~2:3 (e.g. 300x450 px, JPG/PNG)."));
+        guideSection.add(Box.createVerticalStrut(6));
+        guideSection.add(makeGuidePoint("Select or create category instantly with '+ New Category'."));
+        guideSection.add(Box.createVerticalStrut(6));
+        guideSection.add(makeGuidePoint("Duration in minutes (e.g. 150 for 2h 30m)."));
+        guideSection.add(Box.createVerticalStrut(6));
+        guideSection.add(makeGuidePoint("Age Rating: U = All ages, UA = Parental, A = Adults only."));
+        guideSection.add(Box.createVerticalStrut(6));
+        guideSection.add(makeGuidePoint("Ticket pricing is configured per-show when scheduling."));
+        guideSection.add(Box.createVerticalGlue());
+
+        card.add(guideSection, BorderLayout.CENTER);
 
         return card;
     }
@@ -413,7 +426,6 @@ public class AddMoviePage extends JPanel {
             ImageIcon icon = new ImageIcon(path);
             Image img = icon.getImage();
             if (img.getWidth(null) > 0 && img.getHeight(null) > 0) {
-                // Scale smooth to fit 150x210
                 Image scaled = img.getScaledInstance(150, 210, Image.SCALE_SMOOTH);
                 previewImageLbl.setText("");
                 previewImageLbl.setIcon(new ImageIcon(scaled));
@@ -536,7 +548,6 @@ public class AddMoviePage extends JPanel {
                 savedImagePath = "assets/posters/" + safeFileName;
             } catch (Exception ex) {
                 System.err.println("[AddMoviePage] Failed to copy poster image: " + ex.getMessage());
-                // Fall back to original absolute path
                 savedImagePath = selectedImageFile.getAbsolutePath();
             }
         }
@@ -580,7 +591,7 @@ public class AddMoviePage extends JPanel {
     }
 
     private void showStatus(String msg, boolean success) {
-        statusLbl.setText(msg);
+        statusLbl.setText("<html><div style='padding:2px 0;'><b>" + (success ? "✓ Success: " : "⚠ Error: ") + "</b>" + msg + "</div></html>");
         statusBox.setBorder(new CompoundBorder(
                 new LineBorder(success ? Theme.COLOR_SUCCESS : Theme.ACCENT_RED, 1, true),
                 new EmptyBorder(8, 12, 8, 12)
@@ -593,49 +604,19 @@ public class AddMoviePage extends JPanel {
         statusBox.repaint();
     }
 
-    private JPanel createBanner(String titleText, String descText) {
-        JPanel banner = new JPanel(new BorderLayout());
-        banner.setBackground(Theme.CARD_BG);
-        banner.setBorder(new CompoundBorder(
-                new LineBorder(Theme.BORDER_COLOR, 1, true),
-                new EmptyBorder(18, 22, 18, 22)
-        ));
-
-        JLabel title = new JLabel("+ " + titleText);
-        title.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        title.setForeground(Theme.TEXT_DARK);
-
-        JLabel desc = new JLabel(descText);
-        desc.setFont(Theme.FONT_REGULAR);
-        desc.setForeground(Theme.TEXT_MUTED);
-
-        JPanel titleBlock = new JPanel();
-        titleBlock.setLayout(new BoxLayout(titleBlock, BoxLayout.Y_AXIS));
-        titleBlock.setOpaque(false);
-        titleBlock.add(title);
-        titleBlock.add(Box.createVerticalStrut(4));
-        titleBlock.add(desc);
-
-        banner.add(titleBlock, BorderLayout.WEST);
-        return banner;
-    }
-
     private JPanel createFieldWrapper(JComponent field, JLabel errorLabel) {
-        JPanel wrapper = new JPanel();
-        wrapper.setLayout(new BoxLayout(wrapper, BoxLayout.Y_AXIS));
+        JPanel wrapper = new JPanel(new BorderLayout(0, 3));
         wrapper.setOpaque(false);
-        field.setAlignmentX(Component.LEFT_ALIGNMENT);
-        errorLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        wrapper.add(field);
-        wrapper.add(errorLabel);
+        wrapper.add(field, BorderLayout.CENTER);
+        wrapper.add(errorLabel, BorderLayout.SOUTH);
         return wrapper;
     }
 
     private JLabel createErrorLabel() {
         JLabel lbl = new JLabel("");
-        lbl.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        lbl.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         lbl.setForeground(Theme.ACCENT_RED);
-        lbl.setBorder(new EmptyBorder(3, 2, 0, 0));
+        lbl.setBorder(new EmptyBorder(2, 2, 0, 0));
         lbl.setVisible(false);
         return lbl;
     }
@@ -647,33 +628,44 @@ public class AddMoviePage extends JPanel {
         return label;
     }
 
-    private void setFieldError(JComponent field, JLabel errorLabel, String message) {
-        errorLabel.setText("⚠ " + message);
+    private void setFieldError(JTextField field, JLabel errorLabel, String message) {
+        errorLabel.setText("<html><div style='padding-top:2px;'>⚠ " + message + "</div></html>");
         errorLabel.setVisible(true);
         field.setBorder(new CompoundBorder(
                 new LineBorder(Theme.ACCENT_RED, 1, true),
                 new EmptyBorder(8, 10, 8, 10)
         ));
-        field.revalidate();
-        field.repaint();
     }
 
-    private void clearFieldError(JComponent field, JLabel errorLabel) {
+    private void clearFieldError(JTextField field, JLabel errorLabel) {
         errorLabel.setText("");
         errorLabel.setVisible(false);
         field.setBorder(new CompoundBorder(
                 new LineBorder(Theme.BORDER_COLOR, 1, true),
                 new EmptyBorder(8, 10, 8, 10)
         ));
-        field.revalidate();
-        field.repaint();
     }
 
     private static class SimpleDocListener implements DocumentListener {
         private final Runnable callback;
-        public SimpleDocListener(Runnable callback) { this.callback = callback; }
-        public void insertUpdate(DocumentEvent e) { callback.run(); }
-        public void removeUpdate(DocumentEvent e) { callback.run(); }
-        public void changedUpdate(DocumentEvent e) { callback.run(); }
+
+        public SimpleDocListener(Runnable callback) {
+            this.callback = callback;
+        }
+
+        @Override
+        public void insertUpdate(DocumentEvent e) {
+            callback.run();
+        }
+
+        @Override
+        public void removeUpdate(DocumentEvent e) {
+            callback.run();
+        }
+
+        @Override
+        public void changedUpdate(DocumentEvent e) {
+            callback.run();
+        }
     }
 }

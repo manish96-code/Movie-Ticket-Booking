@@ -167,9 +167,8 @@ public class AddShowPage extends JPanel {
     }
 
     private void initUI() {
-        add(createBanner("Schedule a Show",
-                "Assign a movie to a screen with date, showtime, and tiered seat pricing."),
-                BorderLayout.NORTH);
+        // Single unified page header at top
+        add(buildPageHeader(), BorderLayout.NORTH);
 
         JPanel contentGrid = new JPanel(new GridBagLayout());
         contentGrid.setOpaque(false);
@@ -190,6 +189,36 @@ public class AddShowPage extends JPanel {
         add(contentGrid, BorderLayout.CENTER);
     }
 
+    private JPanel buildPageHeader() {
+        JPanel header = new JPanel(new BorderLayout(16, 0));
+        header.setOpaque(false);
+        header.setBorder(new EmptyBorder(0, 2, 8, 2));
+
+        JPanel titleBlock = new JPanel();
+        titleBlock.setLayout(new BoxLayout(titleBlock, BoxLayout.Y_AXIS));
+        titleBlock.setOpaque(false);
+
+        JLabel title = new JLabel("Schedule a Show");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        title.setForeground(Theme.TEXT_DARK);
+
+        JLabel subtitle = new JLabel("Assign a movie to a screen with date, showtime, and tiered seat pricing.");
+        subtitle.setFont(Theme.FONT_REGULAR);
+        subtitle.setForeground(Theme.TEXT_MUTED);
+
+        titleBlock.add(title);
+        titleBlock.add(Box.createVerticalStrut(3));
+        titleBlock.add(subtitle);
+
+        JPanel rightActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        rightActions.setOpaque(false);
+        rightActions.add(backBtn);
+
+        header.add(titleBlock, BorderLayout.WEST);
+        header.add(rightActions, BorderLayout.EAST);
+        return header;
+    }
+
     private JPanel buildFormCard() {
         JPanel formCard = new JPanel(new BorderLayout(0, 10));
         formCard.setBackground(Theme.CARD_BG);
@@ -198,31 +227,10 @@ public class AddShowPage extends JPanel {
                 new EmptyBorder(18, 24, 18, 24)
         ));
 
-        // Header section (Title + Subtitle + Alert Banner)
-        JPanel northPanel = new JPanel();
-        northPanel.setLayout(new BoxLayout(northPanel, BoxLayout.Y_AXIS));
+        // Alert Banner placed at the top (shown only on conflict/status)
+        JPanel northPanel = new JPanel(new BorderLayout());
         northPanel.setOpaque(false);
-
-        JPanel headerBox = new JPanel();
-        headerBox.setLayout(new BoxLayout(headerBox, BoxLayout.Y_AXIS));
-        headerBox.setOpaque(false);
-        headerBox.setBorder(new EmptyBorder(0, 2, 8, 2));
-
-        JLabel formHeader = new JLabel("Show Scheduling & Seat Pricing");
-        formHeader.setFont(Theme.FONT_TITLE);
-        formHeader.setForeground(Theme.TEXT_DARK);
-
-        JLabel formSub = new JLabel("Select movie, screen, date/time, and configure tiered pricing per seat type.");
-        formSub.setFont(Theme.FONT_SMALL);
-        formSub.setForeground(Theme.TEXT_MUTED);
-
-        headerBox.add(formHeader);
-        headerBox.add(Box.createVerticalStrut(3));
-        headerBox.add(formSub);
-        northPanel.add(headerBox);
-
-        // Modern Alert Banner placed at the top (under header)
-        northPanel.add(buildAlertBanner());
+        northPanel.add(buildAlertBanner(), BorderLayout.CENTER);
         formCard.add(northPanel, BorderLayout.NORTH);
 
         // Form fields in 2-column GridBagLayout
@@ -292,7 +300,6 @@ public class AddShowPage extends JPanel {
         actionRow.setOpaque(false);
         actionRow.setBorder(new EmptyBorder(10, 0, 0, 0));
         actionRow.add(resetBtn);
-        actionRow.add(backBtn);
         actionRow.add(saveBtn);
         formCard.add(actionRow, BorderLayout.SOUTH);
 
@@ -827,32 +834,6 @@ public class AddShowPage extends JPanel {
         return sep;
     }
 
-    private JPanel createBanner(String titleText, String descText) {
-        JPanel banner = new JPanel(new BorderLayout());
-        banner.setBackground(Theme.CARD_BG);
-        banner.setBorder(new CompoundBorder(
-                new LineBorder(Theme.BORDER_COLOR, 1, true),
-                new EmptyBorder(16, 20, 16, 20)
-        ));
-
-        JLabel title = new JLabel("+ " + titleText);
-        title.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        title.setForeground(Theme.TEXT_DARK);
-
-        JLabel desc = new JLabel(descText);
-        desc.setFont(Theme.FONT_REGULAR);
-        desc.setForeground(Theme.TEXT_MUTED);
-
-        JPanel titleBlock = new JPanel();
-        titleBlock.setLayout(new BoxLayout(titleBlock, BoxLayout.Y_AXIS));
-        titleBlock.setOpaque(false);
-        titleBlock.add(title);
-        titleBlock.add(Box.createVerticalStrut(3));
-        titleBlock.add(desc);
-
-        banner.add(titleBlock, BorderLayout.WEST);
-        return banner;
-    }
 
     private JLabel createErrorLabel() {
         JLabel lbl = new JLabel("");

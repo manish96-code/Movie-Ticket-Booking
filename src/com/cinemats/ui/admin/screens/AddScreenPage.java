@@ -36,9 +36,10 @@ public class AddScreenPage extends JPanel {
     public AddScreenPage(AdminDashboard dashboard) {
         this.dashboard = dashboard;
         this.screenService = new ScreenService();
-        setLayout(new BorderLayout(0, 16));
+
+        setLayout(new BorderLayout(0, 14));
         setBackground(Theme.BG_MAIN);
-        setBorder(new EmptyBorder(22, 26, 22, 26));
+        setBorder(new EmptyBorder(18, 24, 18, 24));
 
         initComponents();
         initUI();
@@ -46,8 +47,8 @@ public class AddScreenPage extends JPanel {
     }
 
     private void initComponents() {
-        nameField = Theme.createTextField("e.g. IMAX Audi");
-        numberField = Theme.createTextField("e.g. 1");
+        nameField = Theme.createTextField("e.g. Screen 1, IMAX Audi, Dolby Atmos Hall");
+        numberField = Theme.createTextField("e.g. 1, 2, 3...");
 
         nameErrorLbl = createErrorLabel();
         numberErrorLbl = createErrorLabel();
@@ -72,15 +73,14 @@ public class AddScreenPage extends JPanel {
         statusBox.add(statusLbl, BorderLayout.CENTER);
 
         resetBtn = Theme.createSecondaryButton("Reset Form");
-        backBtn = Theme.createSecondaryButton("Back to Screens");
+        backBtn = Theme.createSecondaryButton("← Back to Screens");
         saveBtn = Theme.createPrimaryButton("Save & Create Screen");
         saveBtn.setBackground(Theme.COLOR_SUCCESS);
     }
 
     private void initUI() {
-        add(createBanner("Add New Cinema Screen",
-                "Register a new auditorium screen with seating type, number, and operational status."),
-                BorderLayout.NORTH);
+        // Single unified page header at top
+        add(buildPageHeader(), BorderLayout.NORTH);
 
         JPanel contentGrid = new JPanel(new GridBagLayout());
         contentGrid.setOpaque(false);
@@ -101,73 +101,86 @@ public class AddScreenPage extends JPanel {
         add(contentGrid, BorderLayout.CENTER);
     }
 
+    private JPanel buildPageHeader() {
+        JPanel header = new JPanel(new BorderLayout(16, 0));
+        header.setOpaque(false);
+        header.setBorder(new EmptyBorder(0, 2, 8, 2));
+
+        JPanel titleBlock = new JPanel();
+        titleBlock.setLayout(new BoxLayout(titleBlock, BoxLayout.Y_AXIS));
+        titleBlock.setOpaque(false);
+
+        JLabel title = new JLabel("Add New Cinema Screen");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        title.setForeground(Theme.TEXT_DARK);
+
+        JLabel subtitle = new JLabel("Register a new auditorium screen with seating type, number, and operational status.");
+        subtitle.setFont(Theme.FONT_REGULAR);
+        subtitle.setForeground(Theme.TEXT_MUTED);
+
+        titleBlock.add(title);
+        titleBlock.add(Box.createVerticalStrut(3));
+        titleBlock.add(subtitle);
+
+        JPanel rightActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        rightActions.setOpaque(false);
+        rightActions.add(backBtn);
+
+        header.add(titleBlock, BorderLayout.WEST);
+        header.add(rightActions, BorderLayout.EAST);
+        return header;
+    }
+
     private JPanel buildFormCard() {
-        JPanel formCard = new JPanel(new BorderLayout(0, 14));
+        JPanel formCard = new JPanel(new BorderLayout(0, 12));
         formCard.setBackground(Theme.CARD_BG);
         formCard.setBorder(new CompoundBorder(
                 new LineBorder(Theme.BORDER_COLOR, 1, true),
-                new EmptyBorder(22, 24, 22, 24)
+                new EmptyBorder(20, 24, 20, 24)
         ));
-
-        JPanel formTitleBox = new JPanel();
-        formTitleBox.setLayout(new BoxLayout(formTitleBox, BoxLayout.Y_AXIS));
-        formTitleBox.setOpaque(false);
-
-        JLabel formHeader = new JLabel("Screen Configuration & Identification");
-        formHeader.setFont(Theme.FONT_TITLE);
-        formHeader.setForeground(Theme.TEXT_DARK);
-
-        JLabel formSub = new JLabel("Enter screen details. Seat layout is managed separately via the seat editor.");
-        formSub.setFont(Theme.FONT_SMALL);
-        formSub.setForeground(Theme.TEXT_MUTED);
-
-        formTitleBox.add(formHeader);
-        formTitleBox.add(Box.createVerticalStrut(3));
-        formTitleBox.add(formSub);
-        formCard.add(formTitleBox, BorderLayout.NORTH);
 
         JPanel formFields = new JPanel(new GridBagLayout());
         formFields.setOpaque(false);
         GridBagConstraints fgbc = new GridBagConstraints();
         fgbc.fill = GridBagConstraints.HORIZONTAL;
-        fgbc.insets = new Insets(6, 4, 6, 4);
+        fgbc.insets = new Insets(8, 4, 8, 4);
 
         int row = 0;
 
         fgbc.gridx = 0;
         fgbc.gridy = row;
-        fgbc.weightx = 0.35;
+        fgbc.weightx = 0.30;
         formFields.add(createFieldLabel("Screen Name *"), fgbc);
         fgbc.gridx = 1;
         fgbc.gridy = row++;
-        fgbc.weightx = 0.65;
+        fgbc.weightx = 0.70;
         formFields.add(createFieldWrapper(nameField, nameErrorLbl), fgbc);
 
         fgbc.gridx = 0;
         fgbc.gridy = row;
-        fgbc.weightx = 0.35;
+        fgbc.weightx = 0.30;
         formFields.add(createFieldLabel("Screen Number *"), fgbc);
         fgbc.gridx = 1;
         fgbc.gridy = row++;
-        fgbc.weightx = 0.65;
+        fgbc.weightx = 0.70;
         formFields.add(createFieldWrapper(numberField, numberErrorLbl), fgbc);
 
         fgbc.gridx = 0;
         fgbc.gridy = row;
-        fgbc.weightx = 0.35;
+        fgbc.weightx = 0.30;
         formFields.add(createFieldLabel("Screen / Audi Type"), fgbc);
         fgbc.gridx = 1;
         fgbc.gridy = row++;
-        fgbc.weightx = 0.65;
+        fgbc.weightx = 0.70;
         formFields.add(typeCombo, fgbc);
 
         fgbc.gridx = 0;
         fgbc.gridy = row;
-        fgbc.weightx = 0.35;
+        fgbc.weightx = 0.30;
         formFields.add(createFieldLabel("Operational Status"), fgbc);
         fgbc.gridx = 1;
         fgbc.gridy = row++;
-        fgbc.weightx = 0.65;
+        fgbc.weightx = 0.70;
         formFields.add(statusCombo, fgbc);
 
         fgbc.gridx = 0;
@@ -175,12 +188,19 @@ public class AddScreenPage extends JPanel {
         fgbc.gridwidth = 2;
         formFields.add(statusBox, fgbc);
 
+        // Glue spacer at bottom to pin fields tightly to top and remove giant empty gap
+        fgbc.gridx = 0;
+        fgbc.gridy = row++;
+        fgbc.gridwidth = 2;
+        fgbc.weighty = 1.0;
+        formFields.add(Box.createVerticalGlue(), fgbc);
+
         formCard.add(formFields, BorderLayout.CENTER);
 
         JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         actionRow.setOpaque(false);
+        actionRow.setBorder(new EmptyBorder(12, 0, 0, 0));
         actionRow.add(resetBtn);
-        actionRow.add(backBtn);
         actionRow.add(saveBtn);
         formCard.add(actionRow, BorderLayout.SOUTH);
 
@@ -257,7 +277,9 @@ public class AddScreenPage extends JPanel {
 
     private void handleSave() {
         String name = nameField.getText().trim();
-        String numberStr = numberField.getText().trim();
+        String numStr = numberField.getText().trim();
+        String type = (String) typeCombo.getSelectedItem();
+        String status = (String) statusCombo.getSelectedItem();
 
         clearAllErrors();
         statusBox.setVisible(false);
@@ -269,14 +291,14 @@ public class AddScreenPage extends JPanel {
             hasError = true;
         }
 
-        int screenNumber = -1;
-        if (numberStr.isEmpty()) {
+        int number = 0;
+        if (numStr.isEmpty()) {
             setFieldError(numberField, numberErrorLbl, "Screen number is required.");
             hasError = true;
         } else {
             try {
-                screenNumber = Integer.parseInt(numberStr.replaceAll("[^0-9]", ""));
-                if (screenNumber <= 0) {
+                number = Integer.parseInt(numStr);
+                if (number <= 0) {
                     throw new NumberFormatException();
                 }
             } catch (NumberFormatException ex) {
@@ -289,28 +311,21 @@ public class AddScreenPage extends JPanel {
             return;
         }
 
-        String screenType = (String) typeCombo.getSelectedItem();
-        String status = (String) statusCombo.getSelectedItem();
+        Screen screen = new Screen(0, name, number, type, status);
+        String errorMsg = screenService.saveScreen(screen, false);
 
-        Screen newScreen = new Screen(0, name, screenNumber,
-                screenType != null ? screenType : "Standard",
-                status != null ? status : "ACTIVE");
-
-        String error = screenService.saveScreen(newScreen, false);
-        if (error == null) {
-            showStatus("Screen '" + name + "' created successfully! Configure its seat layout from Screens & Seats.", true);
-            if (dashboard.getScreensPage() != null) {
+        if (errorMsg == null) {
+            showStatus("Screen '" + name + "' (#" + number + ") created successfully!", true);
+            if (dashboard != null && dashboard.getScreensPage() != null) {
                 dashboard.getScreensPage().refreshScreens();
             }
             handleReset();
         } else {
-            String lower = error.toLowerCase();
-            if (lower.contains("name")) {
-                setFieldError(nameField, nameErrorLbl, error);
-            } else if (lower.contains("number")) {
-                setFieldError(numberField, numberErrorLbl, error);
-            } else {
-                showStatus(error, false);
+            showStatus(errorMsg, false);
+            if (errorMsg.toLowerCase().contains("number")) {
+                setFieldError(numberField, numberErrorLbl, errorMsg);
+            } else if (errorMsg.toLowerCase().contains("name")) {
+                setFieldError(nameField, nameErrorLbl, errorMsg);
             }
         }
     }
@@ -331,7 +346,7 @@ public class AddScreenPage extends JPanel {
     }
 
     private void showStatus(String msg, boolean success) {
-        statusLbl.setText(msg);
+        statusLbl.setText("<html><div style='padding:2px 0;'><b>" + (success ? "✓ Success: " : "⚠ Error: ") + "</b>" + msg + "</div></html>");
         statusBox.setBorder(new CompoundBorder(
                 new LineBorder(success ? Theme.COLOR_SUCCESS : Theme.ACCENT_RED, 1, true),
                 new EmptyBorder(8, 12, 8, 12)
@@ -344,49 +359,19 @@ public class AddScreenPage extends JPanel {
         statusBox.repaint();
     }
 
-    private JPanel createBanner(String titleText, String descText) {
-        JPanel banner = new JPanel(new BorderLayout());
-        banner.setBackground(Theme.CARD_BG);
-        banner.setBorder(new CompoundBorder(
-                new LineBorder(Theme.BORDER_COLOR, 1, true),
-                new EmptyBorder(18, 22, 18, 22)
-        ));
-
-        JLabel title = new JLabel("+ " + titleText);
-        title.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        title.setForeground(Theme.TEXT_DARK);
-
-        JLabel desc = new JLabel(descText);
-        desc.setFont(Theme.FONT_REGULAR);
-        desc.setForeground(Theme.TEXT_MUTED);
-
-        JPanel titleBlock = new JPanel();
-        titleBlock.setLayout(new BoxLayout(titleBlock, BoxLayout.Y_AXIS));
-        titleBlock.setOpaque(false);
-        titleBlock.add(title);
-        titleBlock.add(Box.createVerticalStrut(4));
-        titleBlock.add(desc);
-
-        banner.add(titleBlock, BorderLayout.WEST);
-        return banner;
-    }
-
     private JPanel createFieldWrapper(JComponent field, JLabel errorLabel) {
-        JPanel wrapper = new JPanel();
-        wrapper.setLayout(new BoxLayout(wrapper, BoxLayout.Y_AXIS));
+        JPanel wrapper = new JPanel(new BorderLayout(0, 3));
         wrapper.setOpaque(false);
-        field.setAlignmentX(Component.LEFT_ALIGNMENT);
-        errorLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        wrapper.add(field);
-        wrapper.add(errorLabel);
+        wrapper.add(field, BorderLayout.CENTER);
+        wrapper.add(errorLabel, BorderLayout.SOUTH);
         return wrapper;
     }
 
     private JLabel createErrorLabel() {
         JLabel lbl = new JLabel("");
-        lbl.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        lbl.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         lbl.setForeground(Theme.ACCENT_RED);
-        lbl.setBorder(new EmptyBorder(3, 2, 0, 0));
+        lbl.setBorder(new EmptyBorder(2, 2, 0, 0));
         lbl.setVisible(false);
         return lbl;
     }
@@ -398,26 +383,22 @@ public class AddScreenPage extends JPanel {
         return label;
     }
 
-    private void setFieldError(JComponent field, JLabel errorLabel, String message) {
-        errorLabel.setText("⚠ " + message);
+    private void setFieldError(JTextField field, JLabel errorLabel, String message) {
+        errorLabel.setText("<html><div style='padding-top:2px;'>⚠ " + message + "</div></html>");
         errorLabel.setVisible(true);
         field.setBorder(new CompoundBorder(
                 new LineBorder(Theme.ACCENT_RED, 1, true),
                 new EmptyBorder(8, 10, 8, 10)
         ));
-        field.revalidate();
-        field.repaint();
     }
 
-    private void clearFieldError(JComponent field, JLabel errorLabel) {
+    private void clearFieldError(JTextField field, JLabel errorLabel) {
         errorLabel.setText("");
         errorLabel.setVisible(false);
         field.setBorder(new CompoundBorder(
                 new LineBorder(Theme.BORDER_COLOR, 1, true),
                 new EmptyBorder(8, 10, 8, 10)
         ));
-        field.revalidate();
-        field.repaint();
     }
 
     private static class SimpleDocListener implements DocumentListener {
@@ -428,14 +409,17 @@ public class AddScreenPage extends JPanel {
             this.callback = callback;
         }
 
+        @Override
         public void insertUpdate(DocumentEvent e) {
             callback.run();
         }
 
+        @Override
         public void removeUpdate(DocumentEvent e) {
             callback.run();
         }
 
+        @Override
         public void changedUpdate(DocumentEvent e) {
             callback.run();
         }

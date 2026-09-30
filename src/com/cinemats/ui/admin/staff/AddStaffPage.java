@@ -11,6 +11,9 @@ import javax.swing.border.LineBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 
 // Add new staff account page
 public class AddStaffPage extends JPanel {
@@ -53,9 +56,9 @@ public class AddStaffPage extends JPanel {
 
     public AddStaffPage(AdminDashboard dashboard) {
         this.dashboard = dashboard;
-        setLayout(new BorderLayout(0, 16));
+        setLayout(new BorderLayout(0, 14));
         setBackground(Theme.BG_MAIN);
-        setBorder(new EmptyBorder(22, 26, 22, 26));
+        setBorder(new EmptyBorder(18, 24, 18, 24));
 
         initComponents();
         initUI();
@@ -153,17 +156,16 @@ public class AddStaffPage extends JPanel {
         previewStatus.setForeground(Theme.COLOR_SUCCESS);
         previewStatus.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        resetBtn = Theme.createSecondaryButton("🔄 Reset Form");
-        viewRosterBtn = Theme.createSecondaryButton("📋 View Staff Roster");
-        saveBtn = Theme.createPrimaryButton("💾 Save & Register Staff");
+        resetBtn = Theme.createSecondaryButton("Reset Form");
+        viewRosterBtn = Theme.createSecondaryButton("← Back to Staff Roster");
+        saveBtn = Theme.createPrimaryButton("Save & Register Staff");
         saveBtn.setBackground(Theme.COLOR_SUCCESS);
     }
 
     // Builds the primary page layout
     private void initUI() {
-        add(createBanner("➕ Add New Cinema Staff Member",
-                "Register counter ticketing personnel and administrators into the SQLite database with terminal and shift assignments."),
-                BorderLayout.NORTH);
+        // Single unified page header at top
+        add(buildPageHeader(), BorderLayout.NORTH);
 
         JPanel contentGrid = new JPanel(new GridBagLayout());
         contentGrid.setOpaque(false);
@@ -172,81 +174,88 @@ public class AddStaffPage extends JPanel {
         gbc.insets = new Insets(0, 0, 0, 16);
         gbc.weighty = 1.0;
 
-        // Left Form Card (62%)
-        gbc.gridx = 0; gbc.weightx = 0.62;
+        // Left Form Card (60%)
+        gbc.gridx = 0; gbc.weightx = 0.60;
         contentGrid.add(buildFormCard(), gbc);
 
-        // Right Preview & Guidelines Panel (38%)
-        JPanel rightCol = new JPanel(new BorderLayout(0, 14));
-        rightCol.setOpaque(false);
-        rightCol.add(buildBadgeCard(), BorderLayout.NORTH);
-        rightCol.add(buildGuidelinesCard(), BorderLayout.CENTER);
-
-        gbc.gridx = 1; gbc.weightx = 0.38;
+        // Right Preview & Guidelines Panel (40%)
+        gbc.gridx = 1; gbc.weightx = 0.40;
         gbc.insets = new Insets(0, 0, 0, 0);
-        contentGrid.add(rightCol, gbc);
+        contentGrid.add(buildRightPanel(), gbc);
 
         add(contentGrid, BorderLayout.CENTER);
     }
 
+    private JPanel buildPageHeader() {
+        JPanel header = new JPanel(new BorderLayout(16, 0));
+        header.setOpaque(false);
+        header.setBorder(new EmptyBorder(0, 2, 8, 2));
+
+        JPanel titleBlock = new JPanel();
+        titleBlock.setLayout(new BoxLayout(titleBlock, BoxLayout.Y_AXIS));
+        titleBlock.setOpaque(false);
+
+        JLabel title = new JLabel("Add New Staff Member");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        title.setForeground(Theme.TEXT_DARK);
+
+        JLabel subtitle = new JLabel("Register counter ticketing personnel and administrators into the system.");
+        subtitle.setFont(Theme.FONT_REGULAR);
+        subtitle.setForeground(Theme.TEXT_MUTED);
+
+        titleBlock.add(title);
+        titleBlock.add(Box.createVerticalStrut(3));
+        titleBlock.add(subtitle);
+
+        JPanel rightActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        rightActions.setOpaque(false);
+        rightActions.add(viewRosterBtn);
+
+        header.add(titleBlock, BorderLayout.WEST);
+        header.add(rightActions, BorderLayout.EAST);
+        return header;
+    }
+
     // Builds the staff details form card
     private JPanel buildFormCard() {
-        JPanel formCard = new JPanel(new BorderLayout(0, 14));
+        JPanel formCard = new JPanel(new BorderLayout(0, 12));
         formCard.setBackground(Theme.CARD_BG);
         formCard.setBorder(new CompoundBorder(
                 new LineBorder(Theme.BORDER_COLOR, 1, true),
-                new EmptyBorder(22, 24, 22, 24)
+                new EmptyBorder(20, 24, 20, 24)
         ));
 
-        // Form Title
-        JPanel formTitleBox = new JPanel();
-        formTitleBox.setLayout(new BoxLayout(formTitleBox, BoxLayout.Y_AXIS));
-        formTitleBox.setOpaque(false);
-
-        JLabel formHeader = new JLabel("Staff Account Details & Credentials");
-        formHeader.setFont(Theme.FONT_TITLE);
-        formHeader.setForeground(Theme.TEXT_DARK);
-
-        JLabel formSub = new JLabel("Fill out the details below to generate immediate counter terminal access.");
-        formSub.setFont(Theme.FONT_SMALL);
-        formSub.setForeground(Theme.TEXT_MUTED);
-
-        formTitleBox.add(formHeader);
-        formTitleBox.add(Box.createVerticalStrut(3));
-        formTitleBox.add(formSub);
-        formCard.add(formTitleBox, BorderLayout.NORTH);
-
-        // Form Fields Grid
+        // Form Fields Grid - pinned to top, no empty vertical gap
         JPanel formFields = new JPanel(new GridBagLayout());
         formFields.setOpaque(false);
         GridBagConstraints fgbc = new GridBagConstraints();
         fgbc.fill = GridBagConstraints.HORIZONTAL;
-        fgbc.insets = new Insets(5, 4, 5, 4);
+        fgbc.insets = new Insets(6, 4, 6, 4);
 
         int rowIdx = 0;
 
         // Full Name
-        fgbc.gridx = 0; fgbc.gridy = rowIdx; fgbc.weightx = 0.32;
+        fgbc.gridx = 0; fgbc.gridy = rowIdx; fgbc.weightx = 0.30;
         formFields.add(createFieldLabel("Full Name *"), fgbc);
-        fgbc.gridx = 1; fgbc.gridy = rowIdx++; fgbc.weightx = 0.68;
+        fgbc.gridx = 1; fgbc.gridy = rowIdx++; fgbc.weightx = 0.70;
         formFields.add(createFieldWrapper(fullNameField, nameErrorLbl), fgbc);
 
         // Email Address
-        fgbc.gridx = 0; fgbc.gridy = rowIdx; fgbc.weightx = 0.32;
+        fgbc.gridx = 0; fgbc.gridy = rowIdx; fgbc.weightx = 0.30;
         formFields.add(createFieldLabel("Email Address *"), fgbc);
-        fgbc.gridx = 1; fgbc.gridy = rowIdx++; fgbc.weightx = 0.68;
+        fgbc.gridx = 1; fgbc.gridy = rowIdx++; fgbc.weightx = 0.70;
         formFields.add(createFieldWrapper(emailField, emailErrorLbl), fgbc);
 
         // Password
-        fgbc.gridx = 0; fgbc.gridy = rowIdx; fgbc.weightx = 0.32;
+        fgbc.gridx = 0; fgbc.gridy = rowIdx; fgbc.weightx = 0.30;
         formFields.add(createFieldLabel("Password *"), fgbc);
-        fgbc.gridx = 1; fgbc.gridy = rowIdx++; fgbc.weightx = 0.68;
+        fgbc.gridx = 1; fgbc.gridy = rowIdx++; fgbc.weightx = 0.70;
         formFields.add(createFieldWrapper(passwordField, passwordErrorLbl), fgbc);
 
         // Confirm Password
-        fgbc.gridx = 0; fgbc.gridy = rowIdx; fgbc.weightx = 0.32;
+        fgbc.gridx = 0; fgbc.gridy = rowIdx; fgbc.weightx = 0.30;
         formFields.add(createFieldLabel("Confirm Password *"), fgbc);
-        fgbc.gridx = 1; fgbc.gridy = rowIdx++; fgbc.weightx = 0.68;
+        fgbc.gridx = 1; fgbc.gridy = rowIdx++; fgbc.weightx = 0.70;
         formFields.add(createFieldWrapper(confirmPasswordField, confirmPasswordErrorLbl), fgbc);
 
         // Show Passwords Toggle
@@ -254,58 +263,62 @@ public class AddStaffPage extends JPanel {
         formFields.add(showPassCheck, fgbc);
 
         // System Role
-        fgbc.gridx = 0; fgbc.gridy = rowIdx; fgbc.weightx = 0.32;
+        fgbc.gridx = 0; fgbc.gridy = rowIdx; fgbc.weightx = 0.30;
         formFields.add(createFieldLabel("System Role *"), fgbc);
-        fgbc.gridx = 1; fgbc.gridy = rowIdx++; fgbc.weightx = 0.68;
+        fgbc.gridx = 1; fgbc.gridy = rowIdx++; fgbc.weightx = 0.70;
         formFields.add(roleCombo, fgbc);
 
         // Assigned Counter
-        fgbc.gridx = 0; fgbc.gridy = rowIdx; fgbc.weightx = 0.32;
+        fgbc.gridx = 0; fgbc.gridy = rowIdx; fgbc.weightx = 0.30;
         formFields.add(createFieldLabel("Assigned Counter"), fgbc);
-        fgbc.gridx = 1; fgbc.gridy = rowIdx++; fgbc.weightx = 0.68;
+        fgbc.gridx = 1; fgbc.gridy = rowIdx++; fgbc.weightx = 0.70;
         formFields.add(counterCombo, fgbc);
 
         // Assigned Shift
-        fgbc.gridx = 0; fgbc.gridy = rowIdx; fgbc.weightx = 0.32;
+        fgbc.gridx = 0; fgbc.gridy = rowIdx; fgbc.weightx = 0.30;
         formFields.add(createFieldLabel("Assigned Shift"), fgbc);
-        fgbc.gridx = 1; fgbc.gridy = rowIdx++; fgbc.weightx = 0.68;
+        fgbc.gridx = 1; fgbc.gridy = rowIdx++; fgbc.weightx = 0.70;
         formFields.add(shiftCombo, fgbc);
 
         // Contact Phone
-        fgbc.gridx = 0; fgbc.gridy = rowIdx; fgbc.weightx = 0.32;
-        formFields.add(createFieldLabel("Contact Phone (Optional)"), fgbc);
-        fgbc.gridx = 1; fgbc.gridy = rowIdx++; fgbc.weightx = 0.68;
+        fgbc.gridx = 0; fgbc.gridy = rowIdx; fgbc.weightx = 0.30;
+        formFields.add(createFieldLabel("Contact Phone"), fgbc);
+        fgbc.gridx = 1; fgbc.gridy = rowIdx++; fgbc.weightx = 0.70;
         formFields.add(phoneField, fgbc);
 
         // Status alert box
         fgbc.gridx = 0; fgbc.gridy = rowIdx++; fgbc.gridwidth = 2;
         formFields.add(statusBox, fgbc);
 
+        // Glue spacer at bottom to pin fields tightly to top and remove giant empty gap
+        fgbc.gridx = 0; fgbc.gridy = rowIdx++; fgbc.gridwidth = 2; fgbc.weighty = 1.0;
+        formFields.add(Box.createVerticalGlue(), fgbc);
+
         formCard.add(formFields, BorderLayout.CENTER);
 
         // Actions Row
         JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         actionRow.setOpaque(false);
+        actionRow.setBorder(new EmptyBorder(12, 0, 0, 0));
         actionRow.add(resetBtn);
-        actionRow.add(viewRosterBtn);
         actionRow.add(saveBtn);
         formCard.add(actionRow, BorderLayout.SOUTH);
 
         return formCard;
     }
 
-    // Builds the live ID card preview widget
-    private JPanel buildBadgeCard() {
-        JPanel badgeCard = new JPanel();
-        badgeCard.setLayout(new BoxLayout(badgeCard, BoxLayout.Y_AXIS));
-        badgeCard.setBackground(Theme.CARD_BG);
-        badgeCard.setBorder(new CompoundBorder(
-                BorderFactory.createCompoundBorder(
-                        new LineBorder(Theme.BORDER_COLOR, 1, true),
-                        BorderFactory.createMatteBorder(4, 0, 0, 0, Theme.ACCENT_BLUE)
-                ),
+    private JPanel buildRightPanel() {
+        JPanel card = new JPanel(new BorderLayout(0, 16));
+        card.setBackground(Theme.CARD_BG);
+        card.setBorder(new CompoundBorder(
+                new LineBorder(Theme.BORDER_COLOR, 1, true),
                 new EmptyBorder(20, 20, 20, 20)
         ));
+
+        // Live ID Badge Section
+        JPanel badgeSection = new JPanel();
+        badgeSection.setLayout(new BoxLayout(badgeSection, BoxLayout.Y_AXIS));
+        badgeSection.setOpaque(false);
 
         JLabel badgeCardHeader = new JLabel("LIVE STAFF ID CARD PREVIEW");
         badgeCardHeader.setFont(Theme.FONT_BOLD_SM);
@@ -316,64 +329,64 @@ public class AddStaffPage extends JPanel {
         avatarLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 46));
         avatarLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        badgeCard.add(badgeCardHeader);
-        badgeCard.add(Box.createVerticalStrut(12));
-        badgeCard.add(avatarLabel);
-        badgeCard.add(Box.createVerticalStrut(6));
-        badgeCard.add(previewName);
-        badgeCard.add(Box.createVerticalStrut(2));
-        badgeCard.add(previewEmail);
-        badgeCard.add(Box.createVerticalStrut(10));
-        badgeCard.add(previewRolePill);
-        badgeCard.add(Box.createVerticalStrut(14));
-        badgeCard.add(previewCounter);
-        badgeCard.add(Box.createVerticalStrut(4));
-        badgeCard.add(previewShift);
-        badgeCard.add(Box.createVerticalStrut(14));
-        badgeCard.add(previewStatus);
+        badgeSection.add(badgeCardHeader);
+        badgeSection.add(Box.createVerticalStrut(10));
+        badgeSection.add(avatarLabel);
+        badgeSection.add(Box.createVerticalStrut(6));
+        badgeSection.add(previewName);
+        badgeSection.add(Box.createVerticalStrut(2));
+        badgeSection.add(previewEmail);
+        badgeSection.add(Box.createVerticalStrut(10));
+        badgeSection.add(previewRolePill);
+        badgeSection.add(Box.createVerticalStrut(12));
+        badgeSection.add(previewCounter);
+        badgeSection.add(Box.createVerticalStrut(4));
+        badgeSection.add(previewShift);
+        badgeSection.add(Box.createVerticalStrut(12));
+        badgeSection.add(previewStatus);
 
-        return badgeCard;
+        card.add(badgeSection, BorderLayout.NORTH);
+
+        // Guidelines Section
+        JPanel guideSection = new JPanel();
+        guideSection.setLayout(new BoxLayout(guideSection, BoxLayout.Y_AXIS));
+        guideSection.setOpaque(false);
+
+        JSeparator sep = new JSeparator();
+        sep.setForeground(Theme.BORDER_COLOR);
+        guideSection.add(sep);
+        guideSection.add(Box.createVerticalStrut(12));
+
+        JLabel guideTitle = new JLabel("Role Permissions & Access");
+        guideTitle.setFont(Theme.FONT_BOLD_SM);
+        guideTitle.setForeground(Theme.TEXT_DARK);
+        guideSection.add(guideTitle);
+        guideSection.add(Box.createVerticalStrut(8));
+
+        guideSection.add(makeGuidePoint("STAFF: Counter booking, search, and receipts."));
+        guideSection.add(Box.createVerticalStrut(4));
+        guideSection.add(makeGuidePoint("ADMIN: Full control, analytics, movie & staff management."));
+        guideSection.add(Box.createVerticalStrut(4));
+        guideSection.add(makeGuidePoint("Passwords must be at least 4 characters long."));
+        guideSection.add(Box.createVerticalStrut(4));
+        guideSection.add(makeGuidePoint("Accounts are immediately active upon saving."));
+        guideSection.add(Box.createVerticalGlue());
+
+        card.add(guideSection, BorderLayout.CENTER);
+
+        return card;
     }
 
-    // Builds the security and permissions guidelines card
-    private JPanel buildGuidelinesCard() {
-        JPanel guideCard = new JPanel();
-        guideCard.setLayout(new BoxLayout(guideCard, BoxLayout.Y_AXIS));
-        guideCard.setBackground(Theme.CARD_BG);
-        guideCard.setBorder(new CompoundBorder(
-                new LineBorder(Theme.BORDER_COLOR, 1, true),
-                new EmptyBorder(16, 18, 16, 18)
-        ));
-
-        JLabel guideTitle = new JLabel("🔐 Role Permissions & Access Control");
-        guideTitle.setFont(Theme.FONT_HEADER);
-        guideTitle.setForeground(Theme.TEXT_DARK);
-
-        JLabel guidePoint1 = new JLabel("• STAFF: Authorized for Ticket POS counter booking, search, and receipts.");
-        guidePoint1.setFont(Theme.FONT_SMALL); guidePoint1.setForeground(Theme.TEXT_MUTED);
-        JLabel guidePoint2 = new JLabel("• ADMIN: Full HQ privileges, revenue analytics, movies catalogue, staff management.");
-        guidePoint2.setFont(Theme.FONT_SMALL); guidePoint2.setForeground(Theme.TEXT_MUTED);
-        JLabel guidePoint3 = new JLabel("• Passwords must be at least 4 characters long.");
-        guidePoint3.setFont(Theme.FONT_SMALL); guidePoint3.setForeground(Theme.TEXT_MUTED);
-        JLabel guidePoint4 = new JLabel("• Accounts are immediately active for login in cinema.db upon saving.");
-        guidePoint4.setFont(Theme.FONT_SMALL); guidePoint4.setForeground(Theme.TEXT_MUTED);
-
-        guideCard.add(guideTitle);
-        guideCard.add(Box.createVerticalStrut(8));
-        guideCard.add(guidePoint1);
-        guideCard.add(Box.createVerticalStrut(4));
-        guideCard.add(guidePoint2);
-        guideCard.add(Box.createVerticalStrut(4));
-        guideCard.add(guidePoint3);
-        guideCard.add(Box.createVerticalStrut(4));
-        guideCard.add(guidePoint4);
-
-        return guideCard;
+    private JLabel makeGuidePoint(String text) {
+        JLabel lbl = new JLabel("<html>• " + text + "</html>");
+        lbl.setFont(Theme.FONT_SMALL);
+        lbl.setForeground(Theme.TEXT_MUTED);
+        lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return lbl;
     }
 
     // Registers all event listeners and interactive actions
     private void setupListeners() {
-        // Clear field errors and update live badge preview when user types
         fullNameField.getDocument().addDocumentListener(new SimpleDocListener(() -> {
             clearFieldError(fullNameField, nameErrorLbl);
             updateBadgePreview();
@@ -400,103 +413,131 @@ public class AddStaffPage extends JPanel {
             confirmPasswordField.setEchoChar(echo);
         });
 
-        // Save button action
-        saveBtn.addActionListener(e -> handleSave());
-
-        // Reset button action
-        resetBtn.addActionListener(e -> handleReset());
-
-        // View roster navigation
+        saveBtn.addActionListener(e -> handleSaveStaff());
+        resetBtn.addActionListener(e -> handleResetForm());
         viewRosterBtn.addActionListener(e -> dashboard.switchToPage("PAGE_STAFF"));
     }
 
-    // Validates inputs and creates staff account in database
-    private void handleSave() {
-        String fn = fullNameField.getText().trim();
+    // Synchronizes the right ID card widget live with typed values
+    private void updateBadgePreview() {
+        String name = fullNameField.getText().trim();
+        previewName.setText(name.isEmpty() ? "Staff Member Name" : name);
+
         String email = emailField.getText().trim();
-        String p1 = new String(passwordField.getPassword()).trim();
-        String p2 = new String(confirmPasswordField.getPassword()).trim();
-        String role = roleCombo.getSelectedIndex() == 1 ? "ADMIN" : "STAFF";
+        previewEmail.setText(email.isEmpty() ? "staff@cinemaexpress.com" : email);
 
-        clearAllFieldErrors();
-        statusBox.setVisible(false);
-
-        boolean hasError = false;
-        JComponent firstFocus = null;
-
-        // Validate Full Name
-        if (fn.isEmpty()) {
-            setFieldError(fullNameField, nameErrorLbl, "Please enter the staff member's full name.");
-            hasError = true;
-            if (firstFocus == null) firstFocus = fullNameField;
-        }
-
-        // Validate Email Address
-        if (email.isEmpty()) {
-            setFieldError(emailField, emailErrorLbl, "Please enter an email address.");
-            hasError = true;
-            if (firstFocus == null) firstFocus = emailField;
-        } else if (!email.contains("@") || !email.contains(".") || email.contains(" ")) {
-            setFieldError(emailField, emailErrorLbl, "Please enter a valid email address (e.g. rahul@cinemaexpress.com).");
-            hasError = true;
-            if (firstFocus == null) firstFocus = emailField;
-        } else if (DBConnection.userExists(email)) {
-            setFieldError(emailField, emailErrorLbl, "Email '" + email + "' already exists in database. Please choose another email.");
-            hasError = true;
-            if (firstFocus == null) firstFocus = emailField;
-        }
-
-        // Validate Password
-        if (p1.isEmpty()) {
-            setFieldError(passwordField, passwordErrorLbl, "Please enter a password.");
-            hasError = true;
-            if (firstFocus == null) firstFocus = passwordField;
-        } else if (p1.length() < 4) {
-            setFieldError(passwordField, passwordErrorLbl, "Password must be at least 4 characters long.");
-            hasError = true;
-            if (firstFocus == null) firstFocus = passwordField;
-        }
-
-        // Validate Confirm Password
-        if (p2.isEmpty()) {
-            setFieldError(confirmPasswordField, confirmPasswordErrorLbl, "Please confirm the password.");
-            hasError = true;
-            if (firstFocus == null) firstFocus = confirmPasswordField;
-        } else if (!p1.equals(p2)) {
-            setFieldError(confirmPasswordField, confirmPasswordErrorLbl, "Passwords do not match. Please verify.");
-            hasError = true;
-            if (firstFocus == null) firstFocus = confirmPasswordField;
-        }
-
-        if (hasError) {
-            if (firstFocus != null) firstFocus.requestFocus();
-            return;
+        String selectedRole = (String) roleCombo.getSelectedItem();
+        if (selectedRole != null && selectedRole.startsWith("ADMIN")) {
+            previewRolePill.setText("👑 HQ ADMINISTRATOR");
+            previewRolePill.setBackground(Theme.ACCENT_RED);
+        } else {
+            previewRolePill.setText("🎫 STAFF CASHIER");
+            previewRolePill.setBackground(Theme.ACCENT_BLUE);
         }
 
         String counter = (String) counterCombo.getSelectedItem();
-        String shift = (String) shiftCombo.getSelectedItem();
-        String phone = phoneField.getText().trim();
+        previewCounter.setText("Station: " + (counter != null ? counter.split("\\(")[0].trim() : "Counter #01"));
 
-        boolean ok = DBConnection.addUser(email, p1, role, fn, counter, shift, phone);
-        if (ok) {
-            showInlineStatus(statusBox, statusLbl, "✅ Staff account '" + email + "' registered successfully into SQLite database (cinema.db)!", true);
-            previewStatus.setText("● ACTIVE IN DATABASE (cinema.db)");
-            fullNameField.setText("");
-            emailField.setText("");
-            passwordField.setText("");
-            confirmPasswordField.setText("");
-            phoneField.setText("");
-            clearAllFieldErrors();
-            if (dashboard.getStaffAccountsPage() != null) {
-                dashboard.getStaffAccountsPage().refreshStaffTable();
+        String shift = (String) shiftCombo.getSelectedItem();
+        previewShift.setText("Shift: " + (shift != null ? shift.split("\\(")[0].trim() : "General Shift"));
+    }
+
+    // Validates inputs and inserts new staff record into SQLite
+    private void handleSaveStaff() {
+        String name = fullNameField.getText().trim();
+        String email = emailField.getText().trim();
+        String password = new String(passwordField.getPassword()).trim();
+        String confirmPassword = new String(confirmPasswordField.getPassword()).trim();
+        String phone = phoneField.getText().trim();
+        String roleSelection = (String) roleCombo.getSelectedItem();
+        String role = (roleSelection != null && roleSelection.startsWith("ADMIN")) ? "ADMIN" : "STAFF";
+
+        clearAllErrors();
+        statusBox.setVisible(false);
+
+        boolean hasError = false;
+
+        if (name.isEmpty()) {
+            setFieldError(fullNameField, nameErrorLbl, "Full name cannot be left blank.");
+            hasError = true;
+        }
+
+        if (email.isEmpty()) {
+            setFieldError(emailField, emailErrorLbl, "Email address is required.");
+            hasError = true;
+        } else if (!email.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+            setFieldError(emailField, emailErrorLbl, "Please enter a valid email format.");
+            hasError = true;
+        } else if (emailAlreadyExists(email)) {
+            setFieldError(emailField, emailErrorLbl, "This email is already registered in the system.");
+            hasError = true;
+        }
+
+        if (password.isEmpty()) {
+            setFieldError(passwordField, passwordErrorLbl, "Password cannot be left blank.");
+            hasError = true;
+        } else if (password.length() < 4) {
+            setFieldError(passwordField, passwordErrorLbl, "Password must be at least 4 characters long.");
+            hasError = true;
+        }
+
+        if (confirmPassword.isEmpty()) {
+            setFieldError(confirmPasswordField, confirmPasswordErrorLbl, "Please confirm the password.");
+            hasError = true;
+        } else if (!password.equals(confirmPassword)) {
+            setFieldError(confirmPasswordField, confirmPasswordErrorLbl, "Passwords do not match.");
+            hasError = true;
+        }
+
+        if (hasError) return;
+
+        // Persist to SQLite
+        try (Connection conn = DBConnection.getConnection()) {
+            String insertSql = "INSERT INTO users (username, password, full_name, email, role) VALUES (?, ?, ?, ?, ?)";
+            try (PreparedStatement stmt = conn.prepareStatement(insertSql)) {
+                stmt.setString(1, email);
+                stmt.setString(2, password);
+                stmt.setString(3, name);
+                stmt.setString(4, email);
+                stmt.setString(5, role);
+
+                int rowsAffected = stmt.executeUpdate();
+                if (rowsAffected > 0) {
+                    showInlineStatus(statusBox, statusLbl, "Staff member '" + name + "' registered successfully!", true);
+                    if (dashboard != null && dashboard.getStaffAccountsPage() != null) {
+                        dashboard.getStaffAccountsPage().refreshStaffTable();
+                    }
+                    handleResetForm();
+                } else {
+                    showInlineStatus(statusBox, statusLbl, "Database insertion failed. Please retry.", false);
+                }
             }
-        } else {
-            showInlineStatus(statusBox, statusLbl, "⚠️ Failed to save staff: database error or invalid email format.", false);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            showInlineStatus(statusBox, statusLbl, "System Error: " + ex.getMessage(), false);
         }
     }
 
-    // Resets form fields and restores preview badge
-    private void handleReset() {
+    // Checks database whether an email is already assigned
+    private boolean emailAlreadyExists(String email) {
+        String query = "SELECT COUNT(*) FROM users WHERE LOWER(email) = LOWER(?) OR LOWER(username) = LOWER(?)";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setString(1, email);
+            stmt.setString(2, email);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return false;
+    }
+
+    // Clears all form fields and resets badge preview
+    private void handleResetForm() {
         fullNameField.setText("");
         emailField.setText("");
         passwordField.setText("");
@@ -505,60 +546,22 @@ public class AddStaffPage extends JPanel {
         roleCombo.setSelectedIndex(0);
         counterCombo.setSelectedIndex(0);
         shiftCombo.setSelectedIndex(0);
-        clearAllFieldErrors();
+        showPassCheck.setSelected(false);
+        passwordField.setEchoChar('•');
+        confirmPasswordField.setEchoChar('•');
+        clearAllErrors();
         statusBox.setVisible(false);
-        previewStatus.setText("● READY TO ACTIVATE IN DATABASE");
         updateBadgePreview();
         fullNameField.requestFocus();
     }
 
-    // Updates live ID card preview based on current form inputs
-    private void updateBadgePreview() {
-        String fn = fullNameField.getText().trim();
-        previewName.setText(fn.isEmpty() ? "Staff Member Name" : fn);
-
-        String email = emailField.getText().trim();
-        previewEmail.setText(email.isEmpty() ? "staff@cinemaexpress.com" : email);
-
-        boolean isAdmin = roleCombo.getSelectedIndex() == 1;
-        previewRolePill.setText(isAdmin ? "👑 ADMIN EXECUTIVE" : "🎫 STAFF CASHIER");
-        previewRolePill.setBackground(isAdmin ? new Color(124, 58, 237) : Theme.ACCENT_BLUE);
-
-        previewCounter.setText("Station: " + counterCombo.getSelectedItem());
-        previewShift.setText("Shift: " + shiftCombo.getSelectedItem());
-    }
-
-    // Clears all field validation errors
-    private void clearAllFieldErrors() {
+    private void clearAllErrors() {
         clearFieldError(fullNameField, nameErrorLbl);
         clearFieldError(emailField, emailErrorLbl);
         clearFieldError(passwordField, passwordErrorLbl);
         clearFieldError(confirmPasswordField, confirmPasswordErrorLbl);
     }
 
-    // Wraps an input field and its under-field error message
-    private JPanel createFieldWrapper(JComponent field, JLabel errorLabel) {
-        JPanel wrapper = new JPanel();
-        wrapper.setLayout(new BoxLayout(wrapper, BoxLayout.Y_AXIS));
-        wrapper.setOpaque(false);
-        field.setAlignmentX(Component.LEFT_ALIGNMENT);
-        errorLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        wrapper.add(field);
-        wrapper.add(errorLabel);
-        return wrapper;
-    }
-
-    // Creates a dedicated red validation message label
-    private JLabel createFieldErrorLabel() {
-        JLabel lbl = new JLabel("");
-        lbl.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        lbl.setForeground(Theme.ACCENT_RED);
-        lbl.setBorder(new EmptyBorder(3, 2, 0, 0));
-        lbl.setVisible(false);
-        return lbl;
-    }
-
-    // Displays an error message under the field and highlights the border
     private void setFieldError(JComponent field, JLabel errorLabel, String message) {
         errorLabel.setText("⚠ " + message);
         errorLabel.setVisible(true);
@@ -566,11 +569,8 @@ public class AddStaffPage extends JPanel {
                 new LineBorder(Theme.ACCENT_RED, 1, true),
                 new EmptyBorder(8, 10, 8, 10)
         ));
-        field.revalidate();
-        field.repaint();
     }
 
-    // Clears the error message under the field and restores standard border
     private void clearFieldError(JComponent field, JLabel errorLabel) {
         errorLabel.setText("");
         errorLabel.setVisible(false);
@@ -578,11 +578,25 @@ public class AddStaffPage extends JPanel {
                 new LineBorder(Theme.BORDER_COLOR, 1, true),
                 new EmptyBorder(8, 10, 8, 10)
         ));
-        field.revalidate();
-        field.repaint();
     }
 
-    // Styles password fields consistently with text fields
+    private JPanel createFieldWrapper(JComponent field, JLabel errorLabel) {
+        JPanel wrapper = new JPanel(new BorderLayout(0, 3));
+        wrapper.setOpaque(false);
+        wrapper.add(field, BorderLayout.CENTER);
+        wrapper.add(errorLabel, BorderLayout.SOUTH);
+        return wrapper;
+    }
+
+    private JLabel createFieldErrorLabel() {
+        JLabel lbl = new JLabel("");
+        lbl.setFont(Theme.FONT_SMALL);
+        lbl.setForeground(Theme.ACCENT_RED);
+        lbl.setBorder(new EmptyBorder(2, 2, 0, 0));
+        lbl.setVisible(false);
+        return lbl;
+    }
+
     private void stylePasswordField(JPasswordField pf) {
         pf.setBackground(Color.WHITE);
         pf.setForeground(Theme.TEXT_DARK);
@@ -594,7 +608,6 @@ public class AddStaffPage extends JPanel {
         ));
     }
 
-    // Creates field header labels
     private JLabel createFieldLabel(String text) {
         JLabel label = new JLabel(text);
         label.setFont(Theme.FONT_BOLD_SM);
@@ -602,7 +615,6 @@ public class AddStaffPage extends JPanel {
         return label;
     }
 
-    // Shows inline status banner for general operations
     private void showInlineStatus(JPanel box, JLabel lbl, String msg, boolean success) {
         lbl.setText(msg);
         box.setBorder(new CompoundBorder(
@@ -617,35 +629,6 @@ public class AddStaffPage extends JPanel {
         box.repaint();
     }
 
-    // Creates the top page header banner
-    private JPanel createBanner(String titleText, String descText) {
-        JPanel banner = new JPanel(new BorderLayout());
-        banner.setBackground(Theme.CARD_BG);
-        banner.setBorder(new CompoundBorder(
-                new LineBorder(Theme.BORDER_COLOR, 1, true),
-                new EmptyBorder(18, 22, 18, 22)
-        ));
-
-        JLabel title = new JLabel(titleText);
-        title.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        title.setForeground(Theme.TEXT_DARK);
-
-        JLabel desc = new JLabel(descText);
-        desc.setFont(Theme.FONT_REGULAR);
-        desc.setForeground(Theme.TEXT_MUTED);
-
-        JPanel titleBlock = new JPanel();
-        titleBlock.setLayout(new BoxLayout(titleBlock, BoxLayout.Y_AXIS));
-        titleBlock.setOpaque(false);
-        titleBlock.add(title);
-        titleBlock.add(Box.createVerticalStrut(4));
-        titleBlock.add(desc);
-
-        banner.add(titleBlock, BorderLayout.WEST);
-        return banner;
-    }
-
-    // Simple document listener adapter for text changes
     private static class SimpleDocListener implements DocumentListener {
         private final Runnable callback;
         public SimpleDocListener(Runnable callback) { this.callback = callback; }
