@@ -5,16 +5,15 @@ import com.cinemats.model.ScreenSeat;
 import com.cinemats.service.ScreenSeatService;
 import com.cinemats.service.ScreenService;
 import com.cinemats.util.Theme;
-
-import javax.swing.*;
-import javax.swing.border.CompoundBorder;
-import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.*;
 import java.util.List;
+import javax.swing.*;
+import javax.swing.border.CompoundBorder;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
 
 // Visual cinema seating layout editor and interactive arrangement canvas
 public class SeatLayoutPage extends JPanel {
@@ -69,7 +68,9 @@ public class SeatLayoutPage extends JPanel {
             int confirm = JOptionPane.showConfirmDialog(this,
                     "You have unsaved changes on the current screen arrangement.\nDiscard changes and switch screens?",
                     "Unsaved Changes", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-            if (confirm != JOptionPane.YES_OPTION) return;
+            if (confirm != JOptionPane.YES_OPTION) {
+                return;
+            }
         }
         this.currentScreen = screen;
         hasUnsavedChanges = false;
@@ -185,10 +186,6 @@ public class SeatLayoutPage extends JPanel {
                 new LineBorder(Theme.BORDER_COLOR, 1, true),
                 new EmptyBorder(16, 20, 16, 20)
         ));
-
-        // Cinema Screen Graphic
-        JPanel screenGraphicPanel = createScreenGraphic();
-        canvasCard.add(screenGraphicPanel, BorderLayout.NORTH);
 
         // Grid Container
         gridContainer = new JPanel();
@@ -448,10 +445,16 @@ public class SeatLayoutPage extends JPanel {
         int total = currentSeats.size();
         int reg = 0, prem = 0, rec = 0, blk = 0;
         for (ScreenSeat s : currentSeats) {
-            if (s.isBlocked()) blk++;
-            if ("PREMIUM".equalsIgnoreCase(s.getSeatType())) prem++;
-            else if ("RECLINER".equalsIgnoreCase(s.getSeatType())) rec++;
-            else reg++;
+            if (s.isBlocked()) {
+                blk++;
+            }
+            if ("PREMIUM".equalsIgnoreCase(s.getSeatType())) {
+                prem++; 
+            }else if ("RECLINER".equalsIgnoreCase(s.getSeatType())) {
+                rec++; 
+            }else {
+                reg++;
+            }
         }
         int bookable = Math.max(0, total - blk);
 
@@ -512,21 +515,48 @@ public class SeatLayoutPage extends JPanel {
 
             gridContainer.add(emptyPanel);
         } else {
-            // Render each row
+            // Render rows grouped by tier
+            String currentTier = null;
+
             for (String rowName : rowMap.keySet()) {
                 List<ScreenSeat> seatsInRow = rowMap.get(rowName);
                 seatsInRow.sort(Comparator.comparingInt(ScreenSeat::getSeatNumber));
 
-                JPanel rowPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 6, 4));
+                // Show category tier header (e.g. GOLD / PREMIUM / REGULAR)
+                String rowTier = seatsInRow.isEmpty() ? "REGULAR" : seatsInRow.get(0).getSeatType().toUpperCase();
+                if (!rowTier.equalsIgnoreCase(currentTier)) {
+                    currentTier = rowTier;
+                    gridContainer.add(Box.createVerticalStrut(14));
+                    gridContainer.add(createTierHeader(currentTier));
+                    gridContainer.add(Box.createVerticalStrut(10));
+                }
+
+                JPanel rowPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 2));
                 rowPanel.setOpaque(false);
 
                 // Left row label badge
                 JLabel leftRowBadge = createRowBadge(rowName);
                 rowPanel.add(leftRowBadge);
+                rowPanel.add(Box.createHorizontalStrut(6));
 
-                // Seats with center walkway gap if row has > 8 seats
-                int midPoint = seatsInRow.size() / 2;
-                for (int i = 0; i < seatsInRow.size(); i++) {
+                int totalInRow = seatsInRow.size();
+                int leftCount, rightCount;
+                if (totalInRow >= 12) {
+                    leftCount = 4;
+                    rightCount = 4;
+                } else if (totalInRow >= 9) {
+                    leftCount = 3;
+                    rightCount = 3;
+                } else if (totalInRow >= 6) {
+                    leftCount = 2;
+                    rightCount = 2;
+                } else {
+                    leftCount = 0;
+                    rightCount = 0;
+                }
+                int centerEnd = totalInRow - rightCount;
+
+                for (int i = 0; i < totalInRow; i++) {
                     ScreenSeat seat = seatsInRow.get(i);
                     SeatButton btn = new SeatButton(seat);
 
@@ -560,18 +590,29 @@ public class SeatLayoutPage extends JPanel {
 
                     rowPanel.add(btn);
 
-                    if (seatsInRow.size() > 8 && i == midPoint - 1) {
-                        rowPanel.add(Box.createHorizontalStrut(24)); // Walkway aisle
+                    // Left Aisle Walkway
+                    if (leftCount > 0 && i == leftCount - 1) {
+                        rowPanel.add(Box.createHorizontalStrut(32));
+                    }
+                    // Right Aisle Walkway
+                    if (rightCount > 0 && i == centerEnd - 1) {
+                        rowPanel.add(Box.createHorizontalStrut(32));
                     }
                 }
 
                 // Right row label badge
+                rowPanel.add(Box.createHorizontalStrut(6));
                 JLabel rightRowBadge = createRowBadge(rowName);
                 rowPanel.add(rightRowBadge);
 
                 gridContainer.add(rowPanel);
-                gridContainer.add(Box.createVerticalStrut(4));
+                gridContainer.add(Box.createVerticalStrut(3));
             }
+
+            // Cinema Curved Projection Screen at the bottom
+            gridContainer.add(Box.createVerticalStrut(28));
+            gridContainer.add(createScreenGraphic());
+            gridContainer.add(Box.createVerticalStrut(20));
         }
 
         gridContainer.revalidate();
@@ -580,8 +621,8 @@ public class SeatLayoutPage extends JPanel {
 
     // Opens setup wizard asking for total seats and seats per row
     private void openGenerateLayoutWizard() {
-        int defaultTotal = currentSeats.isEmpty() ? 100 : currentSeats.size();
-        int defaultPerRow = 10;
+        int defaultTotal = currentSeats.isEmpty() ? 160 : currentSeats.size();
+        int defaultPerRow = 16;
         if (!currentSeats.isEmpty()) {
             Map<String, List<ScreenSeat>> map = new HashMap<>();
             for (ScreenSeat s : currentSeats) {
@@ -612,10 +653,16 @@ public class SeatLayoutPage extends JPanel {
         int total = currentSeats.size();
         int reg = 0, prem = 0, rec = 0, blk = 0;
         for (ScreenSeat s : currentSeats) {
-            if (s.isBlocked()) blk++;
-            if ("PREMIUM".equalsIgnoreCase(s.getSeatType())) prem++;
-            else if ("RECLINER".equalsIgnoreCase(s.getSeatType())) rec++;
-            else reg++;
+            if (s.isBlocked()) {
+                blk++;
+            }
+            if ("PREMIUM".equalsIgnoreCase(s.getSeatType())) {
+                prem++; 
+            }else if ("RECLINER".equalsIgnoreCase(s.getSeatType())) {
+                rec++; 
+            }else {
+                reg++;
+            }
         }
 
         String capitalizedScreen = Screen.capitalizeName(currentScreen.getName());
@@ -647,7 +694,9 @@ public class SeatLayoutPage extends JPanel {
 
     // Discards unsaved modifications and reloads from database
     private void handleDiscardChanges() {
-        if (!hasUnsavedChanges) return;
+        if (!hasUnsavedChanges) {
+            return;
+        }
         int confirm = JOptionPane.showConfirmDialog(this,
                 "Discard all unsaved arrangement changes and reload from database?",
                 "Discard Changes", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
@@ -662,9 +711,13 @@ public class SeatLayoutPage extends JPanel {
             int confirm = JOptionPane.showConfirmDialog(this,
                     "You have unsaved changes in the seating arrangement.\nDo you want to discard your changes and leave?",
                     "Unsaved Changes", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-            if (confirm != JOptionPane.YES_OPTION) return;
+            if (confirm != JOptionPane.YES_OPTION) {
+                return;
+            }
         }
-        if (onBack != null) onBack.run();
+        if (onBack != null) {
+            onBack.run();
+        }
     }
 
     // Right-click context popup on seats
@@ -706,9 +759,13 @@ public class SeatLayoutPage extends JPanel {
     private void toggleSeatTypeCycle(ScreenSeat seat) {
         String current = seat.getSeatType().toUpperCase();
         String next = "REGULAR";
-        if ("REGULAR".equals(current)) next = "PREMIUM";
-        else if ("PREMIUM".equals(current)) next = "RECLINER";
-        else if ("RECLINER".equals(current)) next = "REGULAR";
+        if ("REGULAR".equals(current)) {
+            next = "PREMIUM"; 
+        }else if ("PREMIUM".equals(current)) {
+            next = "RECLINER"; 
+        }else if ("RECLINER".equals(current)) {
+            next = "REGULAR";
+        }
 
         updateSeatInMemory(seat.withType(next));
     }
@@ -764,13 +821,17 @@ public class SeatLayoutPage extends JPanel {
 
     // Changes seat classification in memory
     private void handleChangeSeatType(String newType) {
-        if (selectedSeatButton == null) return;
+        if (selectedSeatButton == null) {
+            return;
+        }
         updateSeatInMemory(selectedSeatButton.getSeat().withType(newType));
     }
 
     // Toggles blocked status of selected physical seat in memory
     private void handleToggleBlock() {
-        if (selectedSeatButton == null) return;
+        if (selectedSeatButton == null) {
+            return;
+        }
         ScreenSeat s = selectedSeatButton.getSeat();
         boolean willBlock = !s.isBlocked();
         updateSeatInMemory(s.withStatus(willBlock ? "BLOCKED" : "ACTIVE"));
@@ -778,7 +839,9 @@ public class SeatLayoutPage extends JPanel {
 
     // Deletes selected seat from in-memory arrangement
     private void handleDeleteSeat() {
-        if (selectedSeatButton == null) return;
+        if (selectedSeatButton == null) {
+            return;
+        }
         ScreenSeat target = selectedSeatButton.getSeat();
 
         currentSeats.removeIf(s -> s.getRowName().equalsIgnoreCase(target.getRowName()) && s.getSeatNumber() == target.getSeatNumber());
@@ -790,13 +853,17 @@ public class SeatLayoutPage extends JPanel {
     // Adds a seat to the end of selected row in memory
     private void handleAddSeatToRow() {
         String selected = (String) rowSelectorCombo.getSelectedItem();
-        if (selected == null) return;
+        if (selected == null) {
+            return;
+        }
         String rowName = selected.split(" ")[1];
 
         int maxNum = 0;
         for (ScreenSeat s : currentSeats) {
             if (s.getRowName().equalsIgnoreCase(rowName)) {
-                if (s.getSeatNumber() > maxNum) maxNum = s.getSeatNumber();
+                if (s.getSeatNumber() > maxNum) {
+                    maxNum = s.getSeatNumber();
+                }
             }
         }
         int nextNum = maxNum + 1;
@@ -808,7 +875,9 @@ public class SeatLayoutPage extends JPanel {
     // Applies a single tier classification to all seats in selected row
     private void handleApplyTierToRow(String tier) {
         String selected = (String) rowSelectorCombo.getSelectedItem();
-        if (selected == null) return;
+        if (selected == null) {
+            return;
+        }
         String rowName = selected.split(" ")[1];
 
         for (int i = 0; i < currentSeats.size(); i++) {
@@ -824,7 +893,9 @@ public class SeatLayoutPage extends JPanel {
     // Renames an existing row in memory
     private void handleRenameRow() {
         String selected = (String) rowSelectorCombo.getSelectedItem();
-        if (selected == null) return;
+        if (selected == null) {
+            return;
+        }
         String oldRowName = selected.split(" ")[1];
 
         String newName = JOptionPane.showInputDialog(this,
@@ -853,7 +924,9 @@ public class SeatLayoutPage extends JPanel {
     // Deletes an entire row in memory
     private void handleDeleteRow() {
         String selected = (String) rowSelectorCombo.getSelectedItem();
-        if (selected == null) return;
+        if (selected == null) {
+            return;
+        }
         String rowName = selected.split(" ")[1];
 
         int confirm = JOptionPane.showConfirmDialog(this,
@@ -904,6 +977,7 @@ public class SeatLayoutPage extends JPanel {
     }
 
     // Graphic banner representing cinema screen
+    // Graphic banner representing 3D curved cinema projection screen facing the audience
     private JPanel createScreenGraphic() {
         JPanel p = new JPanel() {
             @Override
@@ -911,30 +985,70 @@ public class SeatLayoutPage extends JPanel {
                 super.paintComponent(g);
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
                 int w = getWidth();
-                int h = getHeight();
+                int screenW = Math.min(Math.max(w - 140, 300), 460);
+                int startX = (w - screenW) / 2;
+                int endX = startX + screenW;
 
-                GradientPaint gp = new GradientPaint(w / 2f, 0, new Color(147, 197, 253), w / 2f, h, new Color(239, 246, 255));
+                // 3D perspective curved trapezoid projection screen
+                int insetX = 24;
+                int topY = 8;
+                int botY = 28;
+
+                java.awt.geom.Path2D.Float path = new java.awt.geom.Path2D.Float();
+                path.moveTo(startX + insetX, topY);
+                path.curveTo(w / 2f, topY - 5, w / 2f, topY - 5, endX - insetX, topY);
+                path.lineTo(endX, botY);
+                path.curveTo(w / 2f, botY - 4, w / 2f, botY - 4, startX, botY);
+                path.closePath();
+
+                // Fill with lavender-purple gradient matching cinema UI
+                GradientPaint gp = new GradientPaint(w / 2f, topY, new Color(221, 214, 254), w / 2f, botY, new Color(196, 181, 253));
                 g2.setPaint(gp);
-                g2.fillRoundRect(w / 6, 8, (w * 2) / 3, 26, 12, 12);
+                g2.fill(path);
 
-                g2.setColor(new Color(59, 130, 246));
-                g2.setStroke(new BasicStroke(2.0f));
-                g2.drawRoundRect(w / 6, 8, (w * 2) / 3, 26, 12, 12);
+                // Draw perimeter outline
+                g2.setColor(new Color(167, 139, 250));
+                g2.setStroke(new BasicStroke(2.2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                g2.draw(path);
 
-                g2.setColor(new Color(30, 64, 175));
-                g2.setFont(Theme.FONT_BOLD_SM);
+                // Subtle text label underneath
+                g2.setColor(new Color(109, 40, 217));
+                g2.setFont(new Font("Segoe UI", Font.BOLD, 10));
                 FontMetrics fm = g2.getFontMetrics();
-                String text = "━━━━━  CINEMA PROJECTION SCREEN  ━━━━━";
+                String text = "SCREEN THIS WAY";
                 int tx = (w - fm.stringWidth(text)) / 2;
-                g2.drawString(text, tx, 25);
+                g2.drawString(text, tx, botY + 16);
 
                 g2.dispose();
             }
         };
-        p.setPreferredSize(new Dimension(0, 48));
+        p.setPreferredSize(new Dimension(0, 52));
+        p.setMaximumSize(new Dimension(Integer.MAX_VALUE, 52));
         p.setOpaque(false);
+        return p;
+    }
+
+    // Category / Tier Section Header (e.g. GOLD / PREMIUM : ₹250)
+    private JPanel createTierHeader(String tierName) {
+        JPanel p = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
+        p.setOpaque(false);
+
+        String title = "REGULAR".equalsIgnoreCase(tierName) ? "SILVER / REGULAR"
+                : ("PREMIUM".equalsIgnoreCase(tierName) ? "GOLD / PREMIUM"
+                : ("RECLINER".equalsIgnoreCase(tierName) ? "PLATINUM RECLINER" : tierName));
+
+        Color badgeColor = "PREMIUM".equalsIgnoreCase(tierName) ? new Color(59, 130, 246)
+                : ("RECLINER".equalsIgnoreCase(tierName) ? new Color(217, 119, 6)
+                : new Color(71, 85, 105));
+
+        JLabel lbl = new JLabel("━━━  " + title + "  ━━━");
+        lbl.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lbl.setForeground(badgeColor);
+        p.add(lbl);
+
         return p;
     }
 

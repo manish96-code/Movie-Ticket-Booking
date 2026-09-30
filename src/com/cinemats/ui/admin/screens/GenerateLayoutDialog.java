@@ -2,15 +2,14 @@ package com.cinemats.ui.admin.screens;
 
 import com.cinemats.model.ScreenSeat;
 import com.cinemats.util.Theme;
-
-import javax.swing.*;
-import javax.swing.border.CompoundBorder;
-import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import javax.swing.*;
+import javax.swing.border.CompoundBorder;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
 
 // Wizard dialog to configure initial seating grid parameters
 public class GenerateLayoutDialog extends JDialog {
@@ -59,7 +58,7 @@ public class GenerateLayoutDialog extends JDialog {
 
         // Total Number of Seats
         form.add(createFieldLabel("Total Number of Physical Seats:"));
-        int initialTotal = (defaultTotal > 0) ? defaultTotal : 100;
+        int initialTotal = (defaultTotal > 0) ? defaultTotal : 160;
         totalSeatsSpinner = new JSpinner(new SpinnerNumberModel(initialTotal, 1, 1000, 5));
         totalSeatsSpinner.setFont(Theme.FONT_REGULAR);
         totalSeatsSpinner.setPreferredSize(new Dimension(0, 36));
@@ -70,7 +69,7 @@ public class GenerateLayoutDialog extends JDialog {
 
         // Seats Per Row
         form.add(createFieldLabel("Number of Seats Per Row:"));
-        int initialPerRow = (defaultPerRow > 0) ? defaultPerRow : 10;
+        int initialPerRow = (defaultPerRow > 0) ? defaultPerRow : 16;
         seatsPerRowSpinner = new JSpinner(new SpinnerNumberModel(initialPerRow, 1, 50, 1));
         seatsPerRowSpinner.setFont(Theme.FONT_REGULAR);
         seatsPerRowSpinner.setPreferredSize(new Dimension(0, 36));
@@ -82,11 +81,11 @@ public class GenerateLayoutDialog extends JDialog {
         // Seat Tier Distribution Preset
         form.add(createFieldLabel("Seat Classification Distribution:"));
         tierPresetCombo = new JComboBox<>(new String[]{
-                "All Regular (Standard Auditorium)",
-                "Balanced Mix (60% Regular, 30% Premium, 10% Recliner)",
-                "VIP & Premium (40% Regular, 40% Premium, 20% Recliner)",
-                "Front Regular & Rear Recliner (80% Regular, 20% Recliner)",
-                "All Premium (Executive Audi)"
+            "All Regular (Standard Auditorium)",
+            "Balanced Mix (60% Regular, 30% Premium, 10% Recliner)",
+            "VIP & Premium (40% Regular, 40% Premium, 20% Recliner)",
+            "Front Regular & Rear Recliner (80% Regular, 20% Recliner)",
+            "All Premium (Executive Audi)"
         });
         tierPresetCombo.setFont(Theme.FONT_REGULAR);
         tierPresetCombo.setBackground(Color.WHITE);
@@ -155,7 +154,9 @@ public class GenerateLayoutDialog extends JDialog {
     private void updatePreview() {
         int total = (Integer) totalSeatsSpinner.getValue();
         int perRow = (Integer) seatsPerRowSpinner.getValue();
-        if (total <= 0 || perRow <= 0) return;
+        if (total <= 0 || perRow <= 0) {
+            return;
+        }
 
         int numRows = (int) Math.ceil((double) total / perRow);
         String startRow = getRowName(0);
@@ -170,19 +171,24 @@ public class GenerateLayoutDialog extends JDialog {
         for (int r = 0; r < numRows && remaining > 0; r++) {
             int seatsInRow = Math.min(perRow, remaining);
             String tier = determineTier(r, numRows, preset);
-            if ("PREMIUM".equals(tier)) premCount += seatsInRow;
-            else if ("RECLINER".equals(tier)) recCount += seatsInRow;
-            else regCount += seatsInRow;
+            if ("PREMIUM".equals(tier)) {
+                premCount += seatsInRow;
+            } else if ("RECLINER".equals(tier)) {
+                recCount += seatsInRow;
+            } else {
+                regCount += seatsInRow;
+            }
             remaining -= seatsInRow;
         }
 
-        String remainderNotice = (total % perRow != 0) ?
-                ("<br>• Final Row " + endRow + " has " + (total % perRow) + " seats.") : "";
+        String remainderNotice = (total % perRow != 0)
+                ? ("<br>• Final Row " + endRow + " has " + (total % perRow) + " seats.") : "";
 
+        String aisleSplit = (perRow == 16) ? " (4 Left • 8 Center • 4 Right)" : "";
         previewSummaryLabel.setText(String.format(
-                "<html><b>%d Total Seats</b> across <b>%d Rows</b> (Rows %s to %s) • %d seats/row%s<br>"
+                "<html><b>%d Total Seats</b> across <b>%d Rows</b> (Rows %s to %s) • %d seats/row%s%s<br>"
                 + "• Tiers: <b>%d</b> Regular &nbsp;|&nbsp; <b>%d</b> Premium &nbsp;|&nbsp; <b>%d</b> Recliner</html>",
-                total, numRows, startRow, endRow, perRow, remainderNotice, regCount, premCount, recCount
+                total, numRows, startRow, endRow, perRow, aisleSplit, remainderNotice, regCount, premCount, recCount
         ));
     }
 
@@ -225,7 +231,9 @@ public class GenerateLayoutDialog extends JDialog {
 
     // Determines seat tier based on row position and selected distribution preset
     private String determineTier(int rowIndex, int totalRows, String preset) {
-        if (preset == null) return "REGULAR";
+        if (preset == null) {
+            return "REGULAR";
+        }
 
         if (preset.startsWith("All Regular")) {
             return "REGULAR";
@@ -235,20 +243,30 @@ public class GenerateLayoutDialog extends JDialog {
             // 60% Regular, 30% Premium, 10% Recliner
             int regLimit = (int) Math.round(totalRows * 0.60);
             int premLimit = (int) Math.round(totalRows * 0.90);
-            if (rowIndex < regLimit) return "REGULAR";
-            if (rowIndex < premLimit) return "PREMIUM";
+            if (rowIndex < regLimit) {
+                return "REGULAR";
+            }
+            if (rowIndex < premLimit) {
+                return "PREMIUM";
+            }
             return "RECLINER";
         } else if (preset.startsWith("VIP & Premium")) {
             // 40% Regular, 40% Premium, 20% Recliner
             int regLimit = (int) Math.round(totalRows * 0.40);
             int premLimit = (int) Math.round(totalRows * 0.80);
-            if (rowIndex < regLimit) return "REGULAR";
-            if (rowIndex < premLimit) return "PREMIUM";
+            if (rowIndex < regLimit) {
+                return "REGULAR";
+            }
+            if (rowIndex < premLimit) {
+                return "PREMIUM";
+            }
             return "RECLINER";
         } else if (preset.startsWith("Front Regular & Rear Recliner")) {
             // 80% Regular, 20% Recliner
             int regLimit = (int) Math.round(totalRows * 0.80);
-            if (rowIndex < regLimit) return "REGULAR";
+            if (rowIndex < regLimit) {
+                return "REGULAR";
+            }
             return "RECLINER";
         }
         return "REGULAR";
