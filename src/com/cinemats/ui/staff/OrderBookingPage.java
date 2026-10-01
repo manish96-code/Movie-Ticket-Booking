@@ -1,27 +1,16 @@
 package com.cinemats.ui.staff;
 
 import com.cinemats.dao.MovieDAO;
-import com.cinemats.dao.ScreenDAO;
 import com.cinemats.dao.ShowDAO;
 import com.cinemats.dao.ShowSeatDAO;
-import com.cinemats.dao.BookingDAO;
 import com.cinemats.model.*;
 import com.cinemats.service.BookingService;
 import com.cinemats.service.CustomerService;
 import com.cinemats.ui.staff.booking.TicketConfirmationDialog;
 import com.cinemats.util.QRCodeRenderer;
 import com.cinemats.util.Theme;
-
-import javax.swing.*;
-import javax.swing.border.CompoundBorder;
-import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
-import javax.swing.border.MatteBorder;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
-import javax.swing.table.DefaultTableCellRenderer;
-import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.geom.*;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
@@ -34,24 +23,46 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.List;
 import javax.imageio.ImageIO;
+import javax.swing.*;
+import javax.swing.border.CompoundBorder;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
+import javax.swing.border.MatteBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
 
 // Enterprise Box Office Movie Ticket Booking Page matching physical screen layouts, rich posters, and counter flow
 public class OrderBookingPage extends JPanel {
 
     private final StaffDashboard dashboard;
 
-    // --- Column 1: Select Movie (Search Bar + Movie Cards) ---
+    // --- 2-Step Workflow: Step 1 (Movies & Shows) -> Step 2 (Seats & Booking Summary) ---
+    private final CardLayout stepCardLayout = new CardLayout();
+    private final JPanel stepCardsPanel = new JPanel(stepCardLayout);
+    public static final String STEP_MOVIES_SHOWS = "STEP_MOVIES_SHOWS";
+    public static final String STEP_SEATS_SUMMARY = "STEP_SEATS_SUMMARY";
+
+    // Step 2 Header Navigation & Meta Labels
+    private final JLabel step2MovieTitle = new JLabel("-");
+    private final JLabel step2ShowMeta = new JLabel("-");
+
+    // --- Step 1: Select Movie (Search Bar + Movie Cards) ---
     private final JTextField movieSearchField = Theme.createTextField("🔍 Search movie by title, genre, lang...");
     private final JPanel movieListPanel = new JPanel();
     private List<Movie> allMoviesList = new ArrayList<>();
     private List<Movie> filteredMoviesList = new ArrayList<>();
     private Movie selectedMovie = null;
+    private final Map<Integer, BufferedImage> posterImageCache = new HashMap<>();
 
-    // --- Column 2: Date Selection -> Screen & Show Selection -> Seating Matrix ---
+    // --- Step 1: Date & Showtime Selection ---
     private final JLabel movieBannerTitle = new JLabel("Select a Movie");
     private final JLabel movieBannerMeta = new JLabel("Choose a movie from the left to view available screening dates and showtimes");
     private final JPanel datesBarPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
-    private final JPanel showsContainerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
+    private final JPanel showsContainerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
+
+    // --- Step 2: Exact Seating Matrix ---
     private final JPanel seatHeaderPanel = new JPanel(new BorderLayout());
     private final JLabel seatHeaderTitle = new JLabel("Seating Arrangement");
     private final JPanel seatPanel = new JPanel();
@@ -66,7 +77,9 @@ public class OrderBookingPage extends JPanel {
 
         @Override
         public void mouseDragged(MouseEvent e) {
-            if (mousePressPoint == null || seatsScrollPane == null) return;
+            if (mousePressPoint == null || seatsScrollPane == null) {
+                return;
+            }
             Point current = e.getLocationOnScreen();
             int dx = mousePressPoint.x - current.x;
             int dy = mousePressPoint.y - current.y;
@@ -139,7 +152,7 @@ public class OrderBookingPage extends JPanel {
 
     public OrderBookingPage(StaffDashboard dashboard) {
         this.dashboard = dashboard;
-        setLayout(new BorderLayout(10, 10));
+        setLayout(new BorderLayout());
         setBackground(Theme.BG_MAIN);
         setBorder(new EmptyBorder(10, 12, 10, 12));
 
@@ -149,58 +162,270 @@ public class OrderBookingPage extends JPanel {
     }
 
     private void initUI() {
-        add(buildHeader(), BorderLayout.NORTH);
+        stepCardsPanel.setOpaque(false);
+        stepCardsPanel.add(buildStep1MoviesAndShowsView(), STEP_MOVIES_SHOWS);
+        stepCardsPanel.add(buildStep2SeatsAndSummaryView(), STEP_SEATS_SUMMARY);
 
-        // Center 3-Column POS Workspace
-        JPanel workspace = new JPanel(new GridBagLayout());
-        workspace.setOpaque(false);
-        GridBagConstraints column = new GridBagConstraints();
-        column.gridy = 0;
-        column.fill = GridBagConstraints.BOTH;
-        column.weighty = 1;
-
-        // Column 1 (18%): Search bar + Movie list
-        column.gridx = 0;
-        column.weightx = 0.18;
-        column.insets = new Insets(0, 0, 0, 8);
-        JPanel col1 = buildMoviePanel();
-        col1.setMinimumSize(new Dimension(190, 0));
-        workspace.add(col1, column);
-
-        // Column 2 (58%): Date pills + Screen/Show cards + Exact Seating Matrix
-        column.gridx = 1;
-        column.weightx = 0.58;
-        column.insets = new Insets(0, 0, 0, 8);
-        JPanel col2 = buildShowAndSeatsPanel();
-        col2.setMinimumSize(new Dimension(540, 0));
-        workspace.add(col2, column);
-
-        // Column 3 (24%): Booking Summary, Price, Customer & Payment
-        column.gridx = 2;
-        column.weightx = 0.24;
-        column.insets = new Insets(0, 0, 0, 0);
-        JPanel col3 = buildSummaryAndPaymentPanel();
-        col3.setMinimumSize(new Dimension(270, 0));
-        workspace.add(col3, column);
-
-        JPanel mainCenter = new JPanel(new BorderLayout(0, 8));
-        mainCenter.setOpaque(false);
-        mainCenter.add(workspace, BorderLayout.CENTER);
-        mainCenter.add(buildTodayBookingsCard(), BorderLayout.SOUTH);
-
-        add(mainCenter, BorderLayout.CENTER);
+        add(stepCardsPanel, BorderLayout.CENTER);
     }
 
-    private JPanel buildHeader() {
+    // STEP 1 VIEW: BROWSE MOVIES & SELECT SHOWTIME
+    private JPanel buildStep1MoviesAndShowsView() {
+        JPanel view = new JPanel(new BorderLayout(0, 10));
+        view.setOpaque(false);
+
+        // Header Banner for Step 1
         JPanel header = new JPanel(new BorderLayout());
         header.setOpaque(false);
 
-        JLabel title = new JLabel("Movie Booking");
+        JPanel titlePanel = new JPanel();
+        titlePanel.setLayout(new BoxLayout(titlePanel, BoxLayout.Y_AXIS));
+        titlePanel.setOpaque(false);
+
+        JLabel title = new JLabel("🎬 Book Movie Tickets");
         title.setFont(new Font("Segoe UI", Font.BOLD, 22));
         title.setForeground(Theme.TEXT_DARK);
 
-        header.add(title, BorderLayout.WEST);
+        JLabel sub = new JLabel("Step 1 of 2: Select a movie and screening showtime to proceed to seat booking");
+        sub.setFont(Theme.FONT_REGULAR);
+        sub.setForeground(Theme.TEXT_MUTED);
+
+        titlePanel.add(title);
+        titlePanel.add(Box.createVerticalStrut(2));
+        titlePanel.add(sub);
+        header.add(titlePanel, BorderLayout.WEST);
+
+        view.add(header, BorderLayout.NORTH);
+
+        // Center Split Workspace: Left = Movies, Right = Showtimes
+        JPanel splitWorkspace = new JPanel(new GridBagLayout());
+        splitWorkspace.setOpaque(false);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridy = 0;
+        gbc.fill = GridBagConstraints.BOTH;
+        gbc.weighty = 1.0;
+
+        // Column 1 (46%): Movie Search & Card Grid
+        gbc.gridx = 0;
+        gbc.weightx = 0.46;
+        gbc.insets = new Insets(0, 0, 0, 10);
+        JPanel col1 = buildMoviePanel();
+        col1.setMinimumSize(new Dimension(360, 0));
+        splitWorkspace.add(col1, gbc);
+
+        // Column 2 (54%): Selected Movie Details, Date Pills & Available Shows
+        gbc.gridx = 1;
+        gbc.weightx = 0.54;
+        gbc.insets = new Insets(0, 0, 0, 0);
+        JPanel col2 = buildStep1ShowtimesPanel();
+        col2.setMinimumSize(new Dimension(420, 0));
+        splitWorkspace.add(col2, gbc);
+
+        view.add(splitWorkspace, BorderLayout.CENTER);
+        return view;
+    }
+
+    private JPanel buildStep1ShowtimesPanel() {
+        JPanel panel = createSection("Available Screenings & Showtimes");
+        panel.setLayout(new BorderLayout(0, 10));
+
+        // Top: Selected Movie Header Banner
+        JPanel movieBanner = new JPanel(new BorderLayout(10, 2));
+        movieBanner.setBackground(new Color(248, 250, 252));
+        movieBanner.setBorder(new CompoundBorder(
+                new LineBorder(Theme.BORDER_COLOR, 1, true),
+                new EmptyBorder(10, 14, 10, 14)
+        ));
+
+        movieBannerTitle.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        movieBannerTitle.setForeground(Theme.TEXT_DARK);
+
+        movieBannerMeta.setFont(Theme.FONT_REGULAR);
+        movieBannerMeta.setForeground(Theme.TEXT_MUTED);
+
+        JPanel bannerText = new JPanel();
+        bannerText.setLayout(new BoxLayout(bannerText, BoxLayout.Y_AXIS));
+        bannerText.setOpaque(false);
+        bannerText.add(movieBannerTitle);
+        bannerText.add(Box.createVerticalStrut(3));
+        bannerText.add(movieBannerMeta);
+
+        movieBanner.add(bannerText, BorderLayout.CENTER);
+
+        // Center Container: Dates & Shows
+        JPanel centerContainer = new JPanel(new BorderLayout(0, 10));
+        centerContainer.setOpaque(false);
+
+        // 1. Date Selection (Pills)
+        JPanel dateSection = new JPanel(new BorderLayout(4, 4));
+        dateSection.setOpaque(false);
+        JLabel dateTitle = new JLabel("📅 Select Screening Date");
+        dateTitle.setFont(Theme.FONT_BOLD_SM);
+        dateTitle.setForeground(new Color(51, 65, 85));
+        dateSection.add(dateTitle, BorderLayout.NORTH);
+
+        datesBarPanel.setOpaque(false);
+        dateSection.add(datesBarPanel, BorderLayout.CENTER);
+        centerContainer.add(dateSection, BorderLayout.NORTH);
+
+        // 2. Available Shows & Screens
+        JPanel showSection = new JPanel(new BorderLayout(4, 6));
+        showSection.setOpaque(false);
+
+        JPanel showHeader = new JPanel(new BorderLayout());
+        showHeader.setOpaque(false);
+        JLabel showTitle = new JLabel("🎬 Available Shows & Screens");
+        showTitle.setFont(Theme.FONT_BOLD_SM);
+        showTitle.setForeground(new Color(51, 65, 85));
+
+        JLabel hint = new JLabel("Click any showtime to select seats →");
+        hint.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        hint.setForeground(new Color(37, 99, 235));
+
+        showHeader.add(showTitle, BorderLayout.WEST);
+        showHeader.add(hint, BorderLayout.EAST);
+        showSection.add(showHeader, BorderLayout.NORTH);
+
+        showsContainerPanel.setBackground(Color.WHITE);
+        JScrollPane showsScroll = new JScrollPane(showsContainerPanel);
+        showsScroll.setBorder(new LineBorder(Theme.BORDER_COLOR, 1, true));
+        showsScroll.getViewport().setBackground(Color.WHITE);
+        com.cinemats.util.ModernScrollBarUI.apply(showsScroll, 8);
+
+        showSection.add(showsScroll, BorderLayout.CENTER);
+        centerContainer.add(showSection, BorderLayout.CENTER);
+
+        panel.add(movieBanner, BorderLayout.NORTH);
+        panel.add(centerContainer, BorderLayout.CENTER);
+        return panel;
+    }
+
+    // ==========================================================
+    // STEP 2 VIEW: SEATS & BOOKING SUMMARY
+    // ==========================================================
+    private JPanel buildStep2SeatsAndSummaryView() {
+        JPanel view = new JPanel(new BorderLayout(0, 8));
+        view.setOpaque(false);
+
+        // Top Navigation & Movie/Show Banner
+        view.add(buildStep2Header(), BorderLayout.NORTH);
+
+        // 2-Column POS Workspace
+        JPanel workspace = new JPanel(new GridBagLayout());
+        workspace.setOpaque(false);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridy = 0;
+        gbc.fill = GridBagConstraints.BOTH;
+        gbc.weighty = 1.0;
+
+        // Column 1 (68%): Seating Arrangement & Layout
+        gbc.gridx = 0;
+        gbc.weightx = 0.68;
+        gbc.insets = new Insets(0, 0, 0, 8);
+        JPanel col1 = buildShowAndSeatsPanel();
+        col1.setMinimumSize(new Dimension(540, 0));
+        workspace.add(col1, gbc);
+
+        // Column 2 (32%): Booking Summary & Payment
+        gbc.gridx = 1;
+        gbc.weightx = 0.32;
+        gbc.insets = new Insets(0, 0, 0, 0);
+        JPanel col2 = buildSummaryAndPaymentPanel();
+        col2.setMinimumSize(new Dimension(300, 0));
+        workspace.add(col2, gbc);
+
+        view.add(workspace, BorderLayout.CENTER);
+        return view;
+    }
+
+    private JPanel buildStep2Header() {
+        JPanel header = new JPanel(new BorderLayout(12, 0));
+        header.setBackground(Color.WHITE);
+        header.setBorder(new CompoundBorder(
+                new LineBorder(Theme.BORDER_COLOR, 1, true),
+                new EmptyBorder(8, 12, 8, 14)
+        ));
+
+        // Left: Back button
+        JButton backBtn = new JButton("← Back to Movies & Shows") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                if (getModel().isRollover()) {
+                    g2.setColor(new Color(241, 245, 249));
+                } else {
+                    g2.setColor(Color.WHITE);
+                }
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+                g2.setColor(new Color(203, 213, 225));
+                g2.setStroke(new BasicStroke(1.0f));
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 8, 8);
+                g2.setColor(new Color(30, 41, 59));
+                g2.setFont(getFont());
+                FontMetrics fm = g2.getFontMetrics();
+                int tx = (getWidth() - fm.stringWidth(getText())) / 2;
+                int ty = (getHeight() + fm.getAscent() - fm.getDescent()) / 2;
+                g2.drawString(getText(), tx, ty);
+                g2.dispose();
+            }
+        };
+        backBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        backBtn.setPreferredSize(new Dimension(205, 34));
+        backBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        backBtn.setFocusPainted(false);
+        backBtn.setBorder(new EmptyBorder(0, 0, 0, 0));
+        backBtn.setContentAreaFilled(false);
+        backBtn.addActionListener(e -> showStep1());
+
+        // Center: Movie & Show Info
+        JPanel infoPanel = new JPanel();
+        infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
+        infoPanel.setOpaque(false);
+
+        step2MovieTitle.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        step2MovieTitle.setForeground(Theme.TEXT_DARK);
+
+        step2ShowMeta.setFont(Theme.FONT_SMALL);
+        step2ShowMeta.setForeground(Theme.TEXT_MUTED);
+
+        infoPanel.add(step2MovieTitle);
+        infoPanel.add(Box.createVerticalStrut(2));
+        infoPanel.add(step2ShowMeta);
+
+        // Right: Step badge
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        rightPanel.setOpaque(false);
+
+        JLabel stepBadge = new JLabel("Step 2 of 2: Seat Selection & POS");
+        stepBadge.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        stepBadge.setForeground(new Color(29, 78, 216));
+        stepBadge.setBackground(new Color(239, 246, 255));
+        stepBadge.setOpaque(true);
+        stepBadge.setBorder(new CompoundBorder(
+                new LineBorder(new Color(191, 219, 254), 1, true),
+                new EmptyBorder(4, 8, 4, 8)
+        ));
+
+        rightPanel.add(stepBadge);
+
+        header.add(backBtn, BorderLayout.WEST);
+        header.add(infoPanel, BorderLayout.CENTER);
+        header.add(rightPanel, BorderLayout.EAST);
+
         return header;
+    }
+
+    public void showStep1() {
+        stepCardLayout.show(stepCardsPanel, STEP_MOVIES_SHOWS);
+    }
+
+    public void showStep2() {
+        if (selectedMovie != null && selectedShow != null) {
+            step2MovieTitle.setText("🎬 " + capitalizeTitle(selectedMovie.getTitle()) + "  •  " + selectedShow.getScreenName() + " (" + selectedShow.getScreenType() + ")");
+            step2ShowMeta.setText("📅 " + formatDatePill(selectedShow.getShowDate()) + "  •  ⏰ " + selectedShow.getStartTime() + "  •  " + selectedMovie.getLanguage() + " • " + selectedMovie.getCertificate() + " • " + selectedMovie.getShortDuration());
+        }
+        stepCardLayout.show(stepCardsPanel, STEP_SEATS_SUMMARY);
     }
 
     // ==========================================================
@@ -215,22 +440,31 @@ public class OrderBookingPage extends JPanel {
         searchBox.setOpaque(false);
         movieSearchField.setPreferredSize(new Dimension(0, 32));
         movieSearchField.getDocument().addDocumentListener(new DocumentListener() {
-            public void insertUpdate(DocumentEvent e) { filterMovies(); }
-            public void removeUpdate(DocumentEvent e) { filterMovies(); }
-            public void changedUpdate(DocumentEvent e) { filterMovies(); }
+            public void insertUpdate(DocumentEvent e) {
+                filterMovies();
+            }
+
+            public void removeUpdate(DocumentEvent e) {
+                filterMovies();
+            }
+
+            public void changedUpdate(DocumentEvent e) {
+                filterMovies();
+            }
         });
         searchBox.add(movieSearchField, BorderLayout.CENTER);
         panel.add(searchBox, BorderLayout.NORTH);
 
-        // Scrollable Movie Cards List
-        movieListPanel.setLayout(new BoxLayout(movieListPanel, BoxLayout.Y_AXIS));
-        movieListPanel.setBackground(Color.WHITE);
-        movieListPanel.setBorder(new EmptyBorder(4, 4, 4, 4));
+        // Scrollable Movie Cards List (Responsive Wrap Grid)
+        movieListPanel.setLayout(new com.cinemats.util.WrapLayout(FlowLayout.LEFT, 10, 10));
+        movieListPanel.setBackground(new Color(248, 250, 252));
+        movieListPanel.setBorder(new EmptyBorder(8, 8, 8, 8));
 
         JScrollPane cardsScroll = new JScrollPane(movieListPanel);
         cardsScroll.setBorder(new LineBorder(Theme.BORDER_COLOR, 1));
-        cardsScroll.getViewport().setBackground(Color.WHITE);
+        cardsScroll.getViewport().setBackground(new Color(248, 250, 252));
         cardsScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        cardsScroll.getVerticalScrollBar().setUnitIncrement(16);
         com.cinemats.util.ModernScrollBarUI.apply(cardsScroll, 6);
 
         panel.add(cardsScroll, BorderLayout.CENTER);
@@ -255,7 +489,7 @@ public class OrderBookingPage extends JPanel {
     private void renderMovieList() {
         movieListPanel.removeAll();
         if (filteredMoviesList.isEmpty()) {
-            JPanel empty = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 20));
+            JPanel empty = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 40));
             empty.setOpaque(false);
             JLabel msg = new JLabel("No matching movies found.");
             msg.setFont(Theme.FONT_REGULAR);
@@ -264,247 +498,266 @@ public class OrderBookingPage extends JPanel {
             movieListPanel.add(empty);
         } else {
             for (Movie movie : filteredMoviesList) {
-                movieListPanel.add(createMovieRowCard(movie));
-                movieListPanel.add(Box.createVerticalStrut(6));
+                movieListPanel.add(createMovieGridCard(movie));
             }
         }
         movieListPanel.revalidate();
         movieListPanel.repaint();
     }
 
-    private JPanel createMovieRowCard(Movie movie) {
-        boolean isSelected = (selectedMovie != null && selectedMovie.getId() == movie.getId());
-        String capitalizedTitle = capitalizeTitle(movie.getTitle());
-
-        JPanel card = new JPanel(new BorderLayout(8, 0)) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                int w = getWidth();
-                int h = getHeight();
-
-                if (isSelected) {
-                    g2.setColor(new Color(239, 246, 255));
-                    g2.fillRoundRect(2, 2, w - 4, h - 4, 8, 8);
-                    g2.setColor(new Color(37, 99, 235));
-                    g2.setStroke(new BasicStroke(2.0f));
-                    g2.drawRoundRect(2, 2, w - 4, h - 4, 8, 8);
-                } else {
-                    g2.setColor(Color.WHITE);
-                    g2.fillRoundRect(2, 2, w - 4, h - 4, 8, 8);
-                    g2.setColor(new Color(226, 232, 240));
-                    g2.setStroke(new BasicStroke(1.0f));
-                    g2.drawRoundRect(2, 2, w - 4, h - 4, 8, 8);
-                }
-                g2.dispose();
-            }
-        };
-
-        card.setPreferredSize(new Dimension(0, 68));
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 68));
-        card.setOpaque(false);
-        card.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        card.setBorder(new EmptyBorder(6, 8, 6, 8));
-
-        // Poster Thumbnail on Left
-        JPanel thumb = createPosterThumbnailSmall(movie);
-        card.add(thumb, BorderLayout.WEST);
-
-        // Details in Center
-        JPanel textPanel = new JPanel();
-        textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
-        textPanel.setOpaque(false);
-
-        JLabel titleLbl = new JLabel(capitalizedTitle);
-        titleLbl.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        titleLbl.setForeground(isSelected ? new Color(29, 78, 216) : Theme.TEXT_DARK);
-
-        JLabel meta1 = new JLabel(movie.getLanguage() + " • " + movie.getCertificate());
-        meta1.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        meta1.setForeground(Theme.TEXT_MUTED);
-
-        JLabel meta2 = new JLabel(movie.getGenre() + " • " + movie.getShortDuration());
-        meta2.setFont(new Font("Segoe UI", Font.PLAIN, 10));
-        meta2.setForeground(new Color(100, 116, 139));
-
-        textPanel.add(titleLbl);
-        textPanel.add(Box.createVerticalStrut(2));
-        textPanel.add(meta1);
-        textPanel.add(Box.createVerticalStrut(1));
-        textPanel.add(meta2);
-        card.add(textPanel, BorderLayout.CENTER);
-
-        // Selection Indicator on Right
-        if (isSelected) {
-            JLabel check = new JLabel("●");
-            check.setFont(new Font("Segoe UI", Font.BOLD, 14));
-            check.setForeground(new Color(37, 99, 235));
-            card.add(check, BorderLayout.EAST);
-        }
-
-        card.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                selectMovie(movie);
-            }
-        });
-
-        return card;
-    }
-
-    private JPanel createPosterThumbnailSmall(Movie movie) {
-        String imgPath = movie.getImagePath();
-        BufferedImage img = null;
-
-        if (imgPath != null && !imgPath.trim().isEmpty()) {
-            File f = new File(imgPath.trim());
-            if (!f.isAbsolute()) {
-                f = new File(System.getProperty("user.dir"), imgPath.trim());
-            }
-            if (!f.exists() || !f.isFile()) {
-                f = new File(new File(System.getProperty("user.dir"), "assets/posters"), new File(imgPath.trim()).getName());
-            }
-            if (f.exists() && f.isFile()) {
-                try {
-                    img = ImageIO.read(f);
-                } catch (Exception ignored) {}
-                if (img == null) {
-                    try {
-                        ImageIcon ic = new ImageIcon(f.getAbsolutePath());
-                        Image raw = ic.getImage();
-                        if (raw.getWidth(null) > 0 && raw.getHeight(null) > 0) {
-                            img = new BufferedImage(raw.getWidth(null), raw.getHeight(null), BufferedImage.TYPE_INT_ARGB);
-                            Graphics2D g2d = img.createGraphics();
-                            g2d.drawImage(raw, 0, 0, null);
-                            g2d.dispose();
-                        }
-                    } catch (Exception ignored) {}
-                }
-            }
-        }
-
-        final BufferedImage posterImg = img;
+    private JPanel createMovieGridCard(Movie movie) {
+        final boolean isSelected = (selectedMovie != null && selectedMovie.getId() == movie.getId());
         final String capitalizedTitle = capitalizeTitle(movie.getTitle());
+        final BufferedImage posterImg = getOrLoadPosterImage(movie);
 
-        JPanel p = new JPanel() {
+        final int CARD_W = 160;
+        final int CARD_H = 248;
+        final int POSTER_H = 164;
+        final int ARC = 12;
+
+        JPanel card = new JPanel() {
+            private boolean isHovered = false;
+
+            {
+                addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mouseEntered(MouseEvent e) {
+                        isHovered = true;
+                        repaint();
+                    }
+
+                    @Override
+                    public void mouseExited(MouseEvent e) {
+                        isHovered = false;
+                        repaint();
+                    }
+
+                    @Override
+                    public void mouseClicked(MouseEvent e) {
+                        selectMovie(movie);
+                    }
+                });
+            }
+
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
                 g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
 
                 int w = getWidth();
                 int h = getHeight();
 
-                if (posterImg != null) {
-                    Shape oldClip = g2.getClip();
-                    g2.clip(new java.awt.geom.RoundRectangle2D.Float(1, 1, w - 2, h - 2, 6, 6));
+                // 1. Draw Card Shape & Background
+                RoundRectangle2D cardShape = new RoundRectangle2D.Float(1, 1, w - 2, h - 2, ARC, ARC);
+                g2.setColor(isSelected ? new Color(241, 246, 255) : Color.WHITE);
+                g2.fill(cardShape);
 
+                // 2. Poster section (top portion clipped to rounded card corners)
+                Shape oldClip = g2.getClip();
+                Area posterClip = new Area(cardShape);
+                posterClip.intersect(new Area(new Rectangle(0, 0, w, POSTER_H)));
+                g2.setClip(posterClip);
+
+                if (posterImg != null) {
                     int iw = posterImg.getWidth();
                     int ih = posterImg.getHeight();
-                    double scale = Math.max((double)(w - 2) / iw, (double)(h - 2) / ih);
+                    double scale = Math.max((double) w / iw, (double) POSTER_H / ih);
                     int sw = (int) (iw * scale);
                     int sh = (int) (ih * scale);
-                    int sx = 1 + (w - 2 - sw) / 2;
-                    int sy = 1 + (h - 2 - sh) / 2;
-
+                    int sx = (w - sw) / 2;
+                    int sy = (POSTER_H - sh) / 2;
                     g2.drawImage(posterImg, sx, sy, sw, sh, null);
-                    g2.setClip(oldClip);
 
-                    g2.setColor(new Color(0, 0, 0, 40));
-                    g2.drawRoundRect(1, 1, w - 2, h - 2, 6, 6);
+                    // Gradient fade at bottom of poster
+                    GradientPaint fade = new GradientPaint(0, POSTER_H - 35, new Color(0, 0, 0, 0), 0, POSTER_H, new Color(0, 0, 0, 110));
+                    g2.setPaint(fade);
+                    g2.fillRect(0, POSTER_H - 35, w, 35);
                 } else {
+                    // Fallback cinematic gradient poster
                     int hash = movie.getTitle().hashCode();
-                    Color c1 = new Color(30 + Math.abs(hash % 30), 40 + Math.abs(hash % 30), 65 + Math.abs(hash % 40));
-                    Color c2 = new Color(15 + Math.abs(hash % 20), 20 + Math.abs(hash % 20), 35 + Math.abs(hash % 25));
-                    g2.setPaint(new GradientPaint(0, 0, c1, 0, h, c2));
-                    g2.fillRoundRect(1, 1, w - 2, h - 2, 6, 6);
+                    Color c1 = new Color(28 + Math.abs(hash % 25), 38 + Math.abs(hash % 25), 62 + Math.abs(hash % 35));
+                    Color c2 = new Color(15 + Math.abs(hash % 20), 20 + Math.abs(hash % 20), 32 + Math.abs(hash % 20));
+                    g2.setPaint(new GradientPaint(0, 0, c1, 0, POSTER_H, c2));
+                    g2.fillRect(0, 0, w, POSTER_H);
 
-                    // Clapper
-                    g2.setColor(new Color(255, 255, 255, 180));
-                    g2.drawRoundRect(w / 2 - 10, h / 2 - 8, 20, 16, 3, 3);
-                    Polygon tri = new Polygon(
-                            new int[]{w / 2 - 3, w / 2 + 4, w / 2 - 3},
-                            new int[]{h / 2 - 4, h / 2, h / 2 + 4},
-                            3
-                    );
-                    g2.fillPolygon(tri);
+                    // Film Clapper Icon
+                    g2.setColor(new Color(255, 255, 255, 140));
+                    g2.drawRoundRect(w / 2 - 16, POSTER_H / 2 - 20, 32, 24, 4, 4);
+                    g2.fillRoundRect(w / 2 - 8, POSTER_H / 2 - 14, 16, 12, 2, 2);
 
-                    g2.setColor(new Color(251, 191, 36, 160));
-                    g2.drawRoundRect(1, 1, w - 2, h - 2, 6, 6);
+                    // Initial letter
+                    String init = capitalizedTitle.isEmpty() ? "M" : capitalizedTitle.substring(0, 1);
+                    g2.setFont(new Font("Segoe UI", Font.BOLD, 18));
+                    g2.setColor(new Color(255, 255, 255, 220));
+                    FontMetrics ifm = g2.getFontMetrics();
+                    g2.drawString(init, (w - ifm.stringWidth(init)) / 2, POSTER_H / 2 + 20);
                 }
+                g2.setClip(oldClip);
+
+                // Subtle border line between poster and info
+                g2.setColor(new Color(226, 232, 240, 120));
+                g2.drawLine(1, POSTER_H, w - 2, POSTER_H);
+
+                // 3. Overlaid Badges on Poster
+                // Top-Left: Language Badge
+                String lang = movie.getLanguage() != null && !movie.getLanguage().isEmpty() ? movie.getLanguage() : "Hindi";
+                g2.setFont(new Font("Segoe UI", Font.BOLD, 9));
+                FontMetrics fmBadge = g2.getFontMetrics();
+                int lWidth = fmBadge.stringWidth(lang) + 10;
+                g2.setColor(new Color(15, 23, 42, 210));
+                g2.fillRoundRect(6, 6, lWidth, 18, 8, 8);
+                g2.setColor(new Color(241, 245, 249));
+                g2.drawString(lang, 11, 6 + 13);
+
+                // Top-Right: Rating / Certificate Badge
+                String cert = movie.getCertificate() != null && !movie.getCertificate().isEmpty() ? movie.getCertificate() : "UA";
+                int cWidth = fmBadge.stringWidth(cert) + 10;
+                Color certBg = "A".equalsIgnoreCase(cert) ? new Color(225, 29, 72, 220)
+                        : "U".equalsIgnoreCase(cert) ? new Color(16, 185, 129, 220)
+                        : new Color(217, 119, 6, 220); // Amber for UA / UA 13+
+                g2.setColor(certBg);
+                g2.fillRoundRect(w - cWidth - 6, 6, cWidth, 18, 8, 8);
+                g2.setColor(Color.WHITE);
+                g2.drawString(cert, w - cWidth - 1, 6 + 13);
+
+                // Selected Checkmark Badge (bottom-right of poster)
+                if (isSelected) {
+                    int bx = w - 26;
+                    int by = POSTER_H - 26;
+                    g2.setColor(new Color(37, 99, 235));
+                    g2.fillOval(bx, by, 20, 20);
+                    g2.setColor(Color.WHITE);
+                    g2.setFont(new Font("Segoe UI", Font.BOLD, 12));
+                    g2.drawString("✓", bx + 5, by + 15);
+                }
+
+                // 4. Text / Details Section (Bottom: POSTER_H to h)
+                int textY = POSTER_H + 16;
+
+                // Title
+                g2.setFont(new Font("Segoe UI", Font.BOLD, 12));
+                FontMetrics titleFm = g2.getFontMetrics();
+                g2.setColor(isSelected ? new Color(29, 78, 216) : new Color(15, 23, 42));
+                String displayTitle = capitalizedTitle;
+                if (titleFm.stringWidth(displayTitle) > w - 16) {
+                    while (displayTitle.length() > 3 && titleFm.stringWidth(displayTitle + "…") > w - 16) {
+                        displayTitle = displayTitle.substring(0, displayTitle.length() - 1);
+                    }
+                    displayTitle = displayTitle + "…";
+                }
+                g2.drawString(displayTitle, 8, textY);
+
+                // Genre
+                textY += 15;
+                g2.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+                g2.setColor(new Color(100, 116, 139));
+                FontMetrics genreFm = g2.getFontMetrics();
+                String genre = movie.getGenre();
+                if (genre != null && genreFm.stringWidth(genre) > w - 16) {
+                    while (genre.length() > 3 && genreFm.stringWidth(genre + "…") > w - 16) {
+                        genre = genre.substring(0, genre.length() - 1);
+                    }
+                    genre = genre + "…";
+                }
+                g2.drawString(genre != null ? genre : "", 8, textY);
+
+                // Duration & Status Pill
+                textY += 15;
+                g2.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+                g2.setColor(new Color(71, 85, 105));
+                g2.drawString("⏱ " + movie.getShortDuration(), 8, textY);
+
+                // If Selected: Bottom Accent Indicator Bar
+                if (isSelected) {
+                    g2.setColor(new Color(37, 99, 235));
+                    g2.fillRoundRect(8, h - 5, w - 16, 3, 2, 2);
+                }
+
+                // 5. Border & Focus Ring
+                if (isSelected) {
+                    g2.setColor(new Color(37, 99, 235));
+                    g2.setStroke(new BasicStroke(2.0f));
+                    g2.drawRoundRect(1, 1, w - 3, h - 3, ARC, ARC);
+                } else if (isHovered) {
+                    g2.setColor(new Color(148, 163, 184));
+                    g2.setStroke(new BasicStroke(1.5f));
+                    g2.drawRoundRect(1, 1, w - 2, h - 2, ARC, ARC);
+                } else {
+                    g2.setColor(new Color(226, 232, 240));
+                    g2.setStroke(new BasicStroke(1.0f));
+                    g2.drawRoundRect(1, 1, w - 2, h - 2, ARC, ARC);
+                }
+
                 g2.dispose();
             }
         };
-        p.setPreferredSize(new Dimension(44, 56));
-        p.setOpaque(false);
-        return p;
+
+        card.setPreferredSize(new Dimension(CARD_W, CARD_H));
+        card.setMinimumSize(new Dimension(CARD_W, CARD_H));
+        card.setMaximumSize(new Dimension(CARD_W, CARD_H));
+        card.setOpaque(false);
+        card.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        card.setToolTipText(capitalizedTitle + " (" + movie.getLanguage() + " • " + movie.getCertificate() + " • " + movie.getShortDuration() + ")");
+
+        return card;
+    }
+
+    private BufferedImage getOrLoadPosterImage(Movie movie) {
+        if (posterImageCache.containsKey(movie.getId())) {
+            return posterImageCache.get(movie.getId());
+        }
+        BufferedImage img = loadPosterImage(movie);
+        posterImageCache.put(movie.getId(), img);
+        return img;
+    }
+
+    private BufferedImage loadPosterImage(Movie movie) {
+        String imgPath = movie.getImagePath();
+        if (imgPath == null || imgPath.trim().isEmpty()) {
+            return null;
+        }
+        File f = new File(imgPath.trim());
+        if (!f.isAbsolute()) {
+            f = new File(System.getProperty("user.dir"), imgPath.trim());
+        }
+        if (!f.exists() || !f.isFile()) {
+            f = new File(new File(System.getProperty("user.dir"), "assets/posters"), new File(imgPath.trim()).getName());
+        }
+        if (f.exists() && f.isFile()) {
+            try {
+                BufferedImage img = ImageIO.read(f);
+                if (img != null) {
+                    return img;
+                }
+            } catch (Exception ignored) {
+            }
+            try {
+                ImageIcon ic = new ImageIcon(f.getAbsolutePath());
+                Image raw = ic.getImage();
+                if (raw != null && raw.getWidth(null) > 0 && raw.getHeight(null) > 0) {
+                    BufferedImage img = new BufferedImage(raw.getWidth(null), raw.getHeight(null), BufferedImage.TYPE_INT_ARGB);
+                    Graphics2D g2d = img.createGraphics();
+                    g2d.drawImage(raw, 0, 0, null);
+                    g2d.dispose();
+                    return img;
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return null;
     }
 
     // ==========================================================
-    // COLUMN 2: DATE SELECTION -> SCREENS/SHOWS -> EXACT SEATING
+    // STEP 2: EXACT SCREEN SEAT MATRIX PANEL
     // ==========================================================
     private JPanel buildShowAndSeatsPanel() {
         JPanel panel = createSection("Show & Seat Selection");
         panel.setLayout(new BorderLayout(0, 8));
 
-        // Top Container: Movie Banner + Available Dates + Available Shows
-        JPanel topContainer = new JPanel();
-        topContainer.setLayout(new BoxLayout(topContainer, BoxLayout.Y_AXIS));
-        topContainer.setOpaque(false);
-
-        // 1. Selected Movie Header Banner
-        JPanel movieBanner = new JPanel(new BorderLayout(6, 2));
-        movieBanner.setBackground(new Color(248, 250, 252));
-        movieBanner.setBorder(new CompoundBorder(
-                new LineBorder(Theme.BORDER_COLOR, 1, true),
-                new EmptyBorder(8, 12, 8, 12)
-        ));
-
-        movieBannerTitle.setFont(new Font("Segoe UI", Font.BOLD, 15));
-        movieBannerTitle.setForeground(Theme.TEXT_DARK);
-
-        movieBannerMeta.setFont(Theme.FONT_SMALL);
-        movieBannerMeta.setForeground(Theme.TEXT_MUTED);
-
-        movieBanner.add(movieBannerTitle, BorderLayout.NORTH);
-        movieBanner.add(movieBannerMeta, BorderLayout.CENTER);
-        topContainer.add(movieBanner);
-        topContainer.add(Box.createVerticalStrut(8));
-
-        // 2. Date Selection (Pill Buttons)
-        JPanel dateSection = new JPanel(new BorderLayout(4, 2));
-        dateSection.setOpaque(false);
-        JLabel dateTitle = new JLabel("📅 Select Date");
-        dateTitle.setFont(Theme.FONT_BOLD_SM);
-        dateTitle.setForeground(new Color(71, 85, 105));
-        dateSection.add(dateTitle, BorderLayout.NORTH);
-
-        datesBarPanel.setOpaque(false);
-        dateSection.add(datesBarPanel, BorderLayout.CENTER);
-        topContainer.add(dateSection);
-        topContainer.add(Box.createVerticalStrut(6));
-
-        // 3. Available Shows & Screens
-        JPanel showSection = new JPanel(new BorderLayout(4, 2));
-        showSection.setOpaque(false);
-        JLabel showTitle = new JLabel("🎬 Available Shows & Screens");
-        showTitle.setFont(Theme.FONT_BOLD_SM);
-        showTitle.setForeground(new Color(71, 85, 105));
-        showSection.add(showTitle, BorderLayout.NORTH);
-
-        showsContainerPanel.setOpaque(false);
-        showSection.add(showsContainerPanel, BorderLayout.CENTER);
-        topContainer.add(showSection);
-        topContainer.add(Box.createVerticalStrut(8));
-
-        panel.add(topContainer, BorderLayout.NORTH);
-
-        // Bottom Container: Seat Layout Panel
+        // Seat Layout Panel
         JPanel seatWrapper = new JPanel(new BorderLayout(0, 6));
         seatWrapper.setBackground(Color.WHITE);
         seatWrapper.setBorder(new LineBorder(Theme.BORDER_COLOR, 1, true));
@@ -546,8 +799,8 @@ public class OrderBookingPage extends JPanel {
                 }
             } else if (hScrollable && vScrollable) {
                 int rot = e.getWheelRotation();
-                if ((rot > 0 && vBar.getValue() >= vBar.getMaximum() - vBar.getVisibleAmount()) ||
-                    (rot < 0 && vBar.getValue() <= 0)) {
+                if ((rot > 0 && vBar.getValue() >= vBar.getMaximum() - vBar.getVisibleAmount())
+                        || (rot < 0 && vBar.getValue() <= 0)) {
                     int step = rot * 32;
                     hBar.setValue(Math.max(0, Math.min(hBar.getMaximum() - hBar.getVisibleAmount(), hBar.getValue() + step)));
                 } else {
@@ -738,9 +991,17 @@ public class OrderBookingPage extends JPanel {
         customerNameField = createStyledInputField("Enter customer name");
         customerNameField.setAlignmentX(Component.LEFT_ALIGNMENT);
         customerNameField.getDocument().addDocumentListener(new DocumentListener() {
-            public void insertUpdate(DocumentEvent e) { checkNameInput(); }
-            public void removeUpdate(DocumentEvent e) { checkNameInput(); }
-            public void changedUpdate(DocumentEvent e) { checkNameInput(); }
+            public void insertUpdate(DocumentEvent e) {
+                checkNameInput();
+            }
+
+            public void removeUpdate(DocumentEvent e) {
+                checkNameInput();
+            }
+
+            public void changedUpdate(DocumentEvent e) {
+                checkNameInput();
+            }
         });
         customerNameField.addFocusListener(new FocusAdapter() {
             @Override
@@ -764,9 +1025,17 @@ public class OrderBookingPage extends JPanel {
         customerPhoneField = createStyledInputField("Enter 10-digit mobile number");
         customerPhoneField.setAlignmentX(Component.LEFT_ALIGNMENT);
         customerPhoneField.getDocument().addDocumentListener(new DocumentListener() {
-            public void insertUpdate(DocumentEvent e) { handlePhoneLookup(); }
-            public void removeUpdate(DocumentEvent e) { handlePhoneLookup(); }
-            public void changedUpdate(DocumentEvent e) { handlePhoneLookup(); }
+            public void insertUpdate(DocumentEvent e) {
+                handlePhoneLookup();
+            }
+
+            public void removeUpdate(DocumentEvent e) {
+                handlePhoneLookup();
+            }
+
+            public void changedUpdate(DocumentEvent e) {
+                handlePhoneLookup();
+            }
         });
         content.add(customerPhoneField);
         content.add(Box.createVerticalStrut(4));
@@ -825,9 +1094,17 @@ public class OrderBookingPage extends JPanel {
         cashReceivedField = createStyledInputField("Cash Received (₹)");
         cashReceivedField.setPreferredSize(new Dimension(130, 34));
         cashReceivedField.getDocument().addDocumentListener(new DocumentListener() {
-            public void insertUpdate(DocumentEvent e) { updateCashChange(); }
-            public void removeUpdate(DocumentEvent e) { updateCashChange(); }
-            public void changedUpdate(DocumentEvent e) { updateCashChange(); }
+            public void insertUpdate(DocumentEvent e) {
+                updateCashChange();
+            }
+
+            public void removeUpdate(DocumentEvent e) {
+                updateCashChange();
+            }
+
+            public void changedUpdate(DocumentEvent e) {
+                updateCashChange();
+            }
         });
 
         changeReturnedLbl = new JLabel("Change: ₹0.00", SwingConstants.CENTER);
@@ -1065,7 +1342,9 @@ public class OrderBookingPage extends JPanel {
     private void updatePaymentModeUI() {
         if (cashRadio.isSelected()) {
             cashCalcPanel.setVisible(true);
-            if (upiQrPanel != null) upiQrPanel.setVisible(false);
+            if (upiQrPanel != null) {
+                upiQrPanel.setVisible(false);
+            }
             refField.setVisible(false);
         } else if (upiRadio.isSelected()) {
             cashCalcPanel.setVisible(false);
@@ -1077,7 +1356,9 @@ public class OrderBookingPage extends JPanel {
         } else {
             // Card
             cashCalcPanel.setVisible(false);
-            if (upiQrPanel != null) upiQrPanel.setVisible(false);
+            if (upiQrPanel != null) {
+                upiQrPanel.setVisible(false);
+            }
             refField.setVisible(true);
             refField.setToolTipText("Card Auth / Slip Ref");
         }
@@ -1086,7 +1367,9 @@ public class OrderBookingPage extends JPanel {
     }
 
     private void refreshUpiQrCode() {
-        if (upiAmountLabel == null || upiQrImageLabel == null) return;
+        if (upiAmountLabel == null || upiQrImageLabel == null) {
+            return;
+        }
         BigDecimal total = calculateTotal();
         if (total.compareTo(BigDecimal.ZERO) <= 0) {
             upiAmountLabel.setText("Payable: ₹0.00");
@@ -1107,7 +1390,9 @@ public class OrderBookingPage extends JPanel {
 
         String movieTitle = (selectedMovie != null) ? selectedMovie.getTitle().replaceAll("[^a-zA-Z0-9 ]", "") : "Ticket";
         String note = "Tickets-" + movieTitle.replace(" ", "-");
-        if (note.length() > 30) note = note.substring(0, 30);
+        if (note.length() > 30) {
+            note = note.substring(0, 30);
+        }
 
         String upiPayload;
         try {
@@ -1185,7 +1470,9 @@ public class OrderBookingPage extends JPanel {
 
         String movieTitle = (selectedMovie != null) ? selectedMovie.getTitle().replaceAll("[^a-zA-Z0-9 ]", "") : "Ticket";
         String note = "Tickets-" + movieTitle.replace(" ", "-");
-        if (note.length() > 30) note = note.substring(0, 30);
+        if (note.length() > 30) {
+            note = note.substring(0, 30);
+        }
 
         String upiPayload;
         try {
@@ -1334,7 +1621,9 @@ public class OrderBookingPage extends JPanel {
         String[] columns = {"Booking #", "Customer", "Phone", "Movie", "Date", "Show Time", "Screen", "Seats", "Amount", "Payment", "Status"};
         bookingsTableModel = new DefaultTableModel(columns, 0) {
             @Override
-            public boolean isCellEditable(int r, int c) { return false; }
+            public boolean isCellEditable(int r, int c) {
+                return false;
+            }
         };
 
         todayBookingsTable = new JTable(bookingsTableModel);
@@ -1383,6 +1672,7 @@ public class OrderBookingPage extends JPanel {
     // LOGIC: LOADING MOVIES & INTERACTIVE WORKFLOW
     // ==========================================================
     private void loadMovies() {
+        posterImageCache.clear();
         allMoviesList = MovieDAO.getAllMovies();
         filteredMoviesList = new ArrayList<>(allMoviesList);
         renderMovieList();
@@ -1395,7 +1685,9 @@ public class OrderBookingPage extends JPanel {
     }
 
     public static String capitalizeTitle(String text) {
-        if (text == null || text.trim().isEmpty()) return "";
+        if (text == null || text.trim().isEmpty()) {
+            return "";
+        }
         String[] words = text.trim().split("\\s+");
         StringBuilder sb = new StringBuilder();
         for (String w : words) {
@@ -1411,7 +1703,9 @@ public class OrderBookingPage extends JPanel {
     }
 
     private void selectMovie(Movie movie) {
-        if (movie == null) return;
+        if (movie == null) {
+            return;
+        }
         selectedMovie = movie;
 
         // Update Movie Banner in Column 2
@@ -1505,7 +1799,9 @@ public class OrderBookingPage extends JPanel {
     }
 
     public static String formatDatePill(String dateStr) {
-        if (dateStr == null || dateStr.trim().isEmpty()) return "";
+        if (dateStr == null || dateStr.trim().isEmpty()) {
+            return "";
+        }
         try {
             LocalDate d = LocalDate.parse(dateStr.trim());
             LocalDate today = LocalDate.now();
@@ -1562,7 +1858,25 @@ public class OrderBookingPage extends JPanel {
     private JPanel createShowTile(Show show) {
         boolean isSelected = (selectedShow != null && selectedShow.getId() == show.getId());
 
-        JPanel tile = new JPanel(new BorderLayout(4, 2)) {
+        JPanel tile = new JPanel(new BorderLayout(6, 4)) {
+            private boolean isHovered = false;
+
+            {
+                addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mouseEntered(MouseEvent e) {
+                        isHovered = true;
+                        repaint();
+                    }
+
+                    @Override
+                    public void mouseExited(MouseEvent e) {
+                        isHovered = false;
+                        repaint();
+                    }
+                });
+            }
+
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
@@ -1570,55 +1884,82 @@ public class OrderBookingPage extends JPanel {
                 int w = getWidth();
                 int h = getHeight();
 
-                if (isSelected) {
+                if (isSelected || isHovered) {
                     g2.setColor(new Color(239, 246, 255));
-                    g2.fillRoundRect(2, 2, w - 4, h - 4, 8, 8);
+                    g2.fillRoundRect(2, 2, w - 4, h - 4, 10, 10);
                     g2.setColor(new Color(37, 99, 235));
-                    g2.setStroke(new BasicStroke(2.0f));
-                    g2.drawRoundRect(2, 2, w - 4, h - 4, 8, 8);
+                    g2.setStroke(new BasicStroke(1.8f));
+                    g2.drawRoundRect(2, 2, w - 4, h - 4, 10, 10);
                 } else {
                     g2.setColor(Color.WHITE);
-                    g2.fillRoundRect(2, 2, w - 4, h - 4, 8, 8);
+                    g2.fillRoundRect(2, 2, w - 4, h - 4, 10, 10);
                     g2.setColor(new Color(226, 232, 240));
                     g2.setStroke(new BasicStroke(1.0f));
-                    g2.drawRoundRect(2, 2, w - 4, h - 4, 8, 8);
+                    g2.drawRoundRect(2, 2, w - 4, h - 4, 10, 10);
                 }
                 g2.dispose();
             }
         };
 
-        tile.setPreferredSize(new Dimension(170, 62));
+        tile.setPreferredSize(new Dimension(210, 72));
         tile.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        tile.setBorder(new EmptyBorder(6, 10, 6, 10));
+        tile.setBorder(new EmptyBorder(8, 12, 8, 12));
 
         JPanel content = new JPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
         content.setOpaque(false);
 
+        // Screen Name & Type
+        JPanel screenRow = new JPanel(new BorderLayout(4, 0));
+        screenRow.setOpaque(false);
         JLabel screenLbl = new JLabel(show.getScreenName());
         screenLbl.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        screenLbl.setForeground(isSelected ? new Color(29, 78, 216) : Theme.TEXT_DARK);
+        screenLbl.setForeground(new Color(30, 41, 59));
 
+        JLabel typePill = new JLabel(" " + show.getScreenType() + " ");
+        typePill.setFont(new Font("Segoe UI", Font.BOLD, 10));
+        typePill.setForeground(new Color(79, 70, 229));
+        typePill.setBackground(new Color(238, 242, 255));
+        typePill.setOpaque(true);
+        typePill.setBorder(new LineBorder(new Color(199, 210, 254), 1, true));
+
+        screenRow.add(screenLbl, BorderLayout.WEST);
+        screenRow.add(typePill, BorderLayout.EAST);
+
+        // Time
         JLabel timeLbl = new JLabel("⏰ " + show.getStartTime());
-        timeLbl.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        timeLbl.setForeground(isSelected ? new Color(37, 99, 235) : new Color(15, 23, 42));
+        timeLbl.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        timeLbl.setForeground(new Color(37, 99, 235));
+
+        // Seats & Action
+        JPanel botRow = new JPanel(new BorderLayout(4, 0));
+        botRow.setOpaque(false);
 
         JLabel seatsLbl;
         if (show.isStarted()) {
             int minsLeft = show.getMinutesUntilCutoff();
-            seatsLbl = new JLabel("● " + show.getAvailableSeats() + " seats • " + minsLeft + "m left");
+            seatsLbl = new JLabel("● " + show.getAvailableSeats() + " left • " + minsLeft + "m");
             seatsLbl.setFont(Theme.FONT_SMALL);
             seatsLbl.setForeground(new Color(217, 119, 6)); // Amber warning
             seatsLbl.setToolTipText("Show started! Booking window closes in " + minsLeft + " minutes.");
         } else {
-            seatsLbl = new JLabel(show.getAvailableSeats() + " seats available");
+            seatsLbl = new JLabel("● " + show.getAvailableSeats() + " seats left");
             seatsLbl.setFont(Theme.FONT_SMALL);
             seatsLbl.setForeground(new Color(22, 163, 74));
         }
 
-        content.add(screenLbl);
+        JLabel actionLbl = new JLabel("Book Seats →");
+        actionLbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        actionLbl.setForeground(new Color(37, 99, 235));
+
+        botRow.add(seatsLbl, BorderLayout.WEST);
+        botRow.add(actionLbl, BorderLayout.EAST);
+
+        content.add(screenRow);
+        content.add(Box.createVerticalStrut(2));
         content.add(timeLbl);
-        content.add(seatsLbl);
+        content.add(Box.createVerticalStrut(2));
+        content.add(botRow);
 
         tile.add(content, BorderLayout.CENTER);
 
@@ -1633,11 +1974,14 @@ public class OrderBookingPage extends JPanel {
     }
 
     private void selectShow(Show show) {
-        if (show == null) return;
+        if (show == null) {
+            return;
+        }
         selectedShow = show;
         renderShowsForSelectedDate();
         loadSeatsForSelectedShow();
         updateSummary();
+        showStep2();
     }
 
     // ==========================================================
@@ -1680,24 +2024,53 @@ public class OrderBookingPage extends JPanel {
         for (ShowSeat ss : showSeats) {
             String label = ss.getSeatLabel();
             String row = label.replaceAll("[0-9]", "");
-            if (row.isEmpty()) row = "Seats";
+            if (row.isEmpty()) {
+                row = "Seats";
+            }
             seatsByRow.computeIfAbsent(row, k -> new ArrayList<>()).add(ss);
         }
 
-        // Auto-select the first available seat serial-wise (e.g. A1, A2... B1...)
+        // Build row position map (0 = farthest from screen e.g. Row A; highest = closest to screen e.g. Row J)
+        List<String> rowOrderList = new ArrayList<>(seatsByRow.keySet());
+        Map<String, Integer> rowIndexMap = new HashMap<>();
+        for (int i = 0; i < rowOrderList.size(); i++) {
+            rowIndexMap.put(rowOrderList.get(i), i);
+        }
+
+        // Auto-select first available seat starting from REGULAR -> PREMIUM -> RECLINER,
+        // and within each tier starting from the front row closest to the screen (e.g. J1, J2...)
         ShowSeat autoSelectSeat = null;
-        for (Map.Entry<String, List<ShowSeat>> entry : seatsByRow.entrySet()) {
-            List<ShowSeat> seatsInRow = entry.getValue();
-            seatsInRow.sort(Comparator.comparingInt(s -> parseSeatNum(s.getSeatLabel())));
-            for (ShowSeat ss : seatsInRow) {
-                if ("AVAILABLE".equalsIgnoreCase(ss.getStatus())) {
-                    autoSelectSeat = ss;
-                    break;
+        List<ShowSeat> availableCandidates = new ArrayList<>();
+        for (ShowSeat ss : showSeats) {
+            if ("AVAILABLE".equalsIgnoreCase(ss.getStatus())) {
+                availableCandidates.add(ss);
+            }
+        }
+
+        if (!availableCandidates.isEmpty()) {
+            availableCandidates.sort((s1, s2) -> {
+                // 1. Tier Priority: REGULAR (1) -> PREMIUM (2) -> RECLINER (3)
+                int p1 = getTierPriority(s1.getSeatType());
+                int p2 = getTierPriority(s2.getSeatType());
+                if (p1 != p2) {
+                    return Integer.compare(p1, p2);
                 }
-            }
-            if (autoSelectSeat != null) {
-                break;
-            }
+
+                // 2. Row Position: Closest to screen first (higher row index in hall, e.g. Row J before Row I)
+                String r1 = extractRow(s1.getSeatLabel());
+                String r2 = extractRow(s2.getSeatLabel());
+                int idx1 = rowIndexMap.getOrDefault(r1, 0);
+                int idx2 = rowIndexMap.getOrDefault(r2, 0);
+                if (idx1 != idx2) {
+                    return Integer.compare(idx2, idx1); // descending
+                }
+
+                // 3. Seat Number: Starting from seat 1 (1, 2, 3...)
+                int n1 = parseSeatNum(s1.getSeatLabel());
+                int n2 = parseSeatNum(s2.getSeatLabel());
+                return Integer.compare(n1, n2);
+            });
+            autoSelectSeat = availableCandidates.get(0);
         }
 
         if (autoSelectSeat != null) {
@@ -2000,6 +2373,25 @@ public class OrderBookingPage extends JPanel {
         }
     }
 
+    private int getTierPriority(String seatType) {
+        if (seatType == null) return 99;
+        String t = seatType.trim().toUpperCase();
+        if (t.contains("REGULAR") || t.contains("SILVER") || t.contains("STANDARD")) {
+            return 1;
+        } else if (t.contains("PREMIUM") || t.contains("GOLD") || t.contains("PRIME")) {
+            return 2;
+        } else if (t.contains("RECLINER") || t.contains("PLATINUM") || t.contains("VIP") || t.contains("LOUNGE")) {
+            return 3;
+        }
+        return 4;
+    }
+
+    private String extractRow(String label) {
+        if (label == null) return "";
+        String row = label.replaceAll("[0-9]", "").trim().toUpperCase();
+        return row.isEmpty() ? "SEATS" : row;
+    }
+
     // ==========================================================
     // SUMMARY, PRICE RECALCULATION & BOOKING EXECUTION
     // ==========================================================
@@ -2237,11 +2629,11 @@ public class OrderBookingPage extends JPanel {
 
     private void refreshRecentBookings() {
         recentBookingsList = BookingService.getRecentBookings(25);
-        bookingsTableModel.setRowCount(0);
-
-        for (Booking b : recentBookingsList) {
-            String pay = (b.getPayment() != null) ? b.getPayment().getPaymentMethod() : "PAID";
-            bookingsTableModel.addRow(new Object[]{
+        if (bookingsTableModel != null) {
+            bookingsTableModel.setRowCount(0);
+            for (Booking b : recentBookingsList) {
+                String pay = (b.getPayment() != null) ? b.getPayment().getPaymentMethod() : "PAID";
+                bookingsTableModel.addRow(new Object[]{
                     b.getBookingNumber(),
                     capitalizeTitle(b.getCustomerName()),
                     b.getCustomerPhone(),
@@ -2253,7 +2645,8 @@ public class OrderBookingPage extends JPanel {
                     "₹" + b.getTotalAmount().toPlainString(),
                     pay,
                     b.getStatus()
-            });
+                });
+            }
         }
     }
 
@@ -2262,13 +2655,16 @@ public class OrderBookingPage extends JPanel {
         for (Movie m : allMoviesList) {
             if (m.getId() == movieId) {
                 selectMovie(m);
+                showStep1();
                 break;
             }
         }
     }
 
     public void selectShowFromExternal(Show show) {
-        if (show == null) return;
+        if (show == null) {
+            return;
+        }
         if (!show.isBookable()) {
             JOptionPane.showMessageDialog(this,
                     "This screening cannot be booked because it is in the past or its 30-minute booking window has expired.",
