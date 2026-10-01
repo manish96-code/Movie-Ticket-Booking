@@ -15,6 +15,7 @@ import javax.swing.*;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
+import javax.swing.border.MatteBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -61,9 +62,10 @@ public class OrderBookingPage extends JPanel {
     private final JLabel summaryDate = new JLabel("-");
     private final JLabel summaryTime = new JLabel("-");
     private final JLabel summaryScreen = new JLabel("-");
-    private final JLabel summarySeats = new JLabel("-");
+    private final JLabel summarySeats = new JLabel("No seats selected");
     private final JPanel summaryItemsPanel = new JPanel();
     private final JLabel summaryAmount = new JLabel("₹0.00");
+    private final JLabel summarySeatCountLbl = new JLabel("0 seats selected");
 
     private JTextField customerPhoneField;
     private JTextField customerNameField;
@@ -108,28 +110,28 @@ public class OrderBookingPage extends JPanel {
         column.fill = GridBagConstraints.BOTH;
         column.weighty = 1;
 
-        // Column 1 (24%): Search bar + Movie list
+        // Column 1 (22%): Search bar + Movie list
         column.gridx = 0;
-        column.weightx = 0.24;
+        column.weightx = 0.22;
         column.insets = new Insets(0, 0, 0, 8);
         JPanel col1 = buildMoviePanel();
-        col1.setMinimumSize(new Dimension(220, 0));
+        col1.setMinimumSize(new Dimension(210, 0));
         workspace.add(col1, column);
 
-        // Column 2 (49%): Date pills + Screen/Show cards + Exact Seating Matrix
+        // Column 2 (48%): Date pills + Screen/Show cards + Exact Seating Matrix
         column.gridx = 1;
-        column.weightx = 0.49;
+        column.weightx = 0.48;
         column.insets = new Insets(0, 0, 0, 8);
         JPanel col2 = buildShowAndSeatsPanel();
         col2.setMinimumSize(new Dimension(420, 0));
         workspace.add(col2, column);
 
-        // Column 3 (27%): Booking Summary, Price, Customer & Payment
+        // Column 3 (30%): Booking Summary, Price, Customer & Payment
         column.gridx = 2;
-        column.weightx = 0.27;
+        column.weightx = 0.30;
         column.insets = new Insets(0, 0, 0, 0);
         JPanel col3 = buildSummaryAndPaymentPanel();
-        col3.setMinimumSize(new Dimension(290, 0));
+        col3.setMinimumSize(new Dimension(320, 0));
         workspace.add(col3, column);
 
         JPanel mainCenter = new JPanel(new BorderLayout(0, 8));
@@ -510,115 +512,188 @@ public class OrderBookingPage extends JPanel {
     // COLUMN 3: SUMMARY, PRICE, CUSTOMER DETAILS & PAYMENT
     // ==========================================================
     private JPanel buildSummaryAndPaymentPanel() {
-        JPanel panel = createSection("Booking Summary");
-        panel.setLayout(new BorderLayout(0, 8));
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(new CompoundBorder(
+                new LineBorder(new Color(226, 232, 240), 1, true),
+                new EmptyBorder(0, 0, 0, 0)
+        ));
 
+        // 1. Header Bar
+        JPanel cardHeader = new JPanel(new BorderLayout(8, 0));
+        cardHeader.setBackground(new Color(248, 250, 252));
+        cardHeader.setBorder(new CompoundBorder(
+                new MatteBorder(0, 0, 1, 0, new Color(226, 232, 240)),
+                new EmptyBorder(12, 16, 12, 16)
+        ));
+
+        JLabel headerTitle = new JLabel("🧾 Booking Summary");
+        headerTitle.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        headerTitle.setForeground(new Color(15, 23, 42));
+
+        JLabel counterBadge = new JLabel("Counter POS");
+        counterBadge.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        counterBadge.setForeground(new Color(79, 70, 229));
+        counterBadge.setBackground(new Color(238, 242, 255));
+        counterBadge.setOpaque(true);
+        counterBadge.setBorder(new EmptyBorder(3, 8, 3, 8));
+
+        cardHeader.add(headerTitle, BorderLayout.WEST);
+        cardHeader.add(counterBadge, BorderLayout.EAST);
+        panel.add(cardHeader, BorderLayout.NORTH);
+
+        // 2. Center Content with generous internal padding
         JPanel content = new JPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
         content.setOpaque(false);
+        content.setBorder(new EmptyBorder(16, 16, 16, 16));
 
-        // 1. Movie / Show Overview Info
-        JPanel infoBlock = new JPanel();
-        infoBlock.setLayout(new BoxLayout(infoBlock, BoxLayout.Y_AXIS));
-        infoBlock.setOpaque(false);
-        infoBlock.setBorder(new EmptyBorder(0, 0, 6, 0));
+        // Ticket Overview Slate Box
+        JPanel overviewBox = new JPanel();
+        overviewBox.setLayout(new BoxLayout(overviewBox, BoxLayout.Y_AXIS));
+        overviewBox.setBackground(new Color(248, 250, 252));
+        overviewBox.setBorder(new CompoundBorder(
+                new LineBorder(new Color(226, 232, 240), 1, true),
+                new EmptyBorder(12, 14, 12, 14)
+        ));
+        overviewBox.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        addSummaryRow(infoBlock, "Movie", summaryMovie);
-        addSummaryRow(infoBlock, "Date", summaryDate);
-        addSummaryRow(infoBlock, "Show Time", summaryTime);
-        addSummaryRow(infoBlock, "Screen", summaryScreen);
-        addSummaryRow(infoBlock, "Seats", summarySeats);
+        JPanel movieRow = new JPanel(new BorderLayout(6, 0));
+        movieRow.setOpaque(false);
+        movieRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel movieIcon = new JLabel("🎬");
+        summaryMovie.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        summaryMovie.setForeground(new Color(15, 23, 42));
+        movieRow.add(movieIcon, BorderLayout.WEST);
+        movieRow.add(summaryMovie, BorderLayout.CENTER);
+        overviewBox.add(movieRow);
+        overviewBox.add(Box.createVerticalStrut(8));
 
-        content.add(infoBlock);
-        content.add(new JSeparator());
-        content.add(Box.createVerticalStrut(6));
+        JSeparator div1 = new JSeparator();
+        div1.setForeground(new Color(226, 232, 240));
+        div1.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
+        div1.setAlignmentX(Component.LEFT_ALIGNMENT);
+        overviewBox.add(div1);
+        overviewBox.add(Box.createVerticalStrut(8));
 
-        // 2. Itemized Seats Price List
+        overviewBox.add(createMetaRow("📅 Date", summaryDate));
+        overviewBox.add(Box.createVerticalStrut(4));
+        overviewBox.add(createMetaRow("⏰ Show Time", summaryTime));
+        overviewBox.add(Box.createVerticalStrut(4));
+        overviewBox.add(createMetaRow("📺 Screen", summaryScreen));
+        overviewBox.add(Box.createVerticalStrut(4));
+        overviewBox.add(createMetaRow("💺 Seats", summarySeats));
+
+        content.add(overviewBox);
+        content.add(Box.createVerticalStrut(12));
+
+        // Itemized Seats Breakdown
         summaryItemsPanel.setLayout(new BoxLayout(summaryItemsPanel, BoxLayout.Y_AXIS));
         summaryItemsPanel.setOpaque(false);
+        summaryItemsPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         content.add(summaryItemsPanel);
-        content.add(Box.createVerticalStrut(6));
+        content.add(Box.createVerticalStrut(10));
 
-        // 3. Total Amount Highlight
-        JPanel totalBlock = new JPanel(new BorderLayout());
-        totalBlock.setOpaque(false);
-        totalBlock.setBorder(new EmptyBorder(4, 0, 8, 0));
+        // Highlighted Total Amount Card
+        JPanel totalCard = new JPanel(new BorderLayout(10, 0)) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(240, 253, 244));
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
+                g2.setColor(new Color(187, 247, 208));
+                g2.setStroke(new BasicStroke(1.0f));
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 10, 10);
+                g2.dispose();
+            }
+        };
+        totalCard.setOpaque(false);
+        totalCard.setBorder(new EmptyBorder(12, 14, 12, 14));
+        totalCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        totalCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, 65));
+
+        JPanel totalLeft = new JPanel();
+        totalLeft.setLayout(new BoxLayout(totalLeft, BoxLayout.Y_AXIS));
+        totalLeft.setOpaque(false);
 
         JLabel totalTitle = new JLabel("Total Amount");
-        totalTitle.setFont(Theme.FONT_HEADER);
-        totalTitle.setForeground(Theme.TEXT_DARK);
+        totalTitle.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        totalTitle.setForeground(new Color(22, 101, 52));
+
+        summarySeatCountLbl.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        summarySeatCountLbl.setForeground(new Color(21, 128, 61));
+
+        totalLeft.add(totalTitle);
+        totalLeft.add(Box.createVerticalStrut(2));
+        totalLeft.add(summarySeatCountLbl);
 
         summaryAmount.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        summaryAmount.setForeground(new Color(22, 163, 74));
+        summaryAmount.setForeground(new Color(22, 101, 52));
 
-        totalBlock.add(totalTitle, BorderLayout.WEST);
-        totalBlock.add(summaryAmount, BorderLayout.EAST);
-        content.add(totalBlock);
-        content.add(new JSeparator());
-        content.add(Box.createVerticalStrut(8));
+        totalCard.add(totalLeft, BorderLayout.WEST);
+        totalCard.add(summaryAmount, BorderLayout.EAST);
 
-        // 4. Customer Details (Name & Mobile)
+        content.add(totalCard);
+        content.add(Box.createVerticalStrut(16));
+
+        // 3. Customer Details Section
         JLabel custHeader = new JLabel("CUSTOMER DETAILS");
-        custHeader.setFont(Theme.FONT_BOLD_SM);
+        custHeader.setFont(new Font("Segoe UI", Font.BOLD, 11));
         custHeader.setForeground(new Color(100, 116, 139));
         custHeader.setAlignmentX(Component.LEFT_ALIGNMENT);
         content.add(custHeader);
         content.add(Box.createVerticalStrut(6));
 
-        // Customer Name
         JLabel nameLbl = new JLabel("Customer Name *");
-        nameLbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        nameLbl.setFont(Theme.FONT_BOLD_SM);
         nameLbl.setForeground(Theme.TEXT_DARK);
         nameLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        content.add(nameLbl);
+        content.add(Box.createVerticalStrut(4));
 
-        customerNameField = Theme.createTextField("Enter customer name");
-        customerNameField.setPreferredSize(new Dimension(0, 32));
-        customerNameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+        customerNameField = createStyledInputField("Enter customer name");
+        customerNameField.setAlignmentX(Component.LEFT_ALIGNMENT);
         customerNameField.getDocument().addDocumentListener(new DocumentListener() {
             public void insertUpdate(DocumentEvent e) { checkNameInput(); }
             public void removeUpdate(DocumentEvent e) { checkNameInput(); }
             public void changedUpdate(DocumentEvent e) { checkNameInput(); }
         });
+        content.add(customerNameField);
+        content.add(Box.createVerticalStrut(10));
 
-        // Mobile Number
         JLabel phoneLbl = new JLabel("Mobile Number (10 digits) *");
-        phoneLbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        phoneLbl.setFont(Theme.FONT_BOLD_SM);
         phoneLbl.setForeground(Theme.TEXT_DARK);
         phoneLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        content.add(phoneLbl);
+        content.add(Box.createVerticalStrut(4));
 
-        customerPhoneField = Theme.createTextField("Enter 10-digit mobile number");
-        customerPhoneField.setPreferredSize(new Dimension(0, 32));
-        customerPhoneField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+        customerPhoneField = createStyledInputField("Enter 10-digit mobile number");
+        customerPhoneField.setAlignmentX(Component.LEFT_ALIGNMENT);
         customerPhoneField.getDocument().addDocumentListener(new DocumentListener() {
             public void insertUpdate(DocumentEvent e) { handlePhoneLookup(); }
             public void removeUpdate(DocumentEvent e) { handlePhoneLookup(); }
             public void changedUpdate(DocumentEvent e) { handlePhoneLookup(); }
         });
+        content.add(customerPhoneField);
+        content.add(Box.createVerticalStrut(4));
 
         customerBadge = new JLabel("● Enter 10-digit mobile number");
         customerBadge.setFont(Theme.FONT_SMALL);
         customerBadge.setForeground(Theme.TEXT_MUTED);
         customerBadge.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        content.add(nameLbl);
-        content.add(Box.createVerticalStrut(2));
-        content.add(customerNameField);
-        content.add(Box.createVerticalStrut(6));
-
-        content.add(phoneLbl);
-        content.add(Box.createVerticalStrut(2));
-        content.add(customerPhoneField);
-        content.add(Box.createVerticalStrut(2));
         content.add(customerBadge);
-        content.add(Box.createVerticalStrut(10));
+        content.add(Box.createVerticalStrut(16));
 
-        // 5. Payment Options (Cash, UPI, Card)
+        // 4. Payment Method Section
         JLabel payHeader = new JLabel("PAYMENT METHOD");
-        payHeader.setFont(Theme.FONT_BOLD_SM);
+        payHeader.setFont(new Font("Segoe UI", Font.BOLD, 11));
         payHeader.setForeground(new Color(100, 116, 139));
         payHeader.setAlignmentX(Component.LEFT_ALIGNMENT);
         content.add(payHeader);
-        content.add(Box.createVerticalStrut(4));
+        content.add(Box.createVerticalStrut(6));
 
         cashRadio = new JRadioButton("Cash", true);
         upiRadio = new JRadioButton("UPI");
@@ -629,76 +704,181 @@ public class OrderBookingPage extends JPanel {
         bg.add(upiRadio);
         bg.add(cardRadio);
 
-        cashRadio.setFont(Theme.FONT_SMALL);
-        upiRadio.setFont(Theme.FONT_SMALL);
-        cardRadio.setFont(Theme.FONT_SMALL);
+        cashRadio.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        upiRadio.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        cardRadio.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        cashRadio.setOpaque(false);
+        upiRadio.setOpaque(false);
+        cardRadio.setOpaque(false);
 
         cashRadio.addActionListener(e -> updatePaymentModeUI());
         upiRadio.addActionListener(e -> updatePaymentModeUI());
         cardRadio.addActionListener(e -> updatePaymentModeUI());
 
-        JPanel payModes = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        JPanel payModes = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 0));
         payModes.setOpaque(false);
+        payModes.setAlignmentX(Component.LEFT_ALIGNMENT);
+        payModes.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
         payModes.add(cashRadio);
         payModes.add(upiRadio);
         payModes.add(cardRadio);
         content.add(payModes);
+        content.add(Box.createVerticalStrut(8));
 
-        // Cash Change Calculator
-        cashCalcPanel = new JPanel(new GridLayout(1, 2, 6, 0));
+        // Cash Calculator Panel
+        cashCalcPanel = new JPanel(new BorderLayout(8, 0));
         cashCalcPanel.setOpaque(false);
-        cashCalcPanel.setBorder(new EmptyBorder(4, 0, 4, 0));
+        cashCalcPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        cashCalcPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
 
-        cashReceivedField = Theme.createTextField("Cash Received (₹)");
-        cashReceivedField.setPreferredSize(new Dimension(0, 30));
+        cashReceivedField = createStyledInputField("Cash Received (₹)");
+        cashReceivedField.setPreferredSize(new Dimension(130, 34));
         cashReceivedField.getDocument().addDocumentListener(new DocumentListener() {
             public void insertUpdate(DocumentEvent e) { updateCashChange(); }
             public void removeUpdate(DocumentEvent e) { updateCashChange(); }
             public void changedUpdate(DocumentEvent e) { updateCashChange(); }
         });
 
-        changeReturnedLbl = new JLabel("Change: ₹0.00");
+        changeReturnedLbl = new JLabel("Change: ₹0.00", SwingConstants.CENTER);
         changeReturnedLbl.setFont(Theme.FONT_BOLD_SM);
         changeReturnedLbl.setForeground(new Color(37, 99, 235));
+        changeReturnedLbl.setBackground(new Color(239, 246, 255));
+        changeReturnedLbl.setOpaque(true);
+        changeReturnedLbl.setBorder(new CompoundBorder(
+                new LineBorder(new Color(191, 219, 254), 1, true),
+                new EmptyBorder(6, 10, 6, 10)
+        ));
 
-        cashCalcPanel.add(cashReceivedField);
-        cashCalcPanel.add(changeReturnedLbl);
+        cashCalcPanel.add(cashReceivedField, BorderLayout.WEST);
+        cashCalcPanel.add(changeReturnedLbl, BorderLayout.CENTER);
         content.add(cashCalcPanel);
 
         // Ref field for UPI / Card
-        refField = Theme.createTextField("Optional UTR / Card Slip Ref");
-        refField.setPreferredSize(new Dimension(0, 30));
-        refField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+        refField = createStyledInputField("Optional UTR / Slip Reference");
+        refField.setAlignmentX(Component.LEFT_ALIGNMENT);
         refField.setVisible(false);
         content.add(refField);
 
         content.add(Box.createVerticalGlue());
 
-        // Confirm & Reset Buttons
-        JPanel actionBlock = new JPanel(new GridLayout(2, 1, 0, 6));
-        actionBlock.setOpaque(false);
-        actionBlock.setBorder(new EmptyBorder(8, 0, 0, 0));
-
-        confirmBookingBtn = Theme.createPrimaryButton("Confirm Booking");
-        confirmBookingBtn.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        confirmBookingBtn.setEnabled(false);
-        confirmBookingBtn.addActionListener(e -> executeBooking());
-
-        resetBtn = Theme.createSecondaryButton("Reset");
-        resetBtn.addActionListener(e -> resetBookingWorkspace());
-
-        actionBlock.add(confirmBookingBtn);
-        actionBlock.add(resetBtn);
-        content.add(actionBlock);
-
         JScrollPane scroll = new JScrollPane(content);
         scroll.setBorder(null);
         scroll.setOpaque(false);
         scroll.getViewport().setOpaque(false);
+        scroll.getVerticalScrollBar().setUnitIncrement(16);
         scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-
         panel.add(scroll, BorderLayout.CENTER);
+
+        // 5. Pinned Action Buttons at Bottom
+        JPanel bottomActions = new JPanel(new GridLayout(2, 1, 0, 8));
+        bottomActions.setBackground(Color.WHITE);
+        bottomActions.setBorder(new CompoundBorder(
+                new MatteBorder(1, 0, 0, 0, new Color(226, 232, 240)),
+                new EmptyBorder(12, 16, 14, 16)
+        ));
+
+        confirmBookingBtn = new JButton("Confirm Booking") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                if (!isEnabled()) {
+                    g2.setColor(new Color(226, 232, 240));
+                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+                    g2.setColor(new Color(148, 163, 184));
+                } else if (getModel().isPressed()) {
+                    g2.setColor(new Color(29, 78, 216));
+                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+                    g2.setColor(Color.WHITE);
+                } else if (getModel().isRollover()) {
+                    g2.setColor(new Color(37, 99, 235));
+                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+                    g2.setColor(Color.WHITE);
+                } else {
+                    g2.setColor(new Color(30, 64, 175));
+                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+                    g2.setColor(Color.WHITE);
+                }
+                FontMetrics fm = g2.getFontMetrics(getFont());
+                int tx = (getWidth() - fm.stringWidth(getText())) / 2;
+                int ty = (getHeight() + fm.getAscent() - fm.getDescent()) / 2;
+                g2.drawString(getText(), tx, ty);
+                g2.dispose();
+            }
+        };
+        confirmBookingBtn.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        confirmBookingBtn.setPreferredSize(new Dimension(0, 40));
+        confirmBookingBtn.setBorder(new EmptyBorder(0, 0, 0, 0));
+        confirmBookingBtn.setContentAreaFilled(false);
+        confirmBookingBtn.setFocusPainted(false);
+        confirmBookingBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        confirmBookingBtn.setEnabled(false);
+        confirmBookingBtn.addActionListener(e -> executeBooking());
+
+        resetBtn = new JButton("Reset Form") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getModel().isRollover() ? new Color(241, 245, 249) : Color.WHITE);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+                g2.setColor(new Color(203, 213, 225));
+                g2.setStroke(new BasicStroke(1.0f));
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 8, 8);
+                g2.setColor(new Color(71, 85, 105));
+                FontMetrics fm = g2.getFontMetrics(getFont());
+                int tx = (getWidth() - fm.stringWidth(getText())) / 2;
+                int ty = (getHeight() + fm.getAscent() - fm.getDescent()) / 2;
+                g2.drawString(getText(), tx, ty);
+                g2.dispose();
+            }
+        };
+        resetBtn.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        resetBtn.setPreferredSize(new Dimension(0, 32));
+        resetBtn.setBorder(new EmptyBorder(0, 0, 0, 0));
+        resetBtn.setContentAreaFilled(false);
+        resetBtn.setFocusPainted(false);
+        resetBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        resetBtn.addActionListener(e -> resetBookingWorkspace());
+
+        bottomActions.add(confirmBookingBtn);
+        bottomActions.add(resetBtn);
+        panel.add(bottomActions, BorderLayout.SOUTH);
+
         return panel;
+    }
+
+    private JTextField createStyledInputField(String placeholder) {
+        JTextField tf = new JTextField();
+        tf.setBackground(Color.WHITE);
+        tf.setForeground(Theme.TEXT_DARK);
+        tf.setCaretColor(Theme.TEXT_DARK);
+        tf.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        tf.setBorder(new CompoundBorder(
+                new LineBorder(new Color(203, 213, 225), 1, true),
+                new EmptyBorder(7, 10, 7, 10)
+        ));
+        tf.setPreferredSize(new Dimension(100, 36));
+        tf.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+        return tf;
+    }
+
+    private JPanel createMetaRow(String labelText, JLabel valueLabel) {
+        JPanel row = new JPanel(new BorderLayout(8, 0));
+        row.setOpaque(false);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
+        row.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel lbl = new JLabel(labelText);
+        lbl.setFont(Theme.FONT_SMALL);
+        lbl.setForeground(new Color(100, 116, 139));
+
+        valueLabel.setFont(Theme.FONT_BOLD_SM);
+        valueLabel.setForeground(new Color(30, 41, 59));
+
+        row.add(lbl, BorderLayout.WEST);
+        row.add(valueLabel, BorderLayout.EAST);
+        return row;
     }
 
     private void updatePaymentModeUI() {
@@ -723,12 +903,16 @@ public class OrderBookingPage extends JPanel {
             if (change.compareTo(BigDecimal.ZERO) >= 0) {
                 changeReturnedLbl.setText(String.format("Change: ₹%.2f", change.doubleValue()));
                 changeReturnedLbl.setForeground(new Color(22, 163, 74));
+                changeReturnedLbl.setBackground(new Color(240, 253, 244));
             } else {
                 changeReturnedLbl.setText("Short: ₹" + total.subtract(received).setScale(2, java.math.RoundingMode.HALF_UP));
                 changeReturnedLbl.setForeground(Theme.ACCENT_RED);
+                changeReturnedLbl.setBackground(new Color(254, 242, 242));
             }
         } catch (Exception ignored) {
             changeReturnedLbl.setText("Change: ₹0.00");
+            changeReturnedLbl.setForeground(new Color(37, 99, 235));
+            changeReturnedLbl.setBackground(new Color(239, 246, 255));
         }
     }
 
@@ -1421,21 +1605,35 @@ public class OrderBookingPage extends JPanel {
         summaryMovie.setText(selectedMovie == null ? "-" : capitalizeTitle(selectedMovie.getTitle()));
         summaryDate.setText(selectedShow == null ? "-" : selectedShow.getShowDate());
         summaryTime.setText(selectedShow == null ? "-" : selectedShow.getStartTime());
-        summaryScreen.setText(selectedShow == null ? "-" : selectedShow.getScreenName());
+        summaryScreen.setText(selectedShow == null ? "-" : (selectedShow.getScreenName() + " (" + selectedShow.getScreenType() + ")"));
 
         if (selectedSeats.isEmpty()) {
-            summarySeats.setText("-");
+            summarySeats.setText("No seats selected");
+            summarySeats.setForeground(new Color(148, 163, 184));
+            summarySeatCountLbl.setText("0 seats selected");
         } else {
             List<String> labels = new ArrayList<>();
             for (ShowSeat ss : selectedSeats.values()) {
                 labels.add(ss.getSeatLabel());
             }
             summarySeats.setText(String.join(", ", labels));
+            summarySeats.setForeground(new Color(37, 99, 235));
+            int count = selectedSeats.size();
+            summarySeatCountLbl.setText(count + (count == 1 ? " seat selected" : " seats selected"));
         }
 
         // Itemized breakdown
         summaryItemsPanel.removeAll();
         BigDecimal total = BigDecimal.ZERO;
+
+        if (!selectedSeats.isEmpty()) {
+            JLabel breakdownHeader = new JLabel("SEATS BREAKDOWN");
+            breakdownHeader.setFont(new Font("Segoe UI", Font.BOLD, 10));
+            breakdownHeader.setForeground(new Color(100, 116, 139));
+            breakdownHeader.setBorder(new EmptyBorder(4, 0, 4, 0));
+            breakdownHeader.setAlignmentX(Component.LEFT_ALIGNMENT);
+            summaryItemsPanel.add(breakdownHeader);
+        }
 
         for (ShowSeat ss : selectedSeats.values()) {
             BigDecimal p = ss.getPrice() != null ? ss.getPrice() : BigDecimal.valueOf(150.0);
@@ -1443,9 +1641,11 @@ public class OrderBookingPage extends JPanel {
 
             JPanel itemRow = new JPanel(new BorderLayout());
             itemRow.setOpaque(false);
-            itemRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 18));
+            itemRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 22));
+            itemRow.setBorder(new EmptyBorder(2, 0, 2, 0));
+            itemRow.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-            JLabel nameLbl = new JLabel(ss.getSeatLabel() + " (" + ss.getSeatType() + ")");
+            JLabel nameLbl = new JLabel("💺 " + ss.getSeatLabel() + " (" + ss.getSeatType() + ")");
             nameLbl.setFont(Theme.FONT_SMALL);
             nameLbl.setForeground(Theme.TEXT_DARK);
 
@@ -1460,6 +1660,7 @@ public class OrderBookingPage extends JPanel {
 
         summaryAmount.setText(String.format("₹%.2f", total.doubleValue()));
         confirmBookingBtn.setEnabled(!selectedSeats.isEmpty());
+        confirmBookingBtn.repaint();
 
         updateCashChange();
         summaryItemsPanel.revalidate();
@@ -1565,8 +1766,9 @@ public class OrderBookingPage extends JPanel {
                     "Transaction Error", JOptionPane.ERROR_MESSAGE);
             loadSeatsForSelectedShow();
         } finally {
-            confirmBookingBtn.setEnabled(true);
+            confirmBookingBtn.setEnabled(!selectedSeats.isEmpty());
             confirmBookingBtn.setText("Confirm Booking");
+            confirmBookingBtn.repaint();
         }
     }
 
@@ -1578,6 +1780,8 @@ public class OrderBookingPage extends JPanel {
         customerBadge.setForeground(Theme.TEXT_MUTED);
         cashReceivedField.setText("");
         changeReturnedLbl.setText("Change: ₹0.00");
+        changeReturnedLbl.setForeground(new Color(37, 99, 235));
+        changeReturnedLbl.setBackground(new Color(239, 246, 255));
         refField.setText("");
         cashRadio.setSelected(true);
         updatePaymentModeUI();
