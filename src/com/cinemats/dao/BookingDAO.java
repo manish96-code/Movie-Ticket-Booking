@@ -94,6 +94,12 @@ public class BookingDAO {
                                                        BigDecimal discount,
                                                        Payment paymentInput) throws Exception {
 
+        if (show == null) {
+            throw new IllegalArgumentException("A valid screening show is required for booking.");
+        }
+        if (!show.isBookable()) {
+            throw new IllegalStateException("Ticket booking for this show is closed (screening is in the past or started more than 30 minutes ago).");
+        }
         if (selectedSeats == null || selectedSeats.isEmpty()) {
             throw new IllegalArgumentException("No seats selected for booking.");
         }

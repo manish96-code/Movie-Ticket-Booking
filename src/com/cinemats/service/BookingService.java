@@ -24,6 +24,9 @@ public class BookingService {
         if (show == null) {
             throw new IllegalArgumentException("A valid screening show must be selected.");
         }
+        if (!show.isBookable()) {
+            throw new IllegalStateException("Ticket booking for this show is closed. Past screenings or shows that started more than 30 minutes ago cannot be booked.");
+        }
         if (selectedSeats == null || selectedSeats.isEmpty()) {
             throw new IllegalArgumentException("At least one seat must be selected for booking.");
         }

@@ -346,9 +346,15 @@ public class TodayShowsPage extends JPanel {
         int row = showTable.getSelectedRow();
         if (row >= 0 && row < filteredShowsList.size()) {
             Show s = filteredShowsList.get(row);
-            selectedShowLbl.setText("Selected: " + OrderBookingPage.capitalizeTitle(s.getMovieTitle()) + " (" + s.getScreenName() + " • " + s.getStartTime() + ")");
-            selectedShowLbl.setForeground(Theme.TEXT_DARK);
-            bookShowBtn.setEnabled("OPEN".equalsIgnoreCase(s.getStatus()));
+            if (s.isBookable()) {
+                selectedShowLbl.setText("Selected: " + OrderBookingPage.capitalizeTitle(s.getMovieTitle()) + " (" + s.getScreenName() + " • " + s.getStartTime() + ")");
+                selectedShowLbl.setForeground(Theme.TEXT_DARK);
+                bookShowBtn.setEnabled("OPEN".equalsIgnoreCase(s.getStatus()));
+            } else {
+                selectedShowLbl.setText("Selected: " + OrderBookingPage.capitalizeTitle(s.getMovieTitle()) + " (" + s.getScreenName() + " • " + s.getStartTime() + ") - Booking Closed (>30m past start)");
+                selectedShowLbl.setForeground(new Color(225, 29, 72));
+                bookShowBtn.setEnabled(false);
+            }
         } else {
             selectedShowLbl.setText("Select a show to proceed with counter booking.");
             selectedShowLbl.setForeground(Theme.TEXT_MUTED);

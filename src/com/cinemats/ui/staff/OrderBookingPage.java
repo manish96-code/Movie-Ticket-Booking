@@ -1061,7 +1061,7 @@ public class OrderBookingPage extends JPanel {
 
         selectedSeats.clear();
         movieShows = ShowDAO.getShowsByMovie(movie.getId());
-        movieShows.removeIf(show -> "CANCELLED".equalsIgnoreCase(show.getStatus()));
+        movieShows.removeIf(show -> !show.isBookable());
 
         renderDatesAndShows();
         updateSummary();
@@ -1072,7 +1072,7 @@ public class OrderBookingPage extends JPanel {
         showsContainerPanel.removeAll();
 
         if (movieShows.isEmpty()) {
-            JLabel noShows = new JLabel("No screenings currently scheduled for this movie.");
+            JLabel noShows = new JLabel("No upcoming screenings available for booking.");
             noShows.setFont(Theme.FONT_REGULAR);
             noShows.setForeground(Theme.TEXT_MUTED);
             datesBarPanel.add(noShows);
@@ -1241,9 +1241,18 @@ public class OrderBookingPage extends JPanel {
         timeLbl.setFont(new Font("Segoe UI", Font.BOLD, 12));
         timeLbl.setForeground(isSelected ? new Color(37, 99, 235) : new Color(15, 23, 42));
 
-        JLabel seatsLbl = new JLabel(show.getAvailableSeats() + " seats available");
-        seatsLbl.setFont(Theme.FONT_SMALL);
-        seatsLbl.setForeground(new Color(22, 163, 74));
+        JLabel seatsLbl;
+        if (show.isStarted()) {
+            int minsLeft = show.getMinutesUntilCutoff();
+            seatsLbl = new JLabel("● " + show.getAvailableSeats() + " seats • " + minsLeft + "m left");
+            seatsLbl.setFont(Theme.FONT_SMALL);
+            seatsLbl.setForeground(new Color(217, 119, 6)); // Amber warning
+            seatsLbl.setToolTipText("Show started! Booking window closes in " + minsLeft + " minutes.");
+        } else {
+            seatsLbl = new JLabel(show.getAvailableSeats() + " seats available");
+            seatsLbl.setFont(Theme.FONT_SMALL);
+            seatsLbl.setForeground(new Color(22, 163, 74));
+        }
 
         content.add(screenLbl);
         content.add(timeLbl);
@@ -1682,6 +1691,19 @@ public class OrderBookingPage extends JPanel {
             return;
         }
 
+        if (!selectedShow.isBookable()) {
+            JOptionPane.showMessageDialog(this,
+                    "Ticket booking for this show is closed.\n\n"
+                    + "• Show Date: " + selectedShow.getShowDate() + "\n"
+                    + "• Show Time: " + selectedShow.getStartTime() + "\n\n"
+                    + "Bookings are only permitted for upcoming shows or within 30 minutes after the show starts.",
+                    "Booking Cutoff Reached", JOptionPane.WARNING_MESSAGE);
+            if (selectedMovie != null) {
+                selectMovie(selectedMovie);
+            }
+            return;
+        }
+
         String phone = customerPhoneField.getText().trim();
         String name = customerNameField.getText().trim();
 
@@ -1826,6 +1848,12 @@ public class OrderBookingPage extends JPanel {
 
     public void selectShowFromExternal(Show show) {
         if (show == null) return;
+        if (!show.isBookable()) {
+            JOptionPane.showMessageDialog(this,
+                    "This screening cannot be booked because it is in the past or its 30-minute booking window has expired.",
+                    "Show Unavailable", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
         selectMovieFromExternal(show.getMovieId());
         if (show.getShowDate() != null) {
             selectedDate = show.getShowDate();
