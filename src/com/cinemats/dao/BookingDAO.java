@@ -2,7 +2,6 @@ package com.cinemats.dao;
 
 import com.cinemats.config.DBConnection;
 import com.cinemats.model.*;
-
 import java.math.BigDecimal;
 import java.sql.*;
 import java.text.SimpleDateFormat;
@@ -34,6 +33,8 @@ public class BookingDAO {
                     + "status TEXT DEFAULT 'CONFIRMED', "
                     + "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
                     + ");");
+
+            migrateLegacyBookingColumns(conn);
 
             stmt.execute("CREATE TABLE IF NOT EXISTS booking_items ("
                     + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -78,6 +79,47 @@ public class BookingDAO {
 
         } catch (SQLException e) {
             System.err.println("[BookingDAO] Error initializing booking tables: " + e.getMessage());
+        }
+    }
+
+    private static void migrateLegacyBookingColumns(Connection conn) throws SQLException {
+        try (Statement stmt = conn.createStatement()) {
+            if (!columnExists(conn, "bookings", "booking_number") && columnExists(conn, "bookings", "booking_code")) {
+                stmt.execute("ALTER TABLE bookings ADD COLUMN booking_number TEXT");
+                stmt.execute("UPDATE bookings SET booking_number = COALESCE(NULLIF(TRIM(booking_number), ''), booking_code) WHERE booking_number IS NULL AND booking_code IS NOT NULL");
+            }
+
+            addColumnIfNotExists(conn, "bookings", "booking_number", "TEXT");
+            addColumnIfNotExists(conn, "bookings", "customer_id", "INTEGER");
+            addColumnIfNotExists(conn, "bookings", "show_id", "INTEGER");
+            addColumnIfNotExists(conn, "bookings", "customer_name", "TEXT");
+            addColumnIfNotExists(conn, "bookings", "customer_phone", "TEXT");
+            addColumnIfNotExists(conn, "bookings", "movie_title", "TEXT");
+            addColumnIfNotExists(conn, "bookings", "screen_name", "TEXT");
+            addColumnIfNotExists(conn, "bookings", "show_date", "TEXT");
+            addColumnIfNotExists(conn, "bookings", "start_time", "TEXT");
+            addColumnIfNotExists(conn, "bookings", "cashier_name", "TEXT DEFAULT ''");
+            addColumnIfNotExists(conn, "bookings", "subtotal", "REAL");
+            addColumnIfNotExists(conn, "bookings", "discount", "REAL DEFAULT 0.0");
+            addColumnIfNotExists(conn, "bookings", "total_amount", "REAL");
+            addColumnIfNotExists(conn, "bookings", "status", "TEXT DEFAULT 'CONFIRMED'");
+            addColumnIfNotExists(conn, "bookings", "created_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+        }
+    }
+
+    private static boolean columnExists(Connection conn, String tableName, String columnName) throws SQLException {
+        try (ResultSet rs = conn.getMetaData().getColumns(null, null, tableName, columnName)) {
+            return rs.next();
+        }
+    }
+
+    private static void addColumnIfNotExists(Connection conn, String tableName, String columnName, String columnDefinition) throws SQLException {
+        if (columnExists(conn, tableName, columnName)) {
+            return;
+        }
+
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute("ALTER TABLE " + tableName + " ADD COLUMN " + columnName + " " + columnDefinition);
         }
     }
 
