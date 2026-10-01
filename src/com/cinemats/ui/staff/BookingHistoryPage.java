@@ -1,7 +1,11 @@
 package com.cinemats.ui.staff;
 
+import com.cinemats.dao.BookingDAO;
+import com.cinemats.model.Booking;
 import com.cinemats.util.Theme;
 import java.awt.*;
+import java.util.List;
+import java.util.regex.Pattern;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
@@ -14,6 +18,7 @@ public class BookingHistoryPage extends JPanel {
     private JTable bookingTable;
     private DefaultTableModel tableModel;
     private JTextField searchField;
+    private TableRowSorter<DefaultTableModel> rowSorter;
 
     public BookingHistoryPage() {
         this(null);
@@ -26,10 +31,7 @@ public class BookingHistoryPage extends JPanel {
         setBackground(Theme.BG_MAIN);
         setBorder(new EmptyBorder(24, 28, 24, 28));
 
-        // =========================
-        // HEADER
-        // =========================
-        JPanel headerPanel = new JPanel(new BorderLayout());
+        JPanel headerPanel = new JPanel(new BorderLayout(16, 0));
         headerPanel.setOpaque(false);
 
         JLabel title = new JLabel("Booking History");
@@ -38,52 +40,38 @@ public class BookingHistoryPage extends JPanel {
 
         JLabel subtitle = new JLabel("View and manage all movie ticket bookings");
         subtitle.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        subtitle.setForeground(Color.GRAY);
+        subtitle.setForeground(Theme.TEXT_MUTED);
 
         JPanel titlePanel = new JPanel();
         titlePanel.setLayout(new BoxLayout(titlePanel, BoxLayout.Y_AXIS));
         titlePanel.setOpaque(false);
-
         titlePanel.add(title);
         titlePanel.add(Box.createVerticalStrut(5));
         titlePanel.add(subtitle);
 
         headerPanel.add(titlePanel, BorderLayout.WEST);
 
-        // =========================
-        // SEARCH
-        // =========================
-        searchField = new JTextField();
-        searchField.setPreferredSize(new Dimension(250, 38));
-        searchField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        searchField = Theme.createTextField("Search booking or customer");
+        searchField.setPreferredSize(new Dimension(260, 38));
 
-        searchField.setBorder(
-                BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(new Color(210, 210, 210)),
-                        new EmptyBorder(5, 10, 5, 10)
-                )
-        );
-
-        JButton searchButton = new JButton("Search");
+        JButton searchButton = Theme.createSecondaryButton("Search");
         searchButton.setPreferredSize(new Dimension(90, 38));
 
-        JButton cancelButton = new JButton("Cancel Booking");
-        cancelButton.setPreferredSize(new Dimension(130, 38));
+        JButton refreshButton = Theme.createSecondaryButton("Refresh");
+        refreshButton.setPreferredSize(new Dimension(90, 38));
+
+        JButton cancelButton = Theme.createPrimaryButton("Cancel Booking");
+        cancelButton.setPreferredSize(new Dimension(150, 38));
 
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         searchPanel.setOpaque(false);
-
         searchPanel.add(searchField);
         searchPanel.add(searchButton);
+        searchPanel.add(refreshButton);
         searchPanel.add(cancelButton);
 
         headerPanel.add(searchPanel, BorderLayout.EAST);
-
         add(headerPanel, BorderLayout.NORTH);
-
-        // =========================
-        // TABLE
-        // =========================
 
         String[] columns = {
                 "Booking ID",
@@ -98,7 +86,6 @@ public class BookingHistoryPage extends JPanel {
         };
 
         tableModel = new DefaultTableModel(columns, 0) {
-
             @Override
             public boolean isCellEditable(int row, int column) {
                 return false;
@@ -106,199 +93,114 @@ public class BookingHistoryPage extends JPanel {
         };
 
         bookingTable = new JTable(tableModel);
-
         bookingTable.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         bookingTable.setRowHeight(42);
         bookingTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-
-        bookingTable.getTableHeader().setFont(
-                new Font("Segoe UI", Font.BOLD, 13)
-        );
-
-        bookingTable.getTableHeader().setPreferredSize(
-                new Dimension(0, 40)
-        );
-
         bookingTable.setShowGrid(false);
         bookingTable.setIntercellSpacing(new Dimension(0, 0));
+        bookingTable.setFillsViewportHeight(true);
+        bookingTable.setSelectionBackground(new Color(219, 234, 254));
+        bookingTable.setSelectionForeground(Theme.TEXT_DARK);
+
+        bookingTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 13));
+        bookingTable.getTableHeader().setPreferredSize(new Dimension(0, 40));
+        bookingTable.getTableHeader().setBackground(new Color(248, 250, 252));
+        bookingTable.getTableHeader().setForeground(Theme.TEXT_MUTED);
+
+        rowSorter = new TableRowSorter<>(tableModel);
+        bookingTable.setRowSorter(rowSorter);
 
         JScrollPane scrollPane = new JScrollPane(bookingTable);
-
-        scrollPane.setBorder(
-                BorderFactory.createLineBorder(
-                        new Color(220, 220, 220)
-                )
-        );
-
+        scrollPane.setBorder(BorderFactory.createLineBorder(Theme.BORDER_COLOR, 1, true));
+        scrollPane.getViewport().setBackground(Theme.BG_MAIN);
         add(scrollPane, BorderLayout.CENTER);
 
-        // =========================
-        // SAMPLE DATA
-        // =========================
-
-        addBooking(
-                "BK001",
-                "Rahul Kumar",
-                "Avengers: Endgame",
-                "28-09-2026",
-                "06:30 PM",
-                "A1, A2",
-                2,
-                "₹400",
-                "Confirmed"
-        );
-
-        addBooking(
-                "BK002",
-                "Priya Singh",
-                "Jawan",
-                "28-09-2026",
-                "09:00 PM",
-                "B5, B6, B7",
-                3,
-                "₹600",
-                "Confirmed"
-        );
-
-        addBooking(
-                "BK003",
-                "Amit Das",
-                "Pushpa 2",
-                "29-09-2026",
-                "03:00 PM",
-                "C2",
-                1,
-                "₹200",
-                "Cancelled"
-        );
-
-        addBooking(
-                "BK004",
-                "Sneha Roy",
-                "KGF Chapter 2",
-                "29-09-2026",
-                "07:30 PM",
-                "D1, D2",
-                2,
-                "₹400",
-                "Confirmed"
-        );
-
-        // =========================
-        // SEARCH FUNCTION
-        // =========================
-
         searchButton.addActionListener(e -> searchBookings());
-
         searchField.addActionListener(e -> searchBookings());
-
+        refreshButton.addActionListener(e -> loadBookings());
         cancelButton.addActionListener(e -> cancelSelectedBooking());
+
+        loadBookings();
     }
 
-    // Add booking to table
-    private void addBooking(
-            String bookingId,
-            String customer,
-            String movie,
-            String date,
-            String time,
-            String seats,
-            int tickets,
-            String amount,
-            String status
-    ) {
+    private void loadBookings() {
+        tableModel.setRowCount(0);
+        List<Booking> bookings = BookingDAO.getRecentBookings(500);
 
-        tableModel.addRow(new Object[]{
-                bookingId,
-                customer,
-                movie,
-                date,
-                time,
-                seats,
-                tickets,
-                amount,
-                status
-        });
-    }
-
-    // Search booking
-    private void searchBookings() {
-
-        String searchText = searchField.getText()
-                .trim()
-                .toLowerCase();
-
-        if (searchText.isEmpty()) {
-            showAllBookings();
+        if (bookings == null || bookings.isEmpty()) {
             return;
         }
 
-        TableRowSorter<DefaultTableModel> sorter =
-                new TableRowSorter<>(tableModel);
+        for (Booking booking : bookings) {
+            String seatLabels = "-";
+            if (booking.getItems() != null && !booking.getItems().isEmpty()) {
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < booking.getItems().size(); i++) {
+                    if (i > 0) sb.append(", ");
+                    sb.append(booking.getItems().get(i).getSeatLabel());
+                }
+                seatLabels = sb.toString();
+            }
 
-        bookingTable.setRowSorter(sorter);
-
-        sorter.setRowFilter(
-                RowFilter.regexFilter(
-                        "(?i)" + searchText
-                )
-        );
+            tableModel.addRow(new Object[]{
+                    booking.getBookingNumber(),
+                    booking.getCustomerName(),
+                    booking.getMovieTitle(),
+                    booking.getShowDate(),
+                    booking.getStartTime(),
+                    seatLabels,
+                    booking.getItems() == null ? 0 : booking.getItems().size(),
+                    "₹" + booking.getTotalAmount(),
+                    booking.getStatus()
+            });
+        }
     }
 
-        private void cancelSelectedBooking() {
-                int selectedRow = bookingTable.getSelectedRow();
-                if (selectedRow < 0) {
-                        JOptionPane.showMessageDialog(
-                                        this,
-                                        "Select a booking to cancel.",
-                                        "No Booking Selected",
-                                        JOptionPane.INFORMATION_MESSAGE
-                        );
-                        return;
-                }
-
-                int modelRow = bookingTable.convertRowIndexToModel(selectedRow);
-                if ("Cancelled".equals(tableModel.getValueAt(modelRow, 8))) {
-                        JOptionPane.showMessageDialog(
-                                        this,
-                                        "This booking is already cancelled.",
-                                        "Booking Already Cancelled",
-                                        JOptionPane.INFORMATION_MESSAGE
-                        );
-                        return;
-                }
-
-                int confirmation = JOptionPane.showConfirmDialog(
-                                this,
-                                "Are you sure you want to cancel booking "
-                                                + tableModel.getValueAt(modelRow, 0) + "?",
-                                "Confirm Cancellation",
-                                JOptionPane.YES_NO_OPTION,
-                                JOptionPane.WARNING_MESSAGE
-                );
-
-                if (confirmation == JOptionPane.YES_OPTION) {
-                        tableModel.setValueAt("Cancelled", modelRow, 8);
-                }
+    private void searchBookings() {
+        String text = searchField.getText().trim();
+        if (text.isEmpty()) {
+            rowSorter.setRowFilter(null);
+            return;
         }
 
-
-    JButton getSearchButton() {
-        return (JButton) ((JPanel) ((BorderLayout) ((JPanel) getComponent(0)).getLayout()).getLayoutComponent(BorderLayout.EAST)).getComponent(1);
+        rowSorter.setRowFilter(RowFilter.regexFilter("(?i)" + Pattern.quote(text)));
     }
 
-    // Show all bookings
-    private void showAllBookings() {
+    private void cancelSelectedBooking() {
+        int selectedRow = bookingTable.getSelectedRow();
+        if (selectedRow < 0) {
+            JOptionPane.showMessageDialog(this, "Select a booking to cancel.", "No Booking Selected", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
 
-        bookingTable.setRowSorter(
-                new TableRowSorter<>(tableModel)
+        int modelRow = bookingTable.convertRowIndexToModel(selectedRow);
+        String bookingNumber = String.valueOf(tableModel.getValueAt(modelRow, 0));
+        String status = String.valueOf(tableModel.getValueAt(modelRow, 8));
+
+        if ("CANCELLED".equalsIgnoreCase(status) || "Cancelled".equalsIgnoreCase(status)) {
+            JOptionPane.showMessageDialog(this, "This booking is already cancelled.", "Already Cancelled", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        int confirmation = JOptionPane.showConfirmDialog(
+                this,
+                "Are you sure you want to cancel booking " + bookingNumber + "?",
+                "Confirm Cancellation",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE
         );
 
-        ((TableRowSorter<?>) bookingTable.getRowSorter())
-                .setRowFilter(null);
+        if (confirmation == JOptionPane.YES_OPTION) {
+            boolean success = BookingDAO.cancelBooking(bookingNumber);
+            if (success) {
+                JOptionPane.showMessageDialog(this, "Booking cancelled successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                loadBookings();
+            } else {
+                JOptionPane.showMessageDialog(this, "Unable to cancel booking.", "Cancellation Failed", JOptionPane.ERROR_MESSAGE);
+            }
+        }
     }
 
-    // Returns parent dashboard
     public StaffDashboard getDashboard() {
         return dashboard;
     }
