@@ -143,12 +143,15 @@ public class ScreenDetailsDialog extends JDialog {
             JTable table = new JTable(model);
             table.setFont(Theme.FONT_REGULAR);
             table.setRowHeight(28);
-            table.getTableHeader().setFont(Theme.FONT_BOLD_SM);
-            showsCard.add(new JScrollPane(table), BorderLayout.CENTER);
+            JScrollPane tableScroll = new JScrollPane(table);
+            com.cinemats.util.Theme.applyModernScrollBars(tableScroll);
+            showsCard.add(tableScroll, BorderLayout.CENTER);
         }
         content.add(showsCard);
 
-        add(new JScrollPane(content), BorderLayout.CENTER);
+        JScrollPane contentScroll = new JScrollPane(content);
+        com.cinemats.util.Theme.applyModernScrollBars(contentScroll);
+        add(contentScroll, BorderLayout.CENTER);
 
         // Footer Actions
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 12));

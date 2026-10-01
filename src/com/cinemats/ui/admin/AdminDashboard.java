@@ -289,7 +289,7 @@ public class AdminDashboard extends JFrame {
         navScrollPane.setOpaque(false);
         navScrollPane.getViewport().setOpaque(false);
         navScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        navScrollPane.getVerticalScrollBar().setUnitIncrement(14);
+        com.cinemats.util.ModernScrollBarUI.apply(navScrollPane, 6);
         sidebar.add(navScrollPane, BorderLayout.CENTER);
 
         // 3. Bottom Section: Logout Button

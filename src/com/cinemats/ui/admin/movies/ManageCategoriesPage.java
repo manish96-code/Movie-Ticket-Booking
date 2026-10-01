@@ -241,7 +241,9 @@ public class ManageCategoriesPage extends JPanel {
         categoryTable.getColumnModel().getColumn(3).setPreferredWidth(95);
         categoryTable.getColumnModel().getColumn(4).setPreferredWidth(130);
 
-        card.add(new JScrollPane(categoryTable), BorderLayout.CENTER);
+        JScrollPane catScroll = new JScrollPane(categoryTable);
+        com.cinemats.util.Theme.applyModernScrollBars(catScroll);
+        card.add(catScroll, BorderLayout.CENTER);
         return card;
     }
 

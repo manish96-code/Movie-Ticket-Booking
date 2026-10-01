@@ -162,8 +162,9 @@ public class ReportsPage extends JPanel {
 
         JTable movieTable = new JTable(movieTableModel);
         styleTable(movieTable);
-        movieTable.setRowHeight(34);
-        moviePanel.add(new JScrollPane(movieTable), BorderLayout.CENTER);
+        JScrollPane movieScroll = new JScrollPane(movieTable);
+        Theme.applyModernScrollBars(movieScroll);
+        moviePanel.add(movieScroll, BorderLayout.CENTER);
         tablesPanel.add(moviePanel);
 
         JPanel paymentPanel = createSectionPanel("Payment Methods");
@@ -177,7 +178,9 @@ public class ReportsPage extends JPanel {
         JTable paymentTable = new JTable(paymentTableModel);
         styleTable(paymentTable);
         paymentTable.setRowHeight(34);
-        paymentPanel.add(new JScrollPane(paymentTable), BorderLayout.CENTER);
+        JScrollPane payScroll = new JScrollPane(paymentTable);
+        Theme.applyModernScrollBars(payScroll);
+        paymentPanel.add(payScroll, BorderLayout.CENTER);
         tablesPanel.add(paymentPanel);
 
         content.add(tablesPanel);
@@ -185,8 +188,7 @@ public class ReportsPage extends JPanel {
         JScrollPane scrollPane = new JScrollPane(content);
         scrollPane.setBorder(null);
         scrollPane.getViewport().setBackground(Theme.BG_MAIN);
-        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
-        scrollPane.getVerticalScrollBar().setBackground(Theme.BG_MAIN);
+        Theme.applyModernScrollBars(scrollPane);
 
         mainPanel.add(scrollPane, BorderLayout.CENTER);
         add(mainPanel);

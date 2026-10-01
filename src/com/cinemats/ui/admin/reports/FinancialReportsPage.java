@@ -58,7 +58,9 @@ public class FinancialReportsPage extends JPanel {
 
         JTable table = new JTable(model);
         styleTable(table);
-        card.add(new JScrollPane(table), BorderLayout.CENTER);
+        JScrollPane tableScroll = new JScrollPane(table);
+        com.cinemats.util.Theme.applyModernScrollBars(tableScroll);
+        card.add(tableScroll, BorderLayout.CENTER);
 
         // Export Button
         JPanel bottomBar = new JPanel(new FlowLayout(FlowLayout.RIGHT));

@@ -76,8 +76,9 @@ public class OverviewPage extends JPanel {
         }
 
         JTable table = new JTable(model);
-        styleTable(table);
-        tableCard.add(new JScrollPane(table), BorderLayout.CENTER);
+        JScrollPane tableScroll = new JScrollPane(table);
+        Theme.applyModernScrollBars(tableScroll);
+        tableCard.add(tableScroll, BorderLayout.CENTER);
 
         gbc.gridx = 0; gbc.weightx = 0.68;
         splitGrid.add(tableCard, gbc);

@@ -229,9 +229,9 @@ public class OrderBookingPage extends JPanel {
 
         JScrollPane cardsScroll = new JScrollPane(movieListPanel);
         cardsScroll.setBorder(new LineBorder(Theme.BORDER_COLOR, 1));
-        cardsScroll.getVerticalScrollBar().setUnitIncrement(16);
         cardsScroll.getViewport().setBackground(Color.WHITE);
         cardsScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        com.cinemats.util.ModernScrollBarUI.apply(cardsScroll, 6);
 
         panel.add(cardsScroll, BorderLayout.CENTER);
         return panel;
@@ -527,11 +527,10 @@ public class OrderBookingPage extends JPanel {
 
         seatsScrollPane = new JScrollPane(seatPanel);
         seatsScrollPane.setBorder(null);
-        seatsScrollPane.getVerticalScrollBar().setUnitIncrement(20);
-        seatsScrollPane.getHorizontalScrollBar().setUnitIncrement(28);
         seatsScrollPane.getViewport().setBackground(Color.WHITE);
         seatsScrollPane.getViewport().addMouseListener(seatPanner);
         seatsScrollPane.getViewport().addMouseMotionListener(seatPanner);
+        com.cinemats.util.ModernScrollBarUI.apply(seatsScrollPane, 8);
 
         // Smart Mouse Wheel: Shift+Wheel or wheel rotation when horizontally scrollable
         seatsScrollPane.addMouseWheelListener(e -> {
@@ -947,8 +946,8 @@ public class OrderBookingPage extends JPanel {
         scroll.setBorder(null);
         scroll.setOpaque(false);
         scroll.getViewport().setOpaque(false);
-        scroll.getVerticalScrollBar().setUnitIncrement(16);
         scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        com.cinemats.util.ModernScrollBarUI.apply(scroll, 6);
         panel.add(scroll, BorderLayout.CENTER);
 
         // 5. Pinned Action Buttons at Bottom
@@ -1374,6 +1373,7 @@ public class OrderBookingPage extends JPanel {
 
         JScrollPane scroll = new JScrollPane(todayBookingsTable);
         scroll.setBorder(new LineBorder(Theme.BORDER_COLOR, 1));
+        com.cinemats.util.ModernScrollBarUI.apply(scroll, 8);
         card.add(scroll, BorderLayout.CENTER);
 
         return card;

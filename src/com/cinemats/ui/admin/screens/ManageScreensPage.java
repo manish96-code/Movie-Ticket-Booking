@@ -175,7 +175,9 @@ public class ManageScreensPage extends JPanel {
             }
         });
 
-        tableCard.add(new JScrollPane(screenTable), BorderLayout.CENTER);
+        JScrollPane screenScroll = new JScrollPane(screenTable);
+        com.cinemats.util.Theme.applyModernScrollBars(screenScroll);
+        tableCard.add(screenScroll, BorderLayout.CENTER);
 
         // Table Bottom Action Bar
         JPanel tableBottomBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 4));

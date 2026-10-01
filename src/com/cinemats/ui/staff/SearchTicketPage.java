@@ -247,6 +247,7 @@ public class SearchTicketPage extends JPanel {
         JScrollPane scroll = new JScrollPane(resultsTable);
         scroll.setBorder(new LineBorder(Theme.BORDER_COLOR, 1));
         scroll.getViewport().setBackground(Color.WHITE);
+        Theme.applyModernScrollBars(scroll);
         card.add(scroll, BorderLayout.CENTER);
 
         return card;

@@ -278,6 +278,7 @@ public class MoviesListPage extends JPanel {
 
         JScrollPane scrollPane = new JScrollPane(movieTable);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        Theme.applyModernScrollBars(scrollPane);
         card.add(scrollPane, BorderLayout.CENTER);
 
         // 3. Bottom Action Bar

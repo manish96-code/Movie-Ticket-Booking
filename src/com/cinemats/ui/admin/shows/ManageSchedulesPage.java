@@ -68,7 +68,9 @@ public class ManageSchedulesPage extends JPanel {
         actionRow.setOpaque(false);
         actionRow.add(refreshButton);
         tablePanel.add(actionRow, BorderLayout.NORTH);
-        tablePanel.add(new JScrollPane(table), BorderLayout.CENTER);
+        JScrollPane tableScroll = new JScrollPane(table);
+        com.cinemats.util.Theme.applyModernScrollBars(tableScroll);
+        tablePanel.add(tableScroll, BorderLayout.CENTER);
         card.add(tablePanel, BorderLayout.CENTER);
         refreshSchedules();
 

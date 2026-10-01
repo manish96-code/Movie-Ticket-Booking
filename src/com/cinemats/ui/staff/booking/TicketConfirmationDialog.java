@@ -55,7 +55,7 @@ public class TicketConfirmationDialog extends JDialog {
         ticketCardPanel = buildTicketReceipt();
         JScrollPane scrollPane = new JScrollPane(ticketCardPanel);
         scrollPane.setBorder(null);
-        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        Theme.applyModernScrollBars(scrollPane);
         add(scrollPane, BorderLayout.CENTER);
 
         // Footer Actions

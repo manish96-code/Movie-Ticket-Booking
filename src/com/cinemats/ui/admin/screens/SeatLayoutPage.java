@@ -195,7 +195,7 @@ public class SeatLayoutPage extends JPanel {
         JScrollPane scrollPane = new JScrollPane(gridContainer);
         scrollPane.setBorder(null);
         scrollPane.getViewport().setBackground(Theme.CARD_BG);
-        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        com.cinemats.util.Theme.applyModernScrollBars(scrollPane);
         canvasCard.add(scrollPane, BorderLayout.CENTER);
 
         centerSplit.add(canvasCard, BorderLayout.CENTER);

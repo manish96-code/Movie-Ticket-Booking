@@ -173,7 +173,9 @@ public class ManageMoviesPage extends JPanel {
 
         movieTable = new JTable(movieTableModel);
         styleTable(movieTable);
-        card.add(new JScrollPane(movieTable), BorderLayout.CENTER);
+        JScrollPane movieScroll = new JScrollPane(movieTable);
+        com.cinemats.util.Theme.applyModernScrollBars(movieScroll);
+        card.add(movieScroll, BorderLayout.CENTER);
 
         add(card, BorderLayout.CENTER);
     }

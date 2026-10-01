@@ -241,6 +241,7 @@ public class TodayShowsPage extends JPanel {
         JScrollPane scrollPane = new JScrollPane(showTable);
         scrollPane.setBorder(new LineBorder(Theme.BORDER_COLOR, 1));
         scrollPane.getViewport().setBackground(Color.WHITE);
+        Theme.applyModernScrollBars(scrollPane);
         card.add(scrollPane, BorderLayout.CENTER);
 
         // Bottom Action Bar

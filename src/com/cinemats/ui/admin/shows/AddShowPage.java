@@ -290,9 +290,7 @@ public class AddShowPage extends JPanel {
         scrollPane.getViewport().setOpaque(false);
         scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
-        scrollPane.getVerticalScrollBar().setUnitIncrement(14);
-        scrollPane.getVerticalScrollBar().setUI(new ModernScrollBarUI());
-        scrollPane.getVerticalScrollBar().setPreferredSize(new Dimension(6, 0));
+        com.cinemats.util.ModernScrollBarUI.apply(scrollPane, 6);
         formCard.add(scrollPane, BorderLayout.CENTER);
 
         // Action Buttons Row
@@ -902,50 +900,6 @@ public class AddShowPage extends JPanel {
         }
         field.revalidate();
         field.repaint();
-    }
-
-    // Modern slim rounded scrollbar UI with zero chunky arrow buttons
-    private static class ModernScrollBarUI extends javax.swing.plaf.basic.BasicScrollBarUI {
-
-        @Override
-        protected void configureScrollBarColors() {
-            this.thumbColor = new Color(203, 213, 225);
-        }
-
-        @Override
-        protected JButton createDecreaseButton(int orientation) {
-            return createZeroButton();
-        }
-
-        @Override
-        protected JButton createIncreaseButton(int orientation) {
-            return createZeroButton();
-        }
-
-        private JButton createZeroButton() {
-            JButton btn = new JButton();
-            btn.setPreferredSize(new Dimension(0, 0));
-            btn.setMinimumSize(new Dimension(0, 0));
-            btn.setMaximumSize(new Dimension(0, 0));
-            return btn;
-        }
-
-        @Override
-        protected void paintTrack(Graphics g, JComponent c, Rectangle trackBounds) {
-            // Transparent track
-        }
-
-        @Override
-        protected void paintThumb(Graphics g, JComponent c, Rectangle thumbBounds) {
-            if (thumbBounds.isEmpty() || !scrollbar.isEnabled()) {
-                return;
-            }
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setColor(isThumbRollover() ? new Color(148, 163, 184) : new Color(203, 213, 225));
-            g2.fillRoundRect(thumbBounds.x + 1, thumbBounds.y + 1, thumbBounds.width - 2, thumbBounds.height - 2, 6, 6);
-            g2.dispose();
-        }
     }
 
     private static class SimpleDocListener implements DocumentListener {

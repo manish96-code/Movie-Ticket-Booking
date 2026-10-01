@@ -109,4 +109,25 @@ public class Theme {
         ));
         return btn;
     }
+
+    /**
+     * Applies modern slim rounded-pill scrollbar UI to a JScrollPane with default 8px thickness.
+     */
+    public static void applyModernScrollBars(JScrollPane scrollPane) {
+        ModernScrollBarUI.apply(scrollPane, 8);
+    }
+
+    /**
+     * Applies modern slim rounded-pill scrollbar UI to a JScrollPane with custom thickness.
+     */
+    public static void applyModernScrollBars(JScrollPane scrollPane, int thickness) {
+        ModernScrollBarUI.apply(scrollPane, thickness);
+    }
+
+    /**
+     * Initializes global theme defaults including default scrollbar UI.
+     */
+    public static void initGlobalTheme() {
+        UIManager.put("ScrollBarUI", "com.cinemats.util.ModernScrollBarUI");
+    }
 }
