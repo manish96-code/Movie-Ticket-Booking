@@ -48,7 +48,10 @@ if [ -z "$JAVAC_CMD" ] && [ "$IS_WINDOWS" = true ]; then
     "/c/Program Files/Amazon Corretto"/jdk* \
     "/c/Program Files/BellSoft"/jdk* \
     "/c/Program Files/Zulu"/zulu* \
-    "/c/Program Files (x86)/Java"/jdk*; do
+    "/c/Program Files (x86)/Java"/jdk* \
+    "$HOME/.jdks"/* \
+    "/c/Users/"*/.jdks/* \
+    "/c/Users/"*/AppData/Local/Programs/Eclipse\ Adoptium/jdk*; do
     if [ -d "$dir" ] && ([ -x "$dir/bin/javac.exe" ] || [ -f "$dir/bin/javac.exe" ]); then
       JAVAC_CMD="$dir/bin/javac.exe"
       JAVA_CMD="$dir/bin/java.exe"
@@ -70,7 +73,7 @@ if [ -z "$JAVAC_CMD" ] && [ "$IS_WINDOWS" = false ]; then
     fi
   fi
   if [ -z "$JAVAC_CMD" ]; then
-    for dir in /usr/lib/jvm/java-* /usr/lib/jvm/jdk* /Library/Java/JavaVirtualMachines/*/Contents/Home; do
+    for dir in /usr/lib/jvm/java-* /usr/lib/jvm/jdk* /Library/Java/JavaVirtualMachines/*/Contents/Home "$HOME/.jdks"/*; do
       if [ -x "$dir/bin/javac" ]; then
         JAVAC_CMD="$dir/bin/javac"
         JAVA_CMD="$dir/bin/java"
@@ -108,7 +111,7 @@ rm -rf bin
 mkdir -p bin
 
 echo "[1/2] Compiling sources..."
-find src -name "*.java" > sources.txt
+find src -name "*.java" | sed 's/^/"/;s/$/"/' > sources.txt
 "$JAVAC_CMD" -d bin -cp "lib/*${CP_SEP}src" @sources.txt
 rm -f sources.txt
 

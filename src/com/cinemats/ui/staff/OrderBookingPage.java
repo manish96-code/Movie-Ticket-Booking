@@ -22,6 +22,8 @@ import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
@@ -53,6 +55,42 @@ public class OrderBookingPage extends JPanel {
     private final JPanel seatHeaderPanel = new JPanel(new BorderLayout());
     private final JLabel seatHeaderTitle = new JLabel("Seating Arrangement");
     private final JPanel seatPanel = new JPanel();
+    private JScrollPane seatsScrollPane;
+    private final MouseAdapter seatPanner = new MouseAdapter() {
+        private Point mousePressPoint;
+
+        @Override
+        public void mousePressed(MouseEvent e) {
+            mousePressPoint = e.getLocationOnScreen();
+        }
+
+        @Override
+        public void mouseDragged(MouseEvent e) {
+            if (mousePressPoint == null || seatsScrollPane == null) return;
+            Point current = e.getLocationOnScreen();
+            int dx = mousePressPoint.x - current.x;
+            int dy = mousePressPoint.y - current.y;
+
+            JViewport vp = seatsScrollPane.getViewport();
+            Point viewPos = vp.getViewPosition();
+            Dimension viewSize = vp.getView().getSize();
+            Dimension extentSize = vp.getExtentSize();
+
+            int maxX = Math.max(0, viewSize.width - extentSize.width);
+            int maxY = Math.max(0, viewSize.height - extentSize.height);
+
+            int targetX = Math.max(0, Math.min(maxX, viewPos.x + dx));
+            int targetY = Math.max(0, Math.min(maxY, viewPos.y + dy));
+
+            vp.setViewPosition(new Point(targetX, targetY));
+            mousePressPoint = current;
+        }
+
+        @Override
+        public void mouseReleased(MouseEvent e) {
+            mousePressPoint = null;
+        }
+    };
     private List<Show> movieShows = new ArrayList<>();
     private String selectedDate = null;
     private Show selectedShow = null;
@@ -121,28 +159,28 @@ public class OrderBookingPage extends JPanel {
         column.fill = GridBagConstraints.BOTH;
         column.weighty = 1;
 
-        // Column 1 (22%): Search bar + Movie list
+        // Column 1 (18%): Search bar + Movie list
         column.gridx = 0;
-        column.weightx = 0.22;
+        column.weightx = 0.18;
         column.insets = new Insets(0, 0, 0, 8);
         JPanel col1 = buildMoviePanel();
-        col1.setMinimumSize(new Dimension(210, 0));
+        col1.setMinimumSize(new Dimension(190, 0));
         workspace.add(col1, column);
 
-        // Column 2 (48%): Date pills + Screen/Show cards + Exact Seating Matrix
+        // Column 2 (58%): Date pills + Screen/Show cards + Exact Seating Matrix
         column.gridx = 1;
-        column.weightx = 0.48;
+        column.weightx = 0.58;
         column.insets = new Insets(0, 0, 0, 8);
         JPanel col2 = buildShowAndSeatsPanel();
-        col2.setMinimumSize(new Dimension(420, 0));
+        col2.setMinimumSize(new Dimension(540, 0));
         workspace.add(col2, column);
 
-        // Column 3 (30%): Booking Summary, Price, Customer & Payment
+        // Column 3 (24%): Booking Summary, Price, Customer & Payment
         column.gridx = 2;
-        column.weightx = 0.30;
+        column.weightx = 0.24;
         column.insets = new Insets(0, 0, 0, 0);
         JPanel col3 = buildSummaryAndPaymentPanel();
-        col3.setMinimumSize(new Dimension(320, 0));
+        col3.setMinimumSize(new Dimension(270, 0));
         workspace.add(col3, column);
 
         JPanel mainCenter = new JPanel(new BorderLayout(0, 8));
@@ -484,12 +522,46 @@ public class OrderBookingPage extends JPanel {
         seatPanel.setLayout(new BoxLayout(seatPanel, BoxLayout.Y_AXIS));
         seatPanel.setBackground(Color.WHITE);
         seatPanel.setBorder(new EmptyBorder(6, 8, 10, 8));
+        seatPanel.addMouseListener(seatPanner);
+        seatPanel.addMouseMotionListener(seatPanner);
 
-        JScrollPane seatsScroll = new JScrollPane(seatPanel);
-        seatsScroll.setBorder(null);
-        seatsScroll.getVerticalScrollBar().setUnitIncrement(16);
-        seatsScroll.getViewport().setBackground(Color.WHITE);
-        seatWrapper.add(seatsScroll, BorderLayout.CENTER);
+        seatsScrollPane = new JScrollPane(seatPanel);
+        seatsScrollPane.setBorder(null);
+        seatsScrollPane.getVerticalScrollBar().setUnitIncrement(20);
+        seatsScrollPane.getHorizontalScrollBar().setUnitIncrement(28);
+        seatsScrollPane.getViewport().setBackground(Color.WHITE);
+        seatsScrollPane.getViewport().addMouseListener(seatPanner);
+        seatsScrollPane.getViewport().addMouseMotionListener(seatPanner);
+
+        // Smart Mouse Wheel: Shift+Wheel or wheel rotation when horizontally scrollable
+        seatsScrollPane.addMouseWheelListener(e -> {
+            JScrollBar hBar = seatsScrollPane.getHorizontalScrollBar();
+            JScrollBar vBar = seatsScrollPane.getVerticalScrollBar();
+            boolean hScrollable = hBar != null && hBar.isVisible() && hBar.getMaximum() > hBar.getVisibleAmount();
+            boolean vScrollable = vBar != null && vBar.isVisible() && vBar.getMaximum() > vBar.getVisibleAmount();
+
+            if (e.isShiftDown() || (hScrollable && !vScrollable)) {
+                if (hBar != null) {
+                    int step = e.getWheelRotation() * 32;
+                    hBar.setValue(Math.max(0, Math.min(hBar.getMaximum() - hBar.getVisibleAmount(), hBar.getValue() + step)));
+                }
+            } else if (hScrollable && vScrollable) {
+                int rot = e.getWheelRotation();
+                if ((rot > 0 && vBar.getValue() >= vBar.getMaximum() - vBar.getVisibleAmount()) ||
+                    (rot < 0 && vBar.getValue() <= 0)) {
+                    int step = rot * 32;
+                    hBar.setValue(Math.max(0, Math.min(hBar.getMaximum() - hBar.getVisibleAmount(), hBar.getValue() + step)));
+                } else {
+                    int step = rot * vBar.getUnitIncrement() * 2;
+                    vBar.setValue(vBar.getValue() + step);
+                }
+            } else if (vBar != null) {
+                int step = e.getWheelRotation() * vBar.getUnitIncrement() * 2;
+                vBar.setValue(vBar.getValue() + step);
+            }
+        });
+
+        seatWrapper.add(seatsScrollPane, BorderLayout.CENTER);
 
         panel.add(seatWrapper, BorderLayout.CENTER);
         return panel;
@@ -670,6 +742,15 @@ public class OrderBookingPage extends JPanel {
             public void insertUpdate(DocumentEvent e) { checkNameInput(); }
             public void removeUpdate(DocumentEvent e) { checkNameInput(); }
             public void changedUpdate(DocumentEvent e) { checkNameInput(); }
+        });
+        customerNameField.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusLost(FocusEvent e) {
+                String val = customerNameField.getText().trim();
+                if (!val.isEmpty()) {
+                    customerNameField.setText(capitalizeTitle(val));
+                }
+            }
         });
         content.add(customerNameField);
         content.add(Box.createVerticalStrut(10));
@@ -1032,10 +1113,10 @@ public class OrderBookingPage extends JPanel {
         String upiPayload;
         try {
             upiPayload = "upi://pay?pa=" + UPI_VPA
-                    + "&pn=" + java.net.URLEncoder.encode(UPI_PAYEE_NAME, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20")
+                    + "&pn=" + java.net.URLEncoder.encode(UPI_PAYEE_NAME, "UTF-8").replace("+", "%20")
                     + "&am=" + amountStr
                     + "&cu=INR"
-                    + "&tn=" + java.net.URLEncoder.encode(note, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20")
+                    + "&tn=" + java.net.URLEncoder.encode(note, "UTF-8").replace("+", "%20")
                     + "&tr=" + currentUpiTrxId;
         } catch (Exception ex) {
             upiPayload = "upi://pay?pa=" + UPI_VPA + "&pn=Cinema%20Express&am=" + amountStr + "&cu=INR&tn=Tickets&tr=" + currentUpiTrxId;
@@ -1110,10 +1191,10 @@ public class OrderBookingPage extends JPanel {
         String upiPayload;
         try {
             upiPayload = "upi://pay?pa=" + UPI_VPA
-                    + "&pn=" + java.net.URLEncoder.encode(UPI_PAYEE_NAME, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20")
+                    + "&pn=" + java.net.URLEncoder.encode(UPI_PAYEE_NAME, "UTF-8").replace("+", "%20")
                     + "&am=" + amountStr
                     + "&cu=INR"
-                    + "&tn=" + java.net.URLEncoder.encode(note, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20")
+                    + "&tn=" + java.net.URLEncoder.encode(note, "UTF-8").replace("+", "%20")
                     + "&tr=" + currentUpiTrxId;
         } catch (Exception ex) {
             upiPayload = "upi://pay?pa=" + UPI_VPA + "&pn=Cinema%20Express&am=" + amountStr + "&cu=INR&tn=Tickets&tr=" + currentUpiTrxId;
@@ -1217,8 +1298,9 @@ public class OrderBookingPage extends JPanel {
             Customer existing = CustomerService.findCustomerByPhone(normalized);
             if (existing != null) {
                 activeCustomer = existing;
-                customerNameField.setText(existing.getName());
-                customerBadge.setText("✓ Existing Patron: " + existing.getName());
+                String capName = capitalizeTitle(existing.getName());
+                customerNameField.setText(capName);
+                customerBadge.setText("✓ Existing Patron: " + capName);
                 customerBadge.setForeground(new Color(22, 163, 74));
             } else {
                 activeCustomer = null;
@@ -1602,6 +1684,26 @@ public class OrderBookingPage extends JPanel {
             seatsByRow.computeIfAbsent(row, k -> new ArrayList<>()).add(ss);
         }
 
+        // Auto-select the first available seat serial-wise (e.g. A1, A2... B1...)
+        ShowSeat autoSelectSeat = null;
+        for (Map.Entry<String, List<ShowSeat>> entry : seatsByRow.entrySet()) {
+            List<ShowSeat> seatsInRow = entry.getValue();
+            seatsInRow.sort(Comparator.comparingInt(s -> parseSeatNum(s.getSeatLabel())));
+            for (ShowSeat ss : seatsInRow) {
+                if ("AVAILABLE".equalsIgnoreCase(ss.getStatus())) {
+                    autoSelectSeat = ss;
+                    break;
+                }
+            }
+            if (autoSelectSeat != null) {
+                break;
+            }
+        }
+
+        if (autoSelectSeat != null) {
+            selectedSeats.put(autoSelectSeat.getId(), autoSelectSeat);
+        }
+
         String currentTier = null;
 
         for (Map.Entry<String, List<ShowSeat>> entry : seatsByRow.entrySet()) {
@@ -1623,6 +1725,8 @@ public class OrderBookingPage extends JPanel {
 
             JPanel seatRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 2));
             seatRow.setOpaque(false);
+            seatRow.addMouseListener(seatPanner);
+            seatRow.addMouseMotionListener(seatPanner);
 
             // Left Row Badge
             seatRow.add(createRowBadge(rowName));
@@ -1648,6 +1752,9 @@ public class OrderBookingPage extends JPanel {
             for (int i = 0; i < totalInRow; i++) {
                 ShowSeat ss = seatsInRow.get(i);
                 JToggleButton btn = createSeatButton(ss);
+                if (autoSelectSeat != null && ss.getId() == autoSelectSeat.getId()) {
+                    btn.setSelected(true);
+                }
                 seatRow.add(btn);
 
                 // Left Aisle Walkway (32px gap)
@@ -1674,6 +1781,7 @@ public class OrderBookingPage extends JPanel {
 
         seatPanel.revalidate();
         seatPanel.repaint();
+        updateSummary();
     }
 
     private JToggleButton createSeatButton(ShowSeat ss) {
@@ -1815,6 +1923,9 @@ public class OrderBookingPage extends JPanel {
         lbl.setForeground(badgeColor);
         p.add(lbl);
 
+        p.addMouseListener(seatPanner);
+        p.addMouseMotionListener(seatPanner);
+
         return p;
     }
 
@@ -1863,6 +1974,8 @@ public class OrderBookingPage extends JPanel {
         p.setPreferredSize(new Dimension(0, 44));
         p.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
         p.setOpaque(false);
+        p.addMouseListener(seatPanner);
+        p.addMouseMotionListener(seatPanner);
         return p;
     }
 
@@ -1988,16 +2101,16 @@ public class OrderBookingPage extends JPanel {
         }
 
         String phone = customerPhoneField.getText().trim();
-        String name = customerNameField.getText().trim();
+        String name = capitalizeTitle(customerNameField.getText().trim());
 
         // Smart-swap if user typed mobile in name field and name in phone field
         if (!CustomerService.isValidIndianMobile(phone) && CustomerService.isValidIndianMobile(name)) {
             String temp = phone;
             phone = name;
-            name = temp;
+            name = capitalizeTitle(temp);
             customerPhoneField.setText(phone);
-            customerNameField.setText(name);
         }
+        customerNameField.setText(name);
 
         String normalizedPhone = CustomerService.normalizePhone(phone);
 
@@ -2130,7 +2243,7 @@ public class OrderBookingPage extends JPanel {
             String pay = (b.getPayment() != null) ? b.getPayment().getPaymentMethod() : "PAID";
             bookingsTableModel.addRow(new Object[]{
                     b.getBookingNumber(),
-                    b.getCustomerName(),
+                    capitalizeTitle(b.getCustomerName()),
                     b.getCustomerPhone(),
                     capitalizeTitle(b.getMovieTitle()),
                     b.getShowDate(),

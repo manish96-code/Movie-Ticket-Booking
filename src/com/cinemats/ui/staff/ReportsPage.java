@@ -352,13 +352,13 @@ public class ReportsPage extends JPanel {
             ));
         }
 
-        List<Report> movies = List.of(
+        List<Report> movies = java.util.Arrays.asList(
                 new Report("Interstellar", 52, 15600, 1),
                 new Report("Dune: Part Two", 43, 12900, 1),
                 new Report("Oppenheimer", 46, 13800, 1)
         );
 
-        List<Report> payments = List.of(
+        List<Report> payments = java.util.Arrays.asList(
                 new Report("UPI", 68, 20400, "PAYMENT"),
                 new Report("CARD", 42, 12600, "PAYMENT"),
                 new Report("CASH", 31, 9300, "PAYMENT")

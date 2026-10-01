@@ -8,13 +8,13 @@ public final class ScheduleMockData {
     // Returns sample show schedules
     public static Object[][] getInitialSchedules() {
         return new Object[][]{
-            {"SCH-101", "Screen 1 (IMAX)", "Dune: Part Two", "11:30 AM", "68 / 300", "77%", "Selling Fast"},
-            {"SCH-102", "Screen 1 (IMAX)", "Dune: Part Two", "03:45 PM", "12 / 300", "96%", "Almost Full"},
-            {"SCH-103", "Screen 1 (IMAX)", "Interstellar", "08:15 PM", "145 / 300", "51%", "Open"},
-            {"SCH-201", "Screen 2 (Prime)", "Spider-Man", "12:00 PM", "92 / 180", "48%", "Open"},
-            {"SCH-202", "Screen 2 (Prime)", "Oppenheimer", "04:30 PM", "45 / 180", "75%", "Selling Fast"},
-            {"SCH-301", "Screen 3 (Standard)", "Avatar: Water", "01:00 PM", "80 / 150", "46%", "Open"},
-            {"SCH-401", "Screen 4 (Gold VIP)", "Interstellar", "07:00 PM", "8 / 60", "86%", "Almost Full"}
+            {"SCH-101", "Audi 1 (IMAX Laser)", "Dune: Part Two", "11:30 AM", "68 / 68", "77%", "Selling Fast"},
+            {"SCH-102", "Audi 1 (IMAX Laser)", "Interstellar", "03:45 PM", "12 / 68", "96%", "Almost Full"},
+            {"SCH-103", "Audi 1 (IMAX Laser)", "Kalki 2898 AD", "08:15 PM", "45 / 68", "51%", "Open"},
+            {"SCH-201", "Audi 2 (Dolby Atmos 4K)", "Jawan", "12:00 PM", "32 / 56", "48%", "Open"},
+            {"SCH-202", "Audi 2 (Dolby Atmos 4K)", "Deadpool & Wolverine", "04:30 PM", "15 / 56", "75%", "Selling Fast"},
+            {"SCH-301", "Audi 3 (Gold Class VIP)", "Oppenheimer", "01:00 PM", "20 / 48", "46%", "Open"},
+            {"SCH-401", "Audi 4 (Prime 3D Cinema)", "Spider-Man: Across The Spider-Verse", "07:00 PM", "8 / 48", "86%", "Almost Full"}
         };
     }
 }

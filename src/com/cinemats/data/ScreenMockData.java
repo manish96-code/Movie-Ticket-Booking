@@ -14,10 +14,10 @@ public final class ScreenMockData {
     // Returns default cinema screens
     public static List<Screen> getInitialScreens() {
         List<Screen> list = new ArrayList<>();
-        list.add(new Screen(1, "Screen 1", 1, "IMAX", "ACTIVE", 68, 36, 24, 8, 2, 3, "2026-09-01 10:00:00", "2026-09-27 10:00:00"));
-        list.add(new Screen(2, "Screen 2", 2, "Premium", "ACTIVE", 50, 30, 20, 0, 0, 2, "2026-09-01 10:00:00", "2026-09-27 10:00:00"));
-        list.add(new Screen(3, "Screen 3", 3, "Standard", "ACTIVE", 40, 40, 0, 0, 1, 1, "2026-09-01 10:00:00", "2026-09-27 10:00:00"));
-        list.add(new Screen(4, "Screen 4", 4, "Dolby", "MAINTENANCE", 24, 0, 0, 24, 4, 0, "2026-09-01 10:00:00", "2026-09-27 10:00:00"));
+        list.add(new Screen(1, "Audi 1 (IMAX Laser)", 1, "IMAX", "ACTIVE", 68, 36, 24, 8, 2, 3, "2026-09-01 10:00:00", "2026-09-27 10:00:00"));
+        list.add(new Screen(2, "Audi 2 (Dolby Atmos 4K)", 2, "Dolby Atmos", "ACTIVE", 50, 30, 20, 0, 0, 2, "2026-09-01 10:00:00", "2026-09-27 10:00:00"));
+        list.add(new Screen(3, "Audi 3 (Gold Class VIP)", 3, "Gold Class", "ACTIVE", 40, 40, 0, 0, 1, 1, "2026-09-01 10:00:00", "2026-09-27 10:00:00"));
+        list.add(new Screen(4, "Audi 4 (Prime 3D Cinema)", 4, "Standard", "ACTIVE", 24, 0, 0, 24, 4, 0, "2026-09-01 10:00:00", "2026-09-27 10:00:00"));
         return list;
     }
 

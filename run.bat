@@ -10,7 +10,7 @@ echo ================================================
 set "JAVAC="
 set "JAVA="
 
-:: 1. Check if javac is directly in PATH
+:: 1. Check if javac is directly available in PATH
 where javac >nul 2>nul
 if %errorlevel% equ 0 (
     set "JAVAC=javac"
@@ -18,7 +18,7 @@ if %errorlevel% equ 0 (
     goto :JAVA_LOCATED
 )
 
-:: 2. Check JAVA_HOME (clean quotes if any)
+:: 2. Check JAVA_HOME (cleaning quotes if present)
 if defined JAVA_HOME (
     set "CLEAN_JH=%JAVA_HOME:"=%"
     if exist "!CLEAN_JH!\bin\javac.exe" (
@@ -48,6 +48,17 @@ if defined ProgramFiles(x86) (
     )
 )
 
+:: 5. Scan user profile directories (IntelliJ IDEA & LocalAppData)
+if defined USERPROFILE (
+    for /d %%D in ("%USERPROFILE%\.jdks\*" "%LOCALAPPDATA%\Programs\Eclipse Adoptium\jdk*") do (
+        if exist "%%D\bin\javac.exe" (
+            set "JAVAC=%%D\bin\javac.exe"
+            set "JAVA=%%D\bin\java.exe"
+            goto :JAVA_LOCATED
+        )
+    )
+)
+
 :JAVA_LOCATED
 if "%JAVAC%"=="" (
     echo.
@@ -56,11 +67,11 @@ if "%JAVAC%"=="" (
     echo ========================================================
     echo  Cinema Express requires a JDK (javac) to compile and run.
     echo.
-    echo  Please install Java JDK 17 or higher:
-    echo  • Recommended: https://adoptium.net/
-    echo  • Oracle JDK:  https://www.oracle.com/java/technologies/downloads/
+    echo  Please install Java JDK (v17 or higher recommended):
+    echo  • Eclipse Temurin: https://adoptium.net/
+    echo  • Oracle JDK:      https://www.oracle.com/java/technologies/downloads/
     echo.
-    echo  After installing, set your JAVA_HOME or restart your terminal.
+    echo  If already installed, ensure JAVA_HOME is configured.
     echo ========================================================
     echo.
     pause
@@ -71,7 +82,10 @@ if not exist bin mkdir bin
 
 echo [1/2] Compiling sources...
 if exist sources.txt del sources.txt
-dir /s /b src\*.java > sources.txt
+for /r src %%F in (*.java) do (
+    echo "%%F">>sources.txt
+)
+
 "%JAVAC%" -d bin -cp "lib\*;src" @sources.txt
 set COMPILE_STATUS=%errorlevel%
 if exist sources.txt del sources.txt

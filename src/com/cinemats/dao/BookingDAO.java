@@ -104,6 +104,9 @@ public class BookingDAO {
             addColumnIfNotExists(conn, "bookings", "total_amount", "REAL");
             addColumnIfNotExists(conn, "bookings", "status", "TEXT DEFAULT 'CONFIRMED'");
             addColumnIfNotExists(conn, "bookings", "created_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+            addColumnIfNotExists(conn, "bookings", "seat_count", "INTEGER DEFAULT 1");
+            addColumnIfNotExists(conn, "bookings", "booked_at", "TEXT DEFAULT ''");
+            addColumnIfNotExists(conn, "bookings", "payment_mode", "TEXT DEFAULT 'UPI'");
         }
     }
 
@@ -183,13 +186,16 @@ public class BookingDAO {
             if (totalAmount.compareTo(BigDecimal.ZERO) < 0) totalAmount = BigDecimal.ZERO;
 
             String bookingNumber = generateBookingNumber();
+            String nowTimestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+            String payMode = (paymentInput != null && paymentInput.getPaymentMethod() != null) ? paymentInput.getPaymentMethod() : "UPI";
+            int seatCount = items.size();
 
             // 4. Insert into bookings
             String insertBookingSql = "INSERT INTO bookings ("
                     + "booking_number, customer_id, show_id, customer_name, customer_phone, "
                     + "movie_title, screen_name, show_date, start_time, cashier_name, "
-                    + "subtotal, discount, total_amount, status) "
-                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CONFIRMED')";
+                    + "subtotal, discount, total_amount, status, seat_count, booked_at, payment_mode) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CONFIRMED', ?, ?, ?)";
 
             int bookingId;
             try (PreparedStatement ps = conn.prepareStatement(insertBookingSql, Statement.RETURN_GENERATED_KEYS)) {
@@ -206,6 +212,9 @@ public class BookingDAO {
                 ps.setDouble(11, subtotal.doubleValue());
                 ps.setDouble(12, discount.doubleValue());
                 ps.setDouble(13, totalAmount.doubleValue());
+                ps.setInt(14, seatCount);
+                ps.setString(15, nowTimestamp);
+                ps.setString(16, payMode);
                 ps.executeUpdate();
 
                 try (ResultSet rs = ps.getGeneratedKeys()) {

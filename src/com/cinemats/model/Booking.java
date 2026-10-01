@@ -69,11 +69,11 @@ public class Booking implements Serializable {
     }
 
     public String getCustomerName() {
-        return customerName;
+        return Customer.capitalize(customerName);
     }
 
     public void setCustomerName(String customerName) {
-        this.customerName = customerName;
+        this.customerName = Customer.capitalize(customerName);
     }
 
     public String getCustomerPhone() {

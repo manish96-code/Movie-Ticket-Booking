@@ -71,14 +71,15 @@ public class CustomerDAO {
 
     public static Customer findOrCreateCustomer(String name, String phone, Connection conn) throws SQLException {
         Customer existing = findByPhone(phone, conn);
+        String capitalizedName = (name != null && !name.trim().isEmpty()) ? Customer.capitalize(name) : "Valued Patron";
         if (existing != null) {
-            // If name was updated, update existing record if needed
-            if (name != null && !name.trim().isEmpty() && !name.trim().equalsIgnoreCase(existing.getName())) {
+            // If name was updated or needs capitalization, update existing record
+            if (!capitalizedName.isEmpty() && !capitalizedName.equals(existing.getName())) {
                 try (PreparedStatement update = conn.prepareStatement("UPDATE customers SET name = ? WHERE id = ?")) {
-                    update.setString(1, name.trim());
+                    update.setString(1, capitalizedName);
                     update.setInt(2, existing.getId());
                     update.executeUpdate();
-                    existing.setName(name.trim());
+                    existing.setName(capitalizedName);
                 }
             }
             return existing;
@@ -86,14 +87,14 @@ public class CustomerDAO {
 
         String insertSql = "INSERT INTO customers (name, phone, email) VALUES (?, ?, ?)";
         try (PreparedStatement ps = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
-            ps.setString(1, name != null ? name.trim() : "Valued Patron");
+            ps.setString(1, capitalizedName);
             ps.setString(2, phone.trim());
             ps.setString(3, "");
             ps.executeUpdate();
             try (ResultSet generatedKeys = ps.getGeneratedKeys()) {
                 if (generatedKeys.next()) {
                     int id = generatedKeys.getInt(1);
-                    return new Customer(id, name, phone.trim(), "", "");
+                    return new Customer(id, capitalizedName, phone.trim(), "", "");
                 }
             }
         }

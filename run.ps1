@@ -36,7 +36,9 @@ if (-not $javacCmd) {
         "$env:ProgramFiles\Amazon Corretto\jdk*",
         "$env:ProgramFiles\BellSoft\jdk*",
         "$env:ProgramFiles\Zulu\zulu*",
-        "${env:ProgramFiles(x86)}\Java\jdk*"
+        "${env:ProgramFiles(x86)}\Java\jdk*",
+        "$env:USERPROFILE\.jdks\*",
+        "$env:LOCALAPPDATA\Programs\Eclipse Adoptium\jdk*"
     )
     foreach ($pattern in $searchPaths) {
         $found = Get-Item $pattern -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -55,7 +57,7 @@ if (-not $javacCmd) {
 if (-not $javacCmd) {
     Write-Host "`n[ERROR] Java Development Kit (JDK) not found!" -ForegroundColor Red
     Write-Host "Cinema Express requires a JDK (javac) to compile and run." -ForegroundColor Yellow
-    Write-Host "Please install JDK 17+ from: https://adoptium.net/" -ForegroundColor Yellow
+    Write-Host "Please install JDK from: https://adoptium.net/" -ForegroundColor Yellow
     Read-Host "Press Enter to exit..."
     exit 1
 }
@@ -65,7 +67,7 @@ if (-not (Test-Path "bin")) {
 }
 
 Write-Host "[1/2] Compiling sources..." -ForegroundColor Green
-$sources = Get-ChildItem -Path "src" -Filter "*.java" -Recurse | ForEach-Object { $_.FullName }
+$sources = Get-ChildItem -Path "src" -Filter "*.java" -Recurse | ForEach-Object { "`"$($_.FullName)`"" }
 $sources | Out-File -FilePath "sources.txt" -Encoding utf8
 
 & $javacCmd -d bin -cp "lib/*;src" "@sources.txt"

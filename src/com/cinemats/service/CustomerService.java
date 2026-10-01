@@ -41,9 +41,13 @@ public class CustomerService {
         return findByPhone(phone);
     }
 
+    public static String capitalizeName(String name) {
+        return Customer.capitalize(name);
+    }
+
     public static Customer findOrCreateCustomer(String name, String phone) {
         String clean = normalizeIndianMobile(phone);
-        return CustomerDAO.findOrCreateCustomer(name, clean);
+        return CustomerDAO.findOrCreateCustomer(capitalizeName(name), clean);
     }
 
     public static List<Customer> searchCustomers(String query) {
