@@ -85,8 +85,81 @@ public class Show {
     public boolean isOpen() { return "OPEN".equalsIgnoreCase(status); }
     public boolean isCancelled() { return "CANCELLED".equalsIgnoreCase(status); }
 
+    // Returns true if this show is scheduled in the future or started within 30 minutes
+    public boolean isBookable() {
+        if ("CANCELLED".equalsIgnoreCase(status)) {
+            return false;
+        }
+        if (showDate == null || showDate.trim().isEmpty()) {
+            return false;
+        }
+        try {
+            java.time.LocalDate d = java.time.LocalDate.parse(showDate.trim());
+            java.time.LocalDate today = java.time.LocalDate.now();
+
+            if (d.isBefore(today)) {
+                return false;
+            }
+            if (d.isAfter(today)) {
+                return true;
+            }
+
+            // Show is scheduled for today: allow booking up to 30 minutes after start time
+            int startMins = com.cinemats.dao.ShowDAO.parseTimeToMinutes(startTime);
+            if (startMins < 0) {
+                return false;
+            }
+
+            java.time.LocalTime showStartTime = java.time.LocalTime.of((startMins / 60) % 24, startMins % 60);
+            java.time.LocalDateTime showStartDateTime = java.time.LocalDateTime.of(d, showStartTime);
+            java.time.LocalDateTime cutoffDateTime = showStartDateTime.plusMinutes(30);
+
+            return !java.time.LocalDateTime.now().isAfter(cutoffDateTime);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    // Returns true if today's show has already started
+    public boolean isStarted() {
+        if (showDate == null || showDate.trim().isEmpty()) return false;
+        try {
+            java.time.LocalDate d = java.time.LocalDate.parse(showDate.trim());
+            if (!d.equals(java.time.LocalDate.now())) return false;
+
+            int startMins = com.cinemats.dao.ShowDAO.parseTimeToMinutes(startTime);
+            if (startMins < 0) return false;
+
+            java.time.LocalTime showStartTime = java.time.LocalTime.of((startMins / 60) % 24, startMins % 60);
+            java.time.LocalDateTime showStartDateTime = java.time.LocalDateTime.of(d, showStartTime);
+            return java.time.LocalDateTime.now().isAfter(showStartDateTime);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    // Returns remaining minutes in the 30-minute booking grace window if show has started
+    public int getMinutesUntilCutoff() {
+        if (showDate == null || showDate.trim().isEmpty()) return 0;
+        try {
+            java.time.LocalDate d = java.time.LocalDate.parse(showDate.trim());
+            int startMins = com.cinemats.dao.ShowDAO.parseTimeToMinutes(startTime);
+            if (startMins < 0) return 0;
+
+            java.time.LocalTime showStartTime = java.time.LocalTime.of((startMins / 60) % 24, startMins % 60);
+            java.time.LocalDateTime showStartDateTime = java.time.LocalDateTime.of(d, showStartTime);
+            java.time.LocalDateTime cutoffDateTime = showStartDateTime.plusMinutes(30);
+
+            long remaining = java.time.Duration.between(java.time.LocalDateTime.now(), cutoffDateTime).toMinutes();
+            return (int) Math.max(0, remaining);
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
     @Override
     public String toString() {
         return movieTitle + " @ " + screenName + " (" + showDate + " " + startTime + " - " + endTime + ")";
     }
 }
+

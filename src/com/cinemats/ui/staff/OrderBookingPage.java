@@ -9,6 +9,7 @@ import com.cinemats.model.*;
 import com.cinemats.service.BookingService;
 import com.cinemats.service.CustomerService;
 import com.cinemats.ui.staff.booking.TicketConfirmationDialog;
+import com.cinemats.util.QRCodeRenderer;
 import com.cinemats.util.Theme;
 
 import javax.swing.*;
@@ -79,6 +80,16 @@ public class OrderBookingPage extends JPanel {
     private JTextField cashReceivedField;
     private JLabel changeReturnedLbl;
     private JTextField refField;
+
+    // UPI Dynamic QR Components
+    public static final String UPI_VPA = "manish966152@ybl";
+    public static final String UPI_PAYEE_NAME = "Cinema Express";
+    private JPanel upiQrPanel;
+    private JLabel upiQrImageLabel;
+    private JLabel upiAmountLabel;
+    private JLabel upiStatusBadge;
+    private String currentUpiTrxId = "";
+    private boolean upiPaymentReceived = false;
 
     private JButton confirmBookingBtn;
     private JButton resetBtn;
@@ -753,8 +764,98 @@ public class OrderBookingPage extends JPanel {
         cashCalcPanel.add(changeReturnedLbl, BorderLayout.CENTER);
         content.add(cashCalcPanel);
 
+        // UPI Dynamic QR Panel
+        upiQrPanel = new JPanel();
+        upiQrPanel.setLayout(new BoxLayout(upiQrPanel, BoxLayout.Y_AXIS));
+        upiQrPanel.setBackground(new Color(248, 250, 252));
+        upiQrPanel.setBorder(new CompoundBorder(
+                new LineBorder(new Color(226, 232, 240), 1, true),
+                new EmptyBorder(10, 10, 10, 10)
+        ));
+        upiQrPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        upiQrPanel.setVisible(false);
+
+        JPanel upiHeader = new JPanel(new BorderLayout());
+        upiHeader.setOpaque(false);
+        upiHeader.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel upiTitle = new JLabel("📱 Dynamic UPI QR");
+        upiTitle.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        upiTitle.setForeground(new Color(67, 56, 202));
+        JLabel upiApps = new JLabel("GPay • PhonePe • Paytm");
+        upiApps.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+        upiApps.setForeground(Theme.TEXT_MUTED);
+        upiHeader.add(upiTitle, BorderLayout.WEST);
+        upiHeader.add(upiApps, BorderLayout.EAST);
+        upiQrPanel.add(upiHeader);
+        upiQrPanel.add(Box.createVerticalStrut(6));
+
+        upiAmountLabel = new JLabel("Payable: ₹0.00", SwingConstants.CENTER);
+        upiAmountLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        upiAmountLabel.setForeground(new Color(22, 101, 52));
+        upiAmountLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        upiQrPanel.add(upiAmountLabel);
+        upiQrPanel.add(Box.createVerticalStrut(6));
+
+        JPanel qrFrame = new JPanel(new GridBagLayout());
+        qrFrame.setBackground(Color.WHITE);
+        qrFrame.setBorder(new CompoundBorder(
+                new LineBorder(new Color(203, 213, 225), 1, true),
+                new EmptyBorder(4, 4, 4, 4)
+        ));
+        qrFrame.setAlignmentX(Component.CENTER_ALIGNMENT);
+        qrFrame.setPreferredSize(new Dimension(148, 148));
+        qrFrame.setMaximumSize(new Dimension(148, 148));
+
+        upiQrImageLabel = new JLabel("", SwingConstants.CENTER);
+        qrFrame.add(upiQrImageLabel);
+        upiQrPanel.add(qrFrame);
+        upiQrPanel.add(Box.createVerticalStrut(6));
+
+        upiStatusBadge = new JLabel("● Scan & Pay with any UPI app", SwingConstants.CENTER);
+        upiStatusBadge.setFont(Theme.FONT_SMALL);
+        upiStatusBadge.setForeground(new Color(79, 70, 229));
+        upiStatusBadge.setAlignmentX(Component.CENTER_ALIGNMENT);
+        upiQrPanel.add(upiStatusBadge);
+        upiQrPanel.add(Box.createVerticalStrut(8));
+
+        JPanel upiActions = new JPanel(new GridLayout(1, 2, 6, 0));
+        upiActions.setOpaque(false);
+        upiActions.setAlignmentX(Component.CENTER_ALIGNMENT);
+        upiActions.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+
+        JButton customerDisplayBtn = new JButton("🔍 Expand QR");
+        customerDisplayBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        customerDisplayBtn.setFocusPainted(false);
+        customerDisplayBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        customerDisplayBtn.setBackground(Color.WHITE);
+        customerDisplayBtn.setBorder(new CompoundBorder(
+                new LineBorder(new Color(203, 213, 225), 1, true),
+                new EmptyBorder(4, 6, 4, 6)
+        ));
+        customerDisplayBtn.addActionListener(e -> showCustomerQrDialog());
+
+        JButton markPaidBtn = new JButton("✓ Paid");
+        markPaidBtn.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        markPaidBtn.setFocusPainted(false);
+        markPaidBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        markPaidBtn.setBackground(new Color(240, 253, 244));
+        markPaidBtn.setForeground(new Color(22, 101, 52));
+        markPaidBtn.setBorder(new CompoundBorder(
+                new LineBorder(new Color(187, 247, 208), 1, true),
+                new EmptyBorder(4, 6, 4, 6)
+        ));
+        markPaidBtn.addActionListener(e -> {
+            upiPaymentReceived = true;
+            refreshUpiQrCode();
+        });
+
+        upiActions.add(customerDisplayBtn);
+        upiActions.add(markPaidBtn);
+        upiQrPanel.add(upiActions);
+        content.add(upiQrPanel);
+
         // Ref field for UPI / Card
-        refField = createStyledInputField("Optional UTR / Slip Reference");
+        refField = createStyledInputField("Card Slip / Auth Reference");
         refField.setAlignmentX(Component.LEFT_ALIGNMENT);
         refField.setVisible(false);
         content.add(refField);
@@ -884,14 +985,193 @@ public class OrderBookingPage extends JPanel {
     private void updatePaymentModeUI() {
         if (cashRadio.isSelected()) {
             cashCalcPanel.setVisible(true);
+            if (upiQrPanel != null) upiQrPanel.setVisible(false);
+            refField.setVisible(false);
+        } else if (upiRadio.isSelected()) {
+            cashCalcPanel.setVisible(false);
+            if (upiQrPanel != null) {
+                upiQrPanel.setVisible(true);
+                refreshUpiQrCode();
+            }
             refField.setVisible(false);
         } else {
+            // Card
             cashCalcPanel.setVisible(false);
+            if (upiQrPanel != null) upiQrPanel.setVisible(false);
             refField.setVisible(true);
-            refField.setToolTipText(upiRadio.isSelected() ? "UPI Ref ID / UTR" : "Card Auth / Slip Ref");
+            refField.setToolTipText("Card Auth / Slip Ref");
         }
         revalidate();
         repaint();
+    }
+
+    private void refreshUpiQrCode() {
+        if (upiAmountLabel == null || upiQrImageLabel == null) return;
+        BigDecimal total = calculateTotal();
+        if (total.compareTo(BigDecimal.ZERO) <= 0) {
+            upiAmountLabel.setText("Payable: ₹0.00");
+            upiQrImageLabel.setIcon(null);
+            upiQrImageLabel.setText("<html><center><font color='#64748B' size='2'>Select seats to generate<br>dynamic UPI QR code</font></center></html>");
+            upiStatusBadge.setText("● Waiting for seat selection");
+            upiStatusBadge.setForeground(Theme.TEXT_MUTED);
+            currentUpiTrxId = "";
+            return;
+        }
+
+        if (currentUpiTrxId == null || currentUpiTrxId.isEmpty()) {
+            currentUpiTrxId = "UPI" + (System.currentTimeMillis() % 100000000L);
+        }
+
+        String amountStr = String.format(java.util.Locale.US, "%.2f", total.doubleValue());
+        upiAmountLabel.setText("Payable: ₹" + amountStr);
+
+        String movieTitle = (selectedMovie != null) ? selectedMovie.getTitle().replaceAll("[^a-zA-Z0-9 ]", "") : "Ticket";
+        String note = "Tickets-" + movieTitle.replace(" ", "-");
+        if (note.length() > 30) note = note.substring(0, 30);
+
+        String upiPayload;
+        try {
+            upiPayload = "upi://pay?pa=" + UPI_VPA
+                    + "&pn=" + java.net.URLEncoder.encode(UPI_PAYEE_NAME, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20")
+                    + "&am=" + amountStr
+                    + "&cu=INR"
+                    + "&tn=" + java.net.URLEncoder.encode(note, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20")
+                    + "&tr=" + currentUpiTrxId;
+        } catch (Exception ex) {
+            upiPayload = "upi://pay?pa=" + UPI_VPA + "&pn=Cinema%20Express&am=" + amountStr + "&cu=INR&tn=Tickets&tr=" + currentUpiTrxId;
+        }
+
+        BufferedImage qrImg = QRCodeRenderer.renderQRCode(upiPayload, 140, 140);
+        upiQrImageLabel.setText("");
+        upiQrImageLabel.setIcon(new ImageIcon(qrImg));
+
+        if (upiPaymentReceived) {
+            upiStatusBadge.setText("✓ Payment Verified (Ref: " + currentUpiTrxId + ")");
+            upiStatusBadge.setForeground(new Color(22, 163, 74));
+        } else {
+            upiStatusBadge.setText("● Scan & Pay with any UPI app");
+            upiStatusBadge.setForeground(new Color(79, 70, 229));
+        }
+    }
+
+    private void showCustomerQrDialog() {
+        BigDecimal total = calculateTotal();
+        if (total.compareTo(BigDecimal.ZERO) <= 0) {
+            JOptionPane.showMessageDialog(this, "Please select at least one seat to generate UPI QR code.", "Notice", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        if (currentUpiTrxId == null || currentUpiTrxId.isEmpty()) {
+            currentUpiTrxId = "UPI" + (System.currentTimeMillis() % 100000000L);
+        }
+
+        JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(this), "Customer UPI QR Payment - Cinema Express", Dialog.ModalityType.APPLICATION_MODAL);
+        dialog.setSize(390, 530);
+        dialog.setLocationRelativeTo(this);
+        dialog.setLayout(new BorderLayout());
+        dialog.getContentPane().setBackground(Color.WHITE);
+
+        // Header
+        JPanel header = new JPanel(new BorderLayout());
+        header.setBackground(new Color(79, 70, 229));
+        header.setBorder(new EmptyBorder(14, 18, 14, 18));
+        JLabel title = new JLabel("📱 Cinema Express UPI Payment");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        title.setForeground(Color.WHITE);
+
+        header.add(title, BorderLayout.WEST);
+        dialog.add(header, BorderLayout.NORTH);
+
+        // Body
+        JPanel body = new JPanel();
+        body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
+        body.setOpaque(false);
+        body.setBorder(new EmptyBorder(16, 20, 16, 20));
+
+        JLabel movieLbl = new JLabel(selectedMovie != null ? capitalizeTitle(selectedMovie.getTitle()) : "Movie Tickets");
+        movieLbl.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        movieLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JLabel showLbl = new JLabel(selectedShow != null ? (selectedShow.getScreenName() + " • " + selectedShow.getStartTime()) : "");
+        showLbl.setFont(Theme.FONT_SMALL);
+        showLbl.setForeground(Theme.TEXT_MUTED);
+        showLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        String amountStr = String.format(java.util.Locale.US, "%.2f", total.doubleValue());
+        JLabel amtLbl = new JLabel("₹" + amountStr);
+        amtLbl.setFont(new Font("Segoe UI", Font.BOLD, 28));
+        amtLbl.setForeground(new Color(22, 163, 74));
+        amtLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        String movieTitle = (selectedMovie != null) ? selectedMovie.getTitle().replaceAll("[^a-zA-Z0-9 ]", "") : "Ticket";
+        String note = "Tickets-" + movieTitle.replace(" ", "-");
+        if (note.length() > 30) note = note.substring(0, 30);
+
+        String upiPayload;
+        try {
+            upiPayload = "upi://pay?pa=" + UPI_VPA
+                    + "&pn=" + java.net.URLEncoder.encode(UPI_PAYEE_NAME, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20")
+                    + "&am=" + amountStr
+                    + "&cu=INR"
+                    + "&tn=" + java.net.URLEncoder.encode(note, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20")
+                    + "&tr=" + currentUpiTrxId;
+        } catch (Exception ex) {
+            upiPayload = "upi://pay?pa=" + UPI_VPA + "&pn=Cinema%20Express&am=" + amountStr + "&cu=INR&tn=Tickets&tr=" + currentUpiTrxId;
+        }
+
+        BufferedImage largeQr = QRCodeRenderer.renderQRCode(upiPayload, 210, 210);
+        JLabel qrLbl = new JLabel(new ImageIcon(largeQr));
+        qrLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
+        qrLbl.setBorder(new CompoundBorder(
+                new LineBorder(new Color(203, 213, 225), 1, true),
+                new EmptyBorder(8, 8, 8, 8)
+        ));
+
+        JLabel scanPrompt = new JLabel("Scan with Google Pay, PhonePe, Paytm, BHIM");
+        scanPrompt.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        scanPrompt.setForeground(new Color(100, 116, 139));
+        scanPrompt.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JLabel refPrompt = new JLabel("Ref: " + currentUpiTrxId);
+        refPrompt.setFont(Theme.FONT_SMALL);
+        refPrompt.setForeground(Theme.TEXT_MUTED);
+        refPrompt.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        body.add(movieLbl);
+        body.add(Box.createVerticalStrut(2));
+        body.add(showLbl);
+        body.add(Box.createVerticalStrut(8));
+        body.add(amtLbl);
+        body.add(Box.createVerticalStrut(10));
+        body.add(qrLbl);
+        body.add(Box.createVerticalStrut(8));
+        body.add(scanPrompt);
+        body.add(Box.createVerticalStrut(2));
+        body.add(refPrompt);
+
+        dialog.add(body, BorderLayout.CENTER);
+
+        // Footer
+        JPanel footer = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
+        footer.setBackground(new Color(248, 250, 252));
+        footer.setBorder(new MatteBorder(1, 0, 0, 0, new Color(226, 232, 240)));
+
+        JButton confirmPaidBtn = Theme.createSuccessButton("✓ Payment Received (Confirm Booking)");
+        confirmPaidBtn.addActionListener(e -> {
+            upiPaymentReceived = true;
+            refreshUpiQrCode();
+            dialog.dispose();
+            executeBooking();
+        });
+
+        JButton closeBtn = Theme.createSecondaryButton("Close");
+        closeBtn.addActionListener(e -> dialog.dispose());
+
+        footer.add(confirmPaidBtn);
+        footer.add(closeBtn);
+        dialog.add(footer, BorderLayout.SOUTH);
+
+        dialog.setVisible(true);
     }
 
     private void updateCashChange() {
@@ -1672,6 +1952,9 @@ public class OrderBookingPage extends JPanel {
         confirmBookingBtn.repaint();
 
         updateCashChange();
+        if (upiRadio != null && upiRadio.isSelected()) {
+            refreshUpiQrCode();
+        }
         summaryItemsPanel.revalidate();
         summaryItemsPanel.repaint();
     }
@@ -1752,9 +2035,33 @@ public class OrderBookingPage extends JPanel {
                 return;
             }
             change = amountReceived.subtract(total);
+        } else if ("UPI".equalsIgnoreCase(method)) {
+            amountReceived = total;
+            change = BigDecimal.ZERO;
+            if (!upiPaymentReceived) {
+                int choice = JOptionPane.showConfirmDialog(this,
+                        "Confirm UPI Payment Received?\n\n"
+                        + "• Amount: ₹" + String.format(java.util.Locale.US, "%.2f", total.doubleValue()) + "\n"
+                        + "• Reference: " + ((currentUpiTrxId != null && !currentUpiTrxId.isEmpty()) ? currentUpiTrxId : "Auto-generated") + "\n\n"
+                        + "Has the customer scanned the QR code and paid successfully?",
+                        "Confirm UPI Payment", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+                if (choice != JOptionPane.YES_OPTION) {
+                    return;
+                }
+                upiPaymentReceived = true;
+                refreshUpiQrCode();
+            }
         }
 
         String ref = refField.getText().trim();
+        if ("UPI".equalsIgnoreCase(method)) {
+            if (ref.isEmpty() || ref.toLowerCase().contains("slip") || ref.toLowerCase().contains("card")) {
+                ref = (currentUpiTrxId != null && !currentUpiTrxId.isEmpty())
+                        ? currentUpiTrxId
+                        : ("UPI" + (System.currentTimeMillis() % 100000000L));
+            }
+        }
+
         Payment payment = new Payment(method, total, amountReceived, change, ref);
         Customer customer = new Customer(name, normalizedPhone);
 
@@ -1803,8 +2110,9 @@ public class OrderBookingPage extends JPanel {
         cashReceivedField.setText("");
         changeReturnedLbl.setText("Change: ₹0.00");
         changeReturnedLbl.setForeground(new Color(37, 99, 235));
-        changeReturnedLbl.setBackground(new Color(239, 246, 255));
         refField.setText("");
+        currentUpiTrxId = "";
+        upiPaymentReceived = false;
         cashRadio.setSelected(true);
         updatePaymentModeUI();
 
