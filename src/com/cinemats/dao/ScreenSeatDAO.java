@@ -34,7 +34,9 @@ public class ScreenSeatDAO {
         try (Connection conn = DBConnection.getConnection();
              Statement stmt = conn.createStatement()) {
 
-            stmt.execute(createSQL);
+            if (!DBConnection.isMySQL()) {
+                stmt.execute(createSQL);
+            }
 
             // Check if screen_seats table is empty
             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM screen_seats");

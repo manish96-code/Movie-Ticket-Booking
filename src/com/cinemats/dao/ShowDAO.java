@@ -31,12 +31,14 @@ public class ShowDAO {
         try (Connection conn = DBConnection.getConnection();
              Statement stmt = conn.createStatement()) {
 
-            stmt.execute(createSQL);
+            if (!DBConnection.isMySQL()) {
+                stmt.execute(createSQL);
 
-            // Schema evolution: drop legacy price and screen text columns if present
-            try { stmt.execute("ALTER TABLE shows DROP COLUMN price"); } catch (SQLException ignored) {}
-            try { stmt.execute("ALTER TABLE shows DROP COLUMN screen"); } catch (SQLException ignored) {}
-            try { stmt.execute("ALTER TABLE shows DROP COLUMN show_time"); } catch (SQLException ignored) {}
+                // Schema evolution: drop legacy price and screen text columns if present
+                try { stmt.execute("ALTER TABLE shows DROP COLUMN price"); } catch (SQLException ignored) {}
+                try { stmt.execute("ALTER TABLE shows DROP COLUMN screen"); } catch (SQLException ignored) {}
+                try { stmt.execute("ALTER TABLE shows DROP COLUMN show_time"); } catch (SQLException ignored) {}
+            }
 
         } catch (SQLException e) {
             System.err.println("[ShowDAO] Error initializing shows table: " + e.getMessage());

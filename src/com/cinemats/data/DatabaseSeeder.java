@@ -48,10 +48,22 @@ public class DatabaseSeeder {
                 "screen_seats", "screens", "movies", "categories", "customers", "users"
             };
 
+            if (DBConnection.isMySQL()) {
+                try { stmt.execute("SET FOREIGN_KEY_CHECKS = 0"); } catch (Exception ignored) {}
+            } else {
+                try { stmt.execute("PRAGMA foreign_keys = OFF"); } catch (Exception ignored) {}
+            }
+
             for (String table : tables) {
                 try {
                     stmt.execute("DROP TABLE IF EXISTS " + table);
                 } catch (Exception ignored) {}
+            }
+
+            if (DBConnection.isMySQL()) {
+                try { stmt.execute("SET FOREIGN_KEY_CHECKS = 1"); } catch (Exception ignored) {}
+            } else {
+                try { stmt.execute("PRAGMA foreign_keys = ON"); } catch (Exception ignored) {}
             }
             System.out.println("[DatabaseSeeder] Dropped all tables cleanly.");
 

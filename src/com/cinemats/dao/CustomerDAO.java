@@ -19,8 +19,10 @@ public class CustomerDAO {
                 + ");";
         try (Connection conn = DBConnection.getConnection();
              Statement stmt = conn.createStatement()) {
-            stmt.execute(sql);
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);");
+            if (!DBConnection.isMySQL()) {
+                stmt.execute(sql);
+                stmt.execute("CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);");
+            }
         } catch (SQLException e) {
             System.err.println("[CustomerDAO] Error initializing customers table: " + e.getMessage());
         }

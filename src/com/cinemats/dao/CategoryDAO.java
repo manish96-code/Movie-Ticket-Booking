@@ -30,7 +30,9 @@ public class CategoryDAO {
         try (Connection conn = DBConnection.getConnection();
              Statement stmt = conn.createStatement()) {
 
-            stmt.execute(createSQL);
+            if (!DBConnection.isMySQL()) {
+                stmt.execute(createSQL);
+            }
 
             // Check if categories table is empty
             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM categories");
@@ -43,7 +45,7 @@ public class CategoryDAO {
                         insertStmt.setString(3, cat.getCreatedAt());
                         insertStmt.executeUpdate();
                     }
-                    System.out.println("[CategoryDAO] Seeded default movie categories into cinema.db.");
+                    System.out.println("[CategoryDAO] Seeded default movie categories into database.");
                 }
             }
         } catch (SQLException e) {
@@ -55,7 +57,7 @@ public class CategoryDAO {
     public static synchronized List<Category> getAllCategories() {
         if (DBConnection.isDriverAvailable()) {
             List<Category> list = new ArrayList<>();
-            String sql = "SELECT id, name, description, created_at FROM categories ORDER BY name COLLATE NOCASE ASC";
+            String sql = "SELECT id, name, description, created_at FROM categories ORDER BY LOWER(name) ASC";
             try (Connection conn = DBConnection.getConnection();
                  Statement stmt = conn.createStatement();
                  ResultSet rs = stmt.executeQuery(sql)) {

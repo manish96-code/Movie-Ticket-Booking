@@ -28,7 +28,6 @@ public class StaffDashboard extends JFrame {
     private MoviesListPage moviesListPage;
     private BookingHistoryPage bookingHistoryPage;
     private TodayShowsPage todayShowsPage;
-    private SearchTicketPage searchTicketPage;
     private MoviesPanel moviesPanel;
 
     // --- Header & User Session ---
@@ -283,12 +282,9 @@ public class StaffDashboard extends JFrame {
         navMenuPanel.add(createCategoryHeader("POINT OF SALE (POS)"));
         ModernNavButton orderBookingBtn = createNavButton("Ticket Booking", "PAGE_ORDER_BOOKING", true);
         ModernNavButton historyBtn = createNavButton("Booking History", "PAGE_BOOKING_HISTORY", false);
-        ModernNavButton searchTicketBtn = createNavButton("Search & Re-Print", "PAGE_SEARCH_TICKET", false);
         navMenuPanel.add(orderBookingBtn);
         navMenuPanel.add(Box.createVerticalStrut(4));
         navMenuPanel.add(historyBtn);
-        navMenuPanel.add(Box.createVerticalStrut(4));
-        navMenuPanel.add(searchTicketBtn);
 
         navMenuPanel.add(Box.createVerticalStrut(14));
 
@@ -422,7 +418,6 @@ public class StaffDashboard extends JFrame {
         moviesListPage = new MoviesListPage(this);
         bookingHistoryPage = new BookingHistoryPage(this);
         todayShowsPage = new TodayShowsPage(this);
-        searchTicketPage = new SearchTicketPage(this);
         moviesPanel = new MoviesPanel(this);
 
         // Register Pages in CardLayout
@@ -430,7 +425,6 @@ public class StaffDashboard extends JFrame {
         mainContentPanel.add(moviesListPage, "PAGE_MOVIES_LIST");
         mainContentPanel.add(bookingHistoryPage, "PAGE_BOOKING_HISTORY");
         mainContentPanel.add(todayShowsPage, "PAGE_TODAY_SHOWS");
-        mainContentPanel.add(searchTicketPage, "PAGE_SEARCH_TICKET");
 
         bodyContainer.add(sidebar, BorderLayout.WEST);
         bodyContainer.add(mainContentPanel, BorderLayout.CENTER);
@@ -564,11 +558,6 @@ public class StaffDashboard extends JFrame {
                 g2.drawLine(x + 4, centerY - 3, x + 11, centerY - 3);
                 g2.drawLine(x + 4, centerY, x + 11, centerY);
                 g2.drawLine(x + 4, centerY + 3, x + 9, centerY + 3);
-            } else if ("PAGE_SEARCH_TICKET".equals(key)) {
-                // Magnifying Search Glass
-                g2.setStroke(new BasicStroke(1.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                g2.drawOval(x + 1, centerY - 7, 9, 9);
-                g2.drawLine(x + 8, centerY, x + 14, centerY + 6);
             } else if ("PAGE_MOVIES_LIST".equals(key)) {
                 // Film Display Card with Play Triangle
                 g2.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
@@ -705,7 +694,6 @@ public class StaffDashboard extends JFrame {
     public OrderBookingPage getOrderBookingPage() { return orderBookingPage; }
     public BookingHistoryPage getBookingHistoryPage() { return bookingHistoryPage; }
     public TodayShowsPage getTodayShowsPage() { return todayShowsPage; }
-    public SearchTicketPage getSearchTicketPage() { return searchTicketPage; }
     public MoviesPanel getMoviesPanel() { return moviesPanel; }
 
     public static void main(String[] args) {

@@ -27,7 +27,9 @@ public class ShowPriceDAO {
 
         try (Connection conn = DBConnection.getConnection();
              Statement stmt = conn.createStatement()) {
-            stmt.execute(createSQL);
+            if (!DBConnection.isMySQL()) {
+                stmt.execute(createSQL);
+            }
         } catch (SQLException e) {
             System.err.println("[ShowPriceDAO] Error initializing show_prices table: " + e.getMessage());
         }
@@ -37,7 +39,7 @@ public class ShowPriceDAO {
     public static void saveShowPrices(int showId, List<ShowPrice> prices, Connection conn) throws SQLException {
         if (prices == null || prices.isEmpty()) return;
 
-        String sql = "INSERT OR REPLACE INTO show_prices (show_id, seat_type, price, updated_at) "
+        String sql = "REPLACE INTO show_prices (show_id, seat_type, price, updated_at) "
                 + "VALUES (?, ?, ?, CURRENT_TIMESTAMP)";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             for (ShowPrice sp : prices) {

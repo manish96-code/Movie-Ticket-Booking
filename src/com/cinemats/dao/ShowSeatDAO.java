@@ -34,7 +34,9 @@ public class ShowSeatDAO {
 
         try (Connection conn = DBConnection.getConnection();
              Statement stmt = conn.createStatement()) {
-            stmt.execute(createSQL);
+            if (!DBConnection.isMySQL()) {
+                stmt.execute(createSQL);
+            }
         } catch (SQLException e) {
             System.err.println("[ShowSeatDAO] Failed to initialize show_seats table: " + e.getMessage());
         }

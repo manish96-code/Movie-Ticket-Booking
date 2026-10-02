@@ -33,27 +33,29 @@ public class MovieDAO {
         try (Connection conn = DBConnection.getConnection();
              Statement stmt = conn.createStatement()) {
 
-            stmt.execute(createSQL);
+            if (!DBConnection.isMySQL()) {
+                stmt.execute(createSQL);
 
-            // Safe migration: add image_path column if table already existed without it
-            try {
-                stmt.execute("ALTER TABLE movies ADD COLUMN image_path TEXT DEFAULT ''");
-            } catch (SQLException ignored) {}
+                // Safe migration: add image_path column if table already existed without it
+                try {
+                    stmt.execute("ALTER TABLE movies ADD COLUMN image_path TEXT DEFAULT ''");
+                } catch (SQLException ignored) {}
 
-            // Safe migration: add language column if table already existed without it
-            try {
-                stmt.execute("ALTER TABLE movies ADD COLUMN language TEXT DEFAULT 'Hindi'");
-            } catch (SQLException ignored) {}
+                // Safe migration: add language column if table already existed without it
+                try {
+                    stmt.execute("ALTER TABLE movies ADD COLUMN language TEXT DEFAULT 'Hindi'");
+                } catch (SQLException ignored) {}
 
-            // Safe migration: add release_date column if table already existed without it
-            try {
-                stmt.execute("ALTER TABLE movies ADD COLUMN release_date TEXT DEFAULT ''");
-            } catch (SQLException ignored) {}
+                // Safe migration: add release_date column if table already existed without it
+                try {
+                    stmt.execute("ALTER TABLE movies ADD COLUMN release_date TEXT DEFAULT ''");
+                } catch (SQLException ignored) {}
 
-            // Safe migration: drop legacy price column if present
-            try {
-                stmt.execute("ALTER TABLE movies DROP COLUMN price");
-            } catch (SQLException ignored) {}
+                // Safe migration: drop legacy price column if present
+                try {
+                    stmt.execute("ALTER TABLE movies DROP COLUMN price");
+                } catch (SQLException ignored) {}
+            }
 
             // Check if movies table is empty
             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM movies");

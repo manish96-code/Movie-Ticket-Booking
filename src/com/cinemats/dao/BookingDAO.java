@@ -15,67 +15,69 @@ public class BookingDAO {
         try (Connection conn = DBConnection.getConnection();
              Statement stmt = conn.createStatement()) {
 
-            stmt.execute("CREATE TABLE IF NOT EXISTS bookings ("
-                    + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-                    + "booking_number TEXT UNIQUE NOT NULL, "
-                    + "customer_id INTEGER NOT NULL, "
-                    + "show_id INTEGER NOT NULL, "
-                    + "customer_name TEXT NOT NULL, "
-                    + "customer_phone TEXT NOT NULL, "
-                    + "movie_title TEXT NOT NULL, "
-                    + "screen_name TEXT NOT NULL, "
-                    + "show_date TEXT NOT NULL, "
-                    + "start_time TEXT NOT NULL, "
-                    + "cashier_name TEXT DEFAULT '', "
-                    + "subtotal REAL NOT NULL, "
-                    + "discount REAL DEFAULT 0.0, "
-                    + "total_amount REAL NOT NULL, "
-                    + "status TEXT DEFAULT 'CONFIRMED', "
-                    + "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
-                    + ");");
+            if (!DBConnection.isMySQL()) {
+                stmt.execute("CREATE TABLE IF NOT EXISTS bookings ("
+                        + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                        + "booking_number TEXT UNIQUE NOT NULL, "
+                        + "customer_id INTEGER NOT NULL, "
+                        + "show_id INTEGER NOT NULL, "
+                        + "customer_name TEXT NOT NULL, "
+                        + "customer_phone TEXT NOT NULL, "
+                        + "movie_title TEXT NOT NULL, "
+                        + "screen_name TEXT NOT NULL, "
+                        + "show_date TEXT NOT NULL, "
+                        + "start_time TEXT NOT NULL, "
+                        + "cashier_name TEXT DEFAULT '', "
+                        + "subtotal REAL NOT NULL, "
+                        + "discount REAL DEFAULT 0.0, "
+                        + "total_amount REAL NOT NULL, "
+                        + "status TEXT DEFAULT 'CONFIRMED', "
+                        + "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+                        + ");");
 
-            migrateLegacyBookingColumns(conn);
+                migrateLegacyBookingColumns(conn);
 
-            stmt.execute("CREATE TABLE IF NOT EXISTS booking_items ("
-                    + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-                    + "booking_id INTEGER NOT NULL, "
-                    + "show_seat_id INTEGER NOT NULL, "
-                    + "seat_label TEXT NOT NULL, "
-                    + "seat_type TEXT NOT NULL, "
-                    + "unit_price REAL NOT NULL, "
-                    + "FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE"
-                    + ");");
+                stmt.execute("CREATE TABLE IF NOT EXISTS booking_items ("
+                        + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                        + "booking_id INTEGER NOT NULL, "
+                        + "show_seat_id INTEGER NOT NULL, "
+                        + "seat_label TEXT NOT NULL, "
+                        + "seat_type TEXT NOT NULL, "
+                        + "unit_price REAL NOT NULL, "
+                        + "FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE"
+                        + ");");
 
-            stmt.execute("CREATE TABLE IF NOT EXISTS payments ("
-                    + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-                    + "booking_id INTEGER NOT NULL, "
-                    + "payment_method TEXT NOT NULL, "
-                    + "total_amount REAL NOT NULL, "
-                    + "amount_received REAL NOT NULL, "
-                    + "change_returned REAL NOT NULL, "
-                    + "transaction_ref TEXT DEFAULT '', "
-                    + "status TEXT DEFAULT 'COMPLETED', "
-                    + "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
-                    + "FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE"
-                    + ");");
+                stmt.execute("CREATE TABLE IF NOT EXISTS payments ("
+                        + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                        + "booking_id INTEGER NOT NULL, "
+                        + "payment_method TEXT NOT NULL, "
+                        + "total_amount REAL NOT NULL, "
+                        + "amount_received REAL NOT NULL, "
+                        + "change_returned REAL NOT NULL, "
+                        + "transaction_ref TEXT DEFAULT '', "
+                        + "status TEXT DEFAULT 'COMPLETED', "
+                        + "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
+                        + "FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE"
+                        + ");");
 
-            stmt.execute("CREATE TABLE IF NOT EXISTS tickets ("
-                    + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-                    + "booking_id INTEGER NOT NULL, "
-                    + "ticket_number TEXT UNIQUE NOT NULL, "
-                    + "seat_label TEXT NOT NULL, "
-                    + "seat_type TEXT NOT NULL, "
-                    + "price REAL NOT NULL, "
-                    + "qr_data TEXT NOT NULL, "
-                    + "status TEXT DEFAULT 'ACTIVE', "
-                    + "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
-                    + "FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE"
-                    + ");");
+                stmt.execute("CREATE TABLE IF NOT EXISTS tickets ("
+                        + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                        + "booking_id INTEGER NOT NULL, "
+                        + "ticket_number TEXT UNIQUE NOT NULL, "
+                        + "seat_label TEXT NOT NULL, "
+                        + "seat_type TEXT NOT NULL, "
+                        + "price REAL NOT NULL, "
+                        + "qr_data TEXT NOT NULL, "
+                        + "status TEXT DEFAULT 'ACTIVE', "
+                        + "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
+                        + "FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE"
+                        + ");");
 
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_bookings_number ON bookings(booking_number);");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_bookings_date ON bookings(show_date);");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_booking_items_booking ON booking_items(booking_id);");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_tickets_number ON tickets(ticket_number);");
+                stmt.execute("CREATE INDEX IF NOT EXISTS idx_bookings_number ON bookings(booking_number);");
+                stmt.execute("CREATE INDEX IF NOT EXISTS idx_bookings_date ON bookings(show_date);");
+                stmt.execute("CREATE INDEX IF NOT EXISTS idx_booking_items_booking ON booking_items(booking_id);");
+                stmt.execute("CREATE INDEX IF NOT EXISTS idx_tickets_number ON tickets(ticket_number);");
+            }
 
         } catch (SQLException e) {
             System.err.println("[BookingDAO] Error initializing booking tables: " + e.getMessage());

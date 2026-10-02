@@ -32,7 +32,9 @@ public class ScreenDAO {
         try (Connection conn = DBConnection.getConnection();
              Statement stmt = conn.createStatement()) {
 
-            stmt.execute(createSQL);
+            if (!DBConnection.isMySQL()) {
+                stmt.execute(createSQL);
+            }
 
             // Check if screens table is empty
             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM screens");

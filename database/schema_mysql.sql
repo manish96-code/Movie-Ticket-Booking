@@ -1,0 +1,190 @@
+-- ====================================================================
+-- Cinema Express - MySQL Database Schema Definition
+-- Compatible with MySQL 8.0+ and MariaDB
+-- ====================================================================
+
+CREATE DATABASE IF NOT EXISTS cinema_db
+    CHARACTER SET utf8mb4
+    COLLATE utf8mb4_unicode_ci;
+
+USE cinema_db;
+
+-- 1. USERS & STAFF ACCOUNTS TABLE
+CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    role VARCHAR(20) NOT NULL DEFAULT 'STAFF',
+    full_name VARCHAR(150) NOT NULL,
+    counter VARCHAR(100) DEFAULT 'Counter #01 (Main Concourse)',
+    shift VARCHAR(100) DEFAULT 'Morning Shift (09:00 AM - 04:00 PM)',
+    phone VARCHAR(30) DEFAULT '',
+    status VARCHAR(20) DEFAULT 'ACTIVE',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 2. MOVIE CATEGORIES TABLE
+CREATE TABLE IF NOT EXISTS categories (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    description VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 3. MOVIES CATALOGUE TABLE
+CREATE TABLE IF NOT EXISTS movies (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    genre VARCHAR(150) NOT NULL,
+    duration_mins INT DEFAULT 150,
+    rating VARCHAR(20) DEFAULT 'UA 13+',
+    poster_label VARCHAR(100) DEFAULT 'MOVIE POSTER',
+    image_path VARCHAR(255) DEFAULT '',
+    status VARCHAR(50) DEFAULT 'NOW_SHOWING',
+    language VARCHAR(50) DEFAULT 'Hindi',
+    release_date VARCHAR(50) DEFAULT '',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 4. SCREENS & AUDITORIUMS TABLE
+CREATE TABLE IF NOT EXISTS screens (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    screen_number INT NOT NULL UNIQUE,
+    screen_type VARCHAR(50) NOT NULL DEFAULT 'Standard',
+    status VARCHAR(50) NOT NULL DEFAULT 'ACTIVE',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 5. PHYSICAL SCREEN SEATS TABLE
+CREATE TABLE IF NOT EXISTS screen_seats (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    screen_id INT NOT NULL,
+    row_name VARCHAR(10) NOT NULL,
+    seat_number INT NOT NULL,
+    seat_label VARCHAR(20) NOT NULL,
+    seat_type VARCHAR(50) NOT NULL DEFAULT 'REGULAR',
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (screen_id) REFERENCES screens(id) ON DELETE CASCADE,
+    UNIQUE KEY uq_screen_seat (screen_id, seat_label)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 6. SCHEDULES & SHOWTIMES TABLE
+CREATE TABLE IF NOT EXISTS shows (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    movie_id INT NOT NULL,
+    screen_id INT NOT NULL,
+    show_date VARCHAR(30) NOT NULL,
+    start_time VARCHAR(30) NOT NULL,
+    end_time VARCHAR(30) NOT NULL,
+    status VARCHAR(30) DEFAULT 'OPEN',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE CASCADE,
+    FOREIGN KEY (screen_id) REFERENCES screens(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 7. SHOW TIERED SEAT PRICING TABLE
+CREATE TABLE IF NOT EXISTS show_prices (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    show_id INT NOT NULL,
+    seat_type VARCHAR(50) NOT NULL,
+    price DECIMAL(10,2) NOT NULL DEFAULT 200.00,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (show_id) REFERENCES shows(id) ON DELETE CASCADE,
+    UNIQUE KEY uq_show_seat_type (show_id, seat_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 8. SHOWTIME SEATS INVENTORY TABLE
+CREATE TABLE IF NOT EXISTS show_seats (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    show_id INT NOT NULL,
+    screen_seat_id INT NOT NULL,
+    price DECIMAL(10,2) NOT NULL DEFAULT 200.00,
+    status VARCHAR(20) NOT NULL DEFAULT 'AVAILABLE',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (show_id) REFERENCES shows(id) ON DELETE CASCADE,
+    FOREIGN KEY (screen_seat_id) REFERENCES screen_seats(id) ON DELETE CASCADE,
+    UNIQUE KEY uq_show_screen_seat (show_id, screen_seat_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 9. CUSTOMERS TABLE
+CREATE TABLE IF NOT EXISTS customers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    phone VARCHAR(30) NOT NULL UNIQUE,
+    email VARCHAR(150) DEFAULT '',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_cust_phone (phone)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 10. BOOKINGS TABLE
+CREATE TABLE IF NOT EXISTS bookings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    booking_number VARCHAR(60) NOT NULL UNIQUE,
+    customer_id INT NOT NULL,
+    show_id INT NOT NULL,
+    customer_name VARCHAR(150) NOT NULL,
+    customer_phone VARCHAR(30) NOT NULL,
+    movie_title VARCHAR(255) NOT NULL,
+    screen_name VARCHAR(100) NOT NULL,
+    show_date VARCHAR(30) NOT NULL,
+    start_time VARCHAR(30) NOT NULL,
+    cashier_name VARCHAR(100) DEFAULT '',
+    subtotal DECIMAL(10,2) NOT NULL,
+    discount DECIMAL(10,2) DEFAULT 0.00,
+    total_amount DECIMAL(10,2) NOT NULL,
+    status VARCHAR(30) DEFAULT 'CONFIRMED',
+    seat_count INT DEFAULT 1,
+    booked_at VARCHAR(40) DEFAULT '',
+    payment_mode VARCHAR(30) DEFAULT 'UPI',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_booking_num (booking_number),
+    INDEX idx_booking_date (show_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 11. BOOKING ITEMS TABLE
+CREATE TABLE IF NOT EXISTS booking_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    booking_id INT NOT NULL,
+    show_seat_id INT NOT NULL,
+    seat_label VARCHAR(20) NOT NULL,
+    seat_type VARCHAR(50) NOT NULL,
+    unit_price DECIMAL(10,2) NOT NULL,
+    FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
+    INDEX idx_booking_items_booking (booking_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 12. PAYMENTS TABLE
+CREATE TABLE IF NOT EXISTS payments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    booking_id INT NOT NULL,
+    payment_method VARCHAR(30) NOT NULL,
+    total_amount DECIMAL(10,2) NOT NULL,
+    amount_received DECIMAL(10,2) NOT NULL,
+    change_returned DECIMAL(10,2) NOT NULL,
+    transaction_ref VARCHAR(100) DEFAULT '',
+    status VARCHAR(30) DEFAULT 'COMPLETED',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 13. TICKETS TABLE
+CREATE TABLE IF NOT EXISTS tickets (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    booking_id INT NOT NULL,
+    ticket_number VARCHAR(60) NOT NULL UNIQUE,
+    seat_label VARCHAR(20) NOT NULL,
+    seat_type VARCHAR(50) NOT NULL,
+    price DECIMAL(10,2) NOT NULL,
+    qr_data TEXT NOT NULL,
+    status VARCHAR(30) DEFAULT 'ACTIVE',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
+    INDEX idx_ticket_num (ticket_number)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

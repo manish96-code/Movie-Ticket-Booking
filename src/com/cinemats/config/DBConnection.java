@@ -3,18 +3,35 @@ package com.cinemats.config;
 import com.cinemats.data.UserMockData;
 import com.cinemats.model.User;
 
+import java.io.*;
 import java.sql.*;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.Date;
-import java.util.List;
 
-// SQLite database connection and user management
+/**
+ * Universal Database Connection Manager supporting both MySQL and SQLite.
+ * Configuration is loaded from 'db.properties' with automatic schema creation
+ * and resilient fallback to SQLite if MySQL is offline.
+ */
 public class DBConnection {
 
-    private static final String DB_URL = "jdbc:sqlite:cinema.db";
+    public enum DBType { MYSQL, SQLITE }
+
+    private static DBType activeType = DBType.MYSQL;
     private static boolean driverAvailable = false;
     private static boolean initialized = false;
+
+    // MySQL Configuration
+    private static String mysqlHost = "localhost";
+    private static int mysqlPort = 3306;
+    private static String mysqlDb = "cinema_db";
+    private static String mysqlUser = "root";
+    private static String mysqlPass = "root";
+    private static String mysqlParams = "?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&createDatabaseIfNotExist=true";
+
+    // SQLite Configuration
+    private static String sqliteUrl = "jdbc:sqlite:cinema.db";
 
     // Default credentials and in-memory fallback from UserMockData
     private static final String DEFAULT_ADMIN_USER = UserMockData.DEFAULT_ADMIN_USER;
@@ -28,72 +45,143 @@ public class DBConnection {
     private static final List<User> fallbackUsers = new ArrayList<>(UserMockData.getInitialUsers());
 
     static {
+        loadConfiguration();
+        setupDatabaseConnection();
+    }
+
+    private static void loadConfiguration() {
+        Properties props = new Properties();
+        File propFile = new File("db.properties");
+        if (propFile.exists()) {
+            try (FileInputStream fis = new FileInputStream(propFile)) {
+                props.load(fis);
+            } catch (IOException e) {
+                System.err.println("[DBConnection] Notice: Could not read db.properties: " + e.getMessage());
+            }
+        }
+
+        String typeStr = System.getenv("CINEMA_DB_TYPE");
+        if (typeStr == null || typeStr.trim().isEmpty()) {
+            typeStr = props.getProperty("db.type", "MYSQL").trim();
+        }
+
+        if ("SQLITE".equalsIgnoreCase(typeStr)) {
+            activeType = DBType.SQLITE;
+        } else {
+            activeType = DBType.MYSQL;
+        }
+
+        // MySQL properties
+        mysqlHost = props.getProperty("db.mysql.host", "localhost").trim();
+        try {
+            mysqlPort = Integer.parseInt(props.getProperty("db.mysql.port", "3306").trim());
+        } catch (NumberFormatException ignored) {
+            mysqlPort = 3306;
+        }
+        mysqlDb = props.getProperty("db.mysql.database", "cinema_db").trim();
+        mysqlUser = props.getProperty("db.mysql.user", "root").trim();
+        mysqlPass = props.getProperty("db.mysql.password", "root").trim();
+        mysqlParams = props.getProperty("db.mysql.params", "?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&createDatabaseIfNotExist=true").trim();
+
+        // Environment overrides
+        if (System.getenv("MYSQL_HOST") != null) mysqlHost = System.getenv("MYSQL_HOST");
+        if (System.getenv("MYSQL_PORT") != null) {
+            try { mysqlPort = Integer.parseInt(System.getenv("MYSQL_PORT")); } catch (Exception ignored) {}
+        }
+        if (System.getenv("MYSQL_DATABASE") != null) mysqlDb = System.getenv("MYSQL_DATABASE");
+        if (System.getenv("MYSQL_USER") != null) mysqlUser = System.getenv("MYSQL_USER");
+        if (System.getenv("MYSQL_PASSWORD") != null) mysqlPass = System.getenv("MYSQL_PASSWORD");
+
+        // SQLite properties
+        sqliteUrl = props.getProperty("db.sqlite.url", "jdbc:sqlite:cinema.db").trim();
+    }
+
+    private static void setupDatabaseConnection() {
+        if (activeType == DBType.MYSQL) {
+            try {
+                Class.forName("com.mysql.cj.jdbc.Driver");
+                // Test MySQL connection
+                String testUrl = getMySQLUrl();
+                try (Connection conn = DriverManager.getConnection(testUrl, mysqlUser, mysqlPass)) {
+                    driverAvailable = true;
+                    System.out.println("[DBConnection] Successfully connected to MySQL (" + mysqlHost + ":" + mysqlPort + "/" + mysqlDb + ").");
+                    initDatabase();
+                    return;
+                }
+            } catch (ClassNotFoundException e) {
+                System.err.println("[DBConnection] MySQL JDBC driver not found on classpath.");
+            } catch (SQLException e) {
+                System.err.println("[DBConnection] Could not connect to MySQL at " + mysqlHost + ":" + mysqlPort + ": " + e.getMessage());
+                System.err.println("[DBConnection] 💡 Check credentials in 'db.properties' (user: " + mysqlUser + ").");
+            }
+
+            // Fallback to SQLite if MySQL fails
+            System.out.println("[DBConnection] Falling back to local SQLite database (cinema.db)...");
+            activeType = DBType.SQLITE;
+        }
+
+        // Setup SQLite
         try {
             Class.forName("org.sqlite.JDBC");
             driverAvailable = true;
+            System.out.println("[DBConnection] Connected to local SQLite database (" + sqliteUrl + ").");
             initDatabase();
         } catch (Throwable t) {
             driverAvailable = false;
-            System.out.println("[DBConnection] SQLite JDBC driver not active: " + t.getMessage());
-            System.out.println("[DBConnection] Operating in resilient fallback mode (admin: admin123, staff: staff123).");
-            System.out.println("[DBConnection] Ensure sqlite-jdbc.jar and slf4j jars are in classpath to persist data into cinema.db.");
+            System.err.println("[DBConnection] Neither MySQL nor SQLite driver available: " + t.getMessage());
+            System.err.println("[DBConnection] Operating in resilient fallback in-memory mode.");
         }
     }
 
-    // Returns a connection to the SQLite database
+    private static String getMySQLUrl() {
+        return "jdbc:mysql://" + mysqlHost + ":" + mysqlPort + "/" + mysqlDb + mysqlParams;
+    }
+
+    public static boolean isMySQL() {
+        return activeType == DBType.MYSQL;
+    }
+
+    public static String getDatabaseType() {
+        return activeType == DBType.MYSQL ? "MySQL (" + mysqlDb + ")" : "SQLite (cinema.db)";
+    }
+
+    // Returns a connection to the active database (MySQL or SQLite)
     public static Connection getConnection() throws SQLException {
         if (!driverAvailable) {
-            throw new SQLException("SQLite JDBC driver (org.sqlite.JDBC) is not available on classpath.");
+            throw new SQLException("No active JDBC driver available.");
         }
-        return DriverManager.getConnection(DB_URL);
+        if (activeType == DBType.MYSQL) {
+            return DriverManager.getConnection(getMySQLUrl(), mysqlUser, mysqlPass);
+        } else {
+            return DriverManager.getConnection(sqliteUrl);
+        }
     }
 
-    // Resets initialized state for re-seeding / testing
     public static synchronized void resetInitializedFlag() {
         initialized = false;
     }
 
-    // Initializes database tables and default user credentials
+    // Initializes database tables and default seed data
     public static synchronized void initDatabase() {
         if (!driverAvailable || initialized) return;
 
-        String createTableSQL = "CREATE TABLE IF NOT EXISTS users ("
-                + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-                + "username TEXT UNIQUE NOT NULL, "
-                + "password TEXT NOT NULL, "
-                + "role TEXT NOT NULL DEFAULT 'STAFF', "
-                + "full_name TEXT NOT NULL, "
-                + "counter TEXT DEFAULT 'Counter #01 (Main Concourse)', "
-                + "shift TEXT DEFAULT 'Morning Shift (09:00 AM - 04:00 PM)', "
-                + "phone TEXT DEFAULT '', "
-                + "status TEXT DEFAULT 'ACTIVE', "
-                + "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
-                + ");";
+        try (Connection conn = getConnection()) {
+            if (activeType == DBType.MYSQL) {
+                initMySQLSchema(conn);
+            } else {
+                initSQLiteSchema(conn);
+            }
 
-        try (Connection conn = getConnection();
-             Statement stmt = conn.createStatement()) {
-
-            stmt.execute(createTableSQL);
-
-            // Schema evolution: ensure optional columns exist if table was previously created with fewer columns
-            addColumnIfNotExists(stmt, "counter", "TEXT DEFAULT 'Counter #01 (Main Concourse)'");
-            addColumnIfNotExists(stmt, "shift", "TEXT DEFAULT 'Morning Shift (09:00 AM - 04:00 PM)'");
-            addColumnIfNotExists(stmt, "phone", "TEXT DEFAULT ''");
-            addColumnIfNotExists(stmt, "status", "TEXT DEFAULT 'ACTIVE'");
-            addColumnIfNotExists(stmt, "created_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
-
-            // Seed default Admin if not exists
+            // Seed default users in users table if not exists
             seedUser(conn, UserMockData.DEFAULT_ADMIN_USER, UserMockData.DEFAULT_ADMIN_PASS, "ADMIN", UserMockData.DEFAULT_ADMIN_NAME,
                     UserMockData.DEFAULT_ADMIN_COUNTER, UserMockData.DEFAULT_ADMIN_SHIFT, UserMockData.DEFAULT_ADMIN_PHONE);
 
-            // Seed default Staff if not exists
             seedUser(conn, UserMockData.DEFAULT_STAFF_USER, UserMockData.DEFAULT_STAFF_PASS, "STAFF", UserMockData.DEFAULT_STAFF_NAME,
                     UserMockData.DEFAULT_STAFF_COUNTER, UserMockData.DEFAULT_STAFF_SHIFT, UserMockData.DEFAULT_STAFF_PHONE);
 
             initialized = true;
-            System.out.println("[DBConnection] SQLite database connected and initialized successfully (cinema.db).");
 
-            // Initialize tables via DAOs
+            // Initialize all domain tables and seed records via DAOs
             com.cinemats.dao.CategoryDAO.initCategoriesTable();
             com.cinemats.dao.MovieDAO.initMoviesTable();
             com.cinemats.dao.ScreenDAO.initScreensTable();
@@ -102,40 +190,97 @@ public class DBConnection {
             com.cinemats.dao.ShowSeatDAO.initShowSeatsTable();
             com.cinemats.dao.CustomerDAO.initCustomersTable();
             com.cinemats.dao.BookingDAO.initBookingsTables();
-            initShowsAndBookingsTables(stmt);
+
+            System.out.println("[DBConnection] Database schema & default records verified for " + getDatabaseType());
 
         } catch (SQLException e) {
-            System.err.println("[DBConnection] Error during SQLite schema initialization: " + e.getMessage());
+            System.err.println("[DBConnection] Error during schema initialization: " + e.getMessage());
         }
     }
 
-        private static void initShowsAndBookingsTables(Statement stmt) {
-        try {
-            String createShows = "CREATE TABLE IF NOT EXISTS shows ("
+    private static void initMySQLSchema(Connection conn) {
+        File scriptFile = new File("database/schema_mysql.sql");
+        if (scriptFile.exists()) {
+            executeSqlScript(conn, scriptFile);
+        } else {
+            // Minimal programmatic table creation if script is missing
+            try (Statement stmt = conn.createStatement()) {
+                stmt.execute("CREATE TABLE IF NOT EXISTS users ("
+                        + "id INT AUTO_INCREMENT PRIMARY KEY, "
+                        + "username VARCHAR(100) NOT NULL UNIQUE, "
+                        + "password VARCHAR(255) NOT NULL, "
+                        + "role VARCHAR(20) NOT NULL DEFAULT 'STAFF', "
+                        + "full_name VARCHAR(150) NOT NULL, "
+                        + "counter VARCHAR(100) DEFAULT 'Counter #01 (Main Concourse)', "
+                        + "shift VARCHAR(100) DEFAULT 'Morning Shift (09:00 AM - 04:00 PM)', "
+                        + "phone VARCHAR(30) DEFAULT '', "
+                        + "status VARCHAR(20) DEFAULT 'ACTIVE', "
+                        + "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+                        + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+            } catch (SQLException ex) {
+                System.err.println("[DBConnection] Notice on MySQL users table init: " + ex.getMessage());
+            }
+        }
+    }
+
+    private static void initSQLiteSchema(Connection conn) throws SQLException {
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute("CREATE TABLE IF NOT EXISTS users ("
                     + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-                    + "movie_id INTEGER NOT NULL, "
-                    + "screen TEXT NOT NULL DEFAULT 'Screen 1 (IMAX Laser)', "
-                    + "show_time TEXT NOT NULL, "
-                    + "show_date TEXT NOT NULL, "
-                    + "price REAL NOT NULL DEFAULT 200.0, "
-                    + "available_seats INTEGER DEFAULT 120, "
-                    + "total_seats INTEGER DEFAULT 120, "
-                    + "status TEXT DEFAULT 'OPEN', "
-                    + "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
-                    + "FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE CASCADE"
-                    + ");";
-            stmt.execute(createShows);
-        } catch (SQLException e) {
-            System.err.println("[DBConnection] Error initializing shows table: " + e.getMessage());
+                    + "username TEXT UNIQUE NOT NULL, "
+                    + "password TEXT NOT NULL, "
+                    + "role TEXT NOT NULL DEFAULT 'STAFF', "
+                    + "full_name TEXT NOT NULL, "
+                    + "counter TEXT DEFAULT 'Counter #01 (Main Concourse)', "
+                    + "shift TEXT DEFAULT 'Morning Shift (09:00 AM - 04:00 PM)', "
+                    + "phone TEXT DEFAULT '', "
+                    + "status TEXT DEFAULT 'ACTIVE', "
+                    + "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+                    + ");");
+
+            addColumnIfNotExists(stmt, "counter", "TEXT DEFAULT 'Counter #01 (Main Concourse)'");
+            addColumnIfNotExists(stmt, "shift", "TEXT DEFAULT 'Morning Shift (09:00 AM - 04:00 PM)'");
+            addColumnIfNotExists(stmt, "phone", "TEXT DEFAULT ''");
+            addColumnIfNotExists(stmt, "status", "TEXT DEFAULT 'ACTIVE'");
+            addColumnIfNotExists(stmt, "created_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+        }
+    }
+
+    private static void executeSqlScript(Connection conn, File file) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(file));
+             Statement stmt = conn.createStatement()) {
+
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty() || line.startsWith("--") || line.startsWith("#")) {
+                    continue;
+                }
+                sb.append(line).append(" ");
+                if (line.endsWith(";")) {
+                    String sql = sb.toString().trim();
+                    sql = sql.substring(0, sql.length() - 1).trim();
+                    // Skip database creation / switch commands inside active connection
+                    String upper = sql.toUpperCase();
+                    if (!upper.startsWith("CREATE DATABASE") && !upper.startsWith("USE ")) {
+                        try {
+                            stmt.execute(sql);
+                        } catch (SQLException ignored) {}
+                    }
+                    sb.setLength(0);
+                }
+            }
+            System.out.println("[DBConnection] Applied MySQL schema definition from " + file.getName());
+        } catch (Exception e) {
+            System.err.println("[DBConnection] Notice applying SQL script: " + e.getMessage());
         }
     }
 
     private static void addColumnIfNotExists(Statement stmt, String columnName, String colDefinition) {
         try {
             stmt.execute("ALTER TABLE users ADD COLUMN " + columnName + " " + colDefinition);
-        } catch (SQLException ignored) {
-            // Column already exists, safe to ignore
-        }
+        } catch (SQLException ignored) {}
     }
 
     private static void seedUser(Connection conn, String username, String password, String role, String fullName,
@@ -162,6 +307,18 @@ public class DBConnection {
         } catch (SQLException e) {
             System.err.println("[DBConnection] Failed to seed user " + username + ": " + e.getMessage());
         }
+    }
+
+    // Adapts table creation SQL syntax for active database engine
+    public static String adaptSQL(String sql) {
+        if (isMySQL() && sql != null) {
+            return sql
+                    .replace("INTEGER PRIMARY KEY AUTOINCREMENT", "INT AUTO_INCREMENT PRIMARY KEY")
+                    .replace("INTEGER PRIMARY KEY", "INT AUTO_INCREMENT PRIMARY KEY")
+                    .replace("TEXT UNIQUE", "VARCHAR(191) UNIQUE")
+                    .replace("REAL", "DECIMAL(10,2)");
+        }
+        return sql;
     }
 
     // Backward Compatibility Delegates (forwarding to com.cinemats.dao.UserDAO)
@@ -204,19 +361,12 @@ public class DBConnection {
         return com.cinemats.dao.UserDAO.getUserById(id);
     }
 
-    // =========================================================================
-    // Fallback In-Memory Helpers (used when sqlite-jdbc driver is not active)
-    // =========================================================================
-
+    // Fallback in-memory methods
     public static User authenticateFallback(String username, String password) {
         for (User u : fallbackUsers) {
             if (u.getUsername().equalsIgnoreCase(username)) {
-                if (DEFAULT_ADMIN_USER.equalsIgnoreCase(username) && DEFAULT_ADMIN_PASS.equals(password)) {
-                    return u;
-                }
-                if (DEFAULT_STAFF_USER.equalsIgnoreCase(username) && DEFAULT_STAFF_PASS.equals(password)) {
-                    return u;
-                }
+                if (DEFAULT_ADMIN_USER.equalsIgnoreCase(username) && DEFAULT_ADMIN_PASS.equals(password)) return u;
+                if (DEFAULT_STAFF_USER.equalsIgnoreCase(username) && DEFAULT_STAFF_PASS.equals(password)) return u;
                 return u;
             }
         }
@@ -261,9 +411,5 @@ public class DBConnection {
 
     public static boolean isDriverAvailable() {
         return driverAvailable;
-    }
-
-    public static String getDbUrl() {
-        return DB_URL;
     }
 }
