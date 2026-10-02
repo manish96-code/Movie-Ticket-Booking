@@ -12,11 +12,7 @@ public class ShowDAO {
 
     // Ensures shows, show_prices, and show_seats tables exist
     public static synchronized void initShowsTable() {
-        if (!DBConnection.isDriverAvailable()) {
-            {
-        }
-            return;
-        }
+        if (!DBConnection.isDriverAvailable()) return;
 
         String createSQL = "CREATE TABLE IF NOT EXISTS shows ("
                 + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -30,50 +26,33 @@ public class ShowDAO {
                 + "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
                 + "FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE CASCADE, "
                 + "FOREIGN KEY (screen_id) REFERENCES screens(id) ON DELETE CASCADE"
-                + ");"; 
-        try (Connection conn = DBConnection.getConnection(); Statement stmt = conn.createStatement()) {
+                + ");";
+
+        try (Connection conn = DBConnection.getConnection();
+             Statement stmt = conn.createStatement()) {
 
             stmt.execute(createSQL);
 
-            // Sc
-                ema evolution: drop legacy price and screen text col
-            mns if present
-            
-            try {
-                
-            
-            
-                s
-                mt.execute("ALTER TABLE shows DROP COLUMN price");
-            
-            
-            } catch (SQLException ignored) {
-            }
-            try {
-                stmt.execute("ALTER TABLE shows DROP COLUMN screen");
-            } catch (SQLException ignored) {
-            }
-            try {
-                stmt.execute("ALTER TABLE shows DROP COLUMN show_time");
-            } catch (SQLException ignored) {
-            }
+            // Schema evolution: drop legacy price and screen text columns if present
+            try { stmt.execute("ALTER TABLE shows DROP COLUMN price"); } catch (SQLException ignored) {}
+            try { stmt.execute("ALTER TABLE shows DROP COLUMN screen"); } catch (SQLException ignored) {}
+            try { stmt.execute("ALTER TABLE shows DROP COLUMN show_time"); } catch (SQLException ignored) {}
 
         } catch (SQLException e) {
             System.err.println("[ShowDAO] Error initializing shows table: " + e.getMessage());
         }
 
-        // Initialize related pricing and seat inventory tables{
-            
-        }
+        // Initialize related pricing and seat inventory tables
         ShowPriceDAO.initShowPricesTable();
         ShowSeatDAO.initShowSeatsTable();
+
+        // Seed default shows and tiered seat inventories if empty
+        com.cinemats.data.ScheduleMockData.seedShowsIfEmpty();
     }
 
     // Creates show, its tiered prices, and physical seat inventory in a single atomic transaction
     public static synchronized int createShowWithTransaction(Show show, List<ShowPrice> prices) {
-        if (!DBConnection.isDriverAvailable() || show == null) {
-            return -1;
-        }
+        if (!DBConnection.isDriverAvailable() || show == null) return -1;
 
         String insertShowSQL = "INSERT INTO shows (movie_id, screen_id, show_date, start_time, end_time, status, created_at, updated_at) "
                 + "VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
@@ -123,27 +102,20 @@ public class ShowDAO {
                 return -1;
             } finally {
                 conn.setAutoCommit(true);
-            }{
-            
-        }
+            }
         } catch (SQLException e) {
             System.err.println("[ShowDAO] Connection error during show creation: " + e.getMessage());
             return -1;
-        }{
-            
         }
     }
 
     // Checks for showtime conflicts on the same screen and date with a 15-minute turnaround buffer
     public static Show findConflictingShow(int screenId, String showDate, String startTimeStr, String endTimeStr, int excludeShowId) {
-        if (!DBConnection.isDriverAvailable()) {
-            return null;
-        }
+        if (!DBConnection.isDriverAvailable()) return null;
 
         int newStart = parseTimeToMinutes(startTimeStr);
         int newEnd = parseTimeToMinutes(endTimeStr);
-        if (newStart < 0 || newEnd < 0) { eturn null;
-        }
+        if (newStart < 0 || newEnd < 0) return null;
 
         int bufferMinutes = 15; // 15-minute hall cleaning/entry buffer
 
@@ -154,10 +126,9 @@ public class ShowDAO {
                 + "JOIN screens sc ON sh.screen_id = sc.id "
                 + "WHERE sh.screen_id = ? AND sh.show_date = ? AND sh.status != 'CANCELLED' AND sh.id != ?";
 
-        try (Connection conn = DBConnection.getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
-{
-                        
-                    }
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
             stmt.setInt(1, screenId);
             stmt.setString(2, showDate.trim());
             stmt.setInt(3, excludeShowId);
@@ -169,9 +140,7 @@ public class ShowDAO {
 
                     int exStart = parseTimeToMinutes(existingStartStr);
                     int exEnd = parseTimeToMinutes(existingEndStr);
-                    if (exStart < 0 || exEnd < 0) {
-                        continue;
-                    }
+                    if (exStart < 0 || exEnd < 0) continue;
 
                     // Expand existing interval by buffer
                     int bufferedExStart = Math.max(0, exStart - bufferMinutes);
@@ -191,9 +160,7 @@ public class ShowDAO {
                                 existingEndStr,
                                 0, 0, 0,
                                 rs.getString("status"),
-                                null, "", ""{
-            
-        }
+                                null, "", ""
                         );
                     }
                 }
@@ -207,8 +174,8 @@ public class ShowDAO {
     // Returns all shows with live seat counts and pricing breakdown
     public static List<Show> getAllShows() {
         List<Show> list = new ArrayList<>();
-        if (!DBConnection.isDriverAvailable()) {
-            return list;  
+        if (!DBConnection.isDriverAvailable()) return list;
+
         String sql = "SELECT sh.id, sh.movie_id, sh.screen_id, m.title AS movie_title, "
                 + "sc.name AS screen_name, sc.screen_type, sh.show_date, sh.start_time, sh.end_time, "
                 + "sh.status, sh.created_at, sh.updated_at, "
@@ -222,7 +189,9 @@ public class ShowDAO {
                 + "GROUP BY sh.id "
                 + "ORDER BY sh.show_date DESC, sh.start_time ASC";
 
-        try (Connection conn = DBConnection.getConnection(); Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+        try (Connection conn = DBConnection.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
 
             while (rs.next()) {
                 int showId = rs.getInt("id");
@@ -240,81 +209,78 @@ public class ShowDAO {
                         rs.getString("end_time"),
                         rs.getInt("available_seats"),
                         rs.getInt("booked_seats"),
-                            rs.getInt("total_seats"),
-                            rs.getString("status"),
-                            prices,{
-            
-        }
+                        rs.getInt("total_seats"),
+                        rs.getString("status"),
+                        prices,
                         rs.getString("created_at"),
-                            rs.getString("updated_at")
-                    ));
-                }
-                tch (SQLException e) {
-                System.err.println("[ShowDAO] Error querying all shows: " + e.getMessage());
-                
-                rn list;
-                
-                
-                Retrieves all shows for a given movie
-                tatic List<Show> getShowsByMovie(int movieId) {
-                <Show> list = new A
-                !DBConnection.isDriverAvailable()) {
-            return list;
-            } 
-            String sql = "SELECT sh.id, sh.movie_id, sh.screen_id, m.title AS movie_title, "
-                    + "sc.name AS screen_name, sc.screen_type, sh.show_date, sh.start_time, sh.end_time, "
-                    + "sh.status, sh.created_at, sh.updated_at, "
-                    + "COUNT(ss.id) AS total_seats, "
-                    + "SUM(CASE WHEN ss.status = 'AVAILABLE' THEN 1 ELSE 0 END) AS available_seats, "
-                + "SUM(CASE WHEN ss.status = 'BOOKED' THEN 1 ELSE 0 END) AS booked_seats "
-                    + "FROM shows sh "
-                            movies 
-                            screens sc ON sh.scree
-                            JOIN show_seats ss ON s
-                             sh.movie_id = ? AND sh.stat
-                             BY sh.id "
-                             BY sh.show_date ASC, sh.sta
-                            
-                            conn = DBConnection.getConn
-                            1, movieId);
-                            et rs = stmt.executeQuery()) 
-                            s.next()) {
-                            showId = rs.getInt("id");
-                            <ShowPrice> prices = Sh
-                            
-                            .add(new Show(
-                                showId,
-                                rs.getInt("movie_id"),
-                                rs.getInt("screen_id"),
-                                rs.getString("movie_title"),
-                                rs.getString("screen_name"),
-                                rs.getString("screen_type"),
-                                rs.getString("show_date"),
-                                rs.getString("start_time"),
-                                rs.getString("end_time"),
-                            rs.getInt("available_seats"),
-                            rs.getInt("total_seats"),
-                            rs.getString("status"),
-                            prices,
-                            rs.getString("creat{
-            ed_at"),
-        }
-                            rs.getString("updated_at")
-                    ));
-                }
+                        rs.getString("updated_at")
+                ));
             }
         } catch (SQLException e) {
-            System.err.println("[ShowDAO] Error querying shows by movie: " + e.getMessage());
+            System.err.println("[ShowDAO] Error querying all shows: " + e.getMessage());
         }
         return list;
     }
 
+    // NEW: Retrieves all shows for a given movie
+public static List<Show> getShowsByMovie(int movieId) {
+    List<Show> list = new ArrayList<>();
+    if (!DBConnection.isDriverAvailable()) return list;
+
+    String sql = "SELECT sh.id, sh.movie_id, sh.screen_id, m.title AS movie_title, "
+            + "sc.name AS screen_name, sc.screen_type, sh.show_date, sh.start_time, sh.end_time, "
+            + "sh.status, sh.created_at, sh.updated_at, "
+            + "COUNT(ss.id) AS total_seats, "
+            + "SUM(CASE WHEN ss.status = 'AVAILABLE' THEN 1 ELSE 0 END) AS available_seats, "
+            + "SUM(CASE WHEN ss.status = 'BOOKED' THEN 1 ELSE 0 END) AS booked_seats "
+            + "FROM shows sh "
+            + "JOIN movies m ON sh.movie_id = m.id "
+            + "JOIN screens sc ON sh.screen_id = sc.id "
+            + "LEFT JOIN show_seats ss ON sh.id = ss.show_id "
+            + "WHERE sh.movie_id = ? AND sh.status != 'CANCELLED' "
+            + "GROUP BY sh.id "
+            + "ORDER BY sh.show_date ASC, sh.start_time ASC";
+
+    try (Connection conn = DBConnection.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(sql)) {
+        stmt.setInt(1, movieId);
+        try (ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                int showId = rs.getInt("id");
+                List<ShowPrice> prices = ShowPriceDAO.getPricesByShowId(showId);
+
+                list.add(new Show(
+                        showId,
+                        rs.getInt("movie_id"),
+                        rs.getInt("screen_id"),
+                        rs.getString("movie_title"),
+                        rs.getString("screen_name"),
+                        rs.getString("screen_type"),
+                        rs.getString("show_date"),
+                        rs.getString("start_time"),
+                        rs.getString("end_time"),
+                        rs.getInt("available_seats"),
+                        rs.getInt("booked_seats"),
+                        rs.getInt("total_seats"),
+                        rs.getString("status"),
+                        prices,
+                        rs.getString("created_at"),
+                        rs.getString("updated_at")
+                ));
+            }
+        }
+    } catch (SQLException e) {
+        System.err.println("[ShowDAO] Error querying shows by movie: " + e.getMessage());
+    }
+    return list;
+}
+
+
     // Retrieves upcoming shows for a given screen
     public static List<Show> getUpcomingShowsByScreenId(int screenId) {
         List<Show> list = new ArrayList<>();
-        if (!DBConnection.isDriverAvailable()) {
-            return list;
-        } 
+        if (!DBConnection.isDriverAvailable()) return list;
+
         String sql = "SELECT sh.id, sh.movie_id, sh.screen_id, m.title AS movie_title, "
                 + "sc.name AS screen_name, sc.screen_type, sh.show_date, sh.start_time, sh.end_time, "
                 + "sh.status, sh.created_at, sh.updated_at, "
@@ -329,7 +295,8 @@ public class ShowDAO {
                 + "GROUP BY sh.id "
                 + "ORDER BY sh.show_date ASC, sh.start_time ASC";
 
-        try (Connection conn = DBConnection.getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, screenId);
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
@@ -349,9 +316,7 @@ public class ShowDAO {
                             rs.getInt("available_seats"),
                             rs.getInt("booked_seats"),
                             rs.getInt("total_seats"),
-                            rs.getString("statu{
-            s"),
-        }
+                            rs.getString("status"),
                             prices,
                             rs.getString("created_at"),
                             rs.getString("updated_at")
@@ -366,8 +331,7 @@ public class ShowDAO {
 
     // Retrieves a single show by ID
     public static Show getShowById(int id) {
-        if (!DBConnection.isDriverAvailable()) { eturn null;
-        }
+        if (!DBConnection.isDriverAvailable()) return null;
 
         String sql = "SELECT sh.id, sh.movie_id, sh.screen_id, m.title AS movie_title, "
                 + "sc.name AS screen_name, sc.screen_type, sh.show_date, sh.start_time, sh.end_time, "
@@ -382,7 +346,8 @@ public class ShowDAO {
                 + "WHERE sh.id = ? "
                 + "GROUP BY sh.id";
 
-        try (Connection conn = DBConnection.getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, id);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -401,9 +366,7 @@ public class ShowDAO {
                             rs.getString("end_time"),
                             rs.getInt("available_seats"),
                             rs.getInt("booked_seats"),
-                            rs.getInt("total_se{
-            ats"),
-        }
+                            rs.getInt("total_seats"),
                             rs.getString("status"),
                             prices,
                             rs.getString("created_at"),
@@ -419,9 +382,7 @@ public class ShowDAO {
 
     // Cancels a scheduled show
     public static synchronized boolean cancelShow(int id) {
-        if (!DBConnection.isDriverAvailable()) {
-            return false;
-        }
+        if (!DBConnection.isDriverAvailable()) return false;
 
         String updateShowSql = "UPDATE shows SET status = 'CANCELLED', updated_at = CURRENT_TIMESTAMP WHERE id = ?";
         String updateSeatsSql = "UPDATE show_seats SET status = 'BLOCKED', updated_at = CURRENT_TIMESTAMP WHERE show_id = ? AND status = 'AVAILABLE'";
@@ -436,9 +397,7 @@ public class ShowDAO {
                 try (PreparedStatement stmt = conn.prepareStatement(updateSeatsSql)) {
                     stmt.setInt(1, id);
                     stmt.executeUpdate();
-                }{
-            
-        }
+                }
                 conn.commit();
                 return true;
             } catch (SQLException ex) {
@@ -456,9 +415,7 @@ public class ShowDAO {
 
     // Updates show schedule and prices in an atomic transaction
     public static synchronized boolean updateShowWithTransaction(Show show, List<ShowPrice> prices) {
-        if (!DBConnection.isDriverAvailable() || show == null) {
-            return false;
-        }
+        if (!DBConnection.isDriverAvailable() || show == null) return false;
 
         String updateShowSql = "UPDATE shows SET movie_id = ?, screen_id = ?, show_date = ?, start_time = ?, end_time = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
 
@@ -480,9 +437,7 @@ public class ShowDAO {
                 // 2. Update prices in show_prices
                 ShowPriceDAO.saveShowPrices(show.getId(), prices, conn);
 
-                // 3. Update price of unbooked seats in s{
-            how_seats
-        }
+                // 3. Update price of unbooked seats in show_seats
                 ShowSeatDAO.updateAvailableSeatPrices(show.getId(), prices, conn);
 
                 conn.commit();
@@ -491,52 +446,33 @@ public class ShowDAO {
                 conn.rollback();
                 System.err.println("[ShowDAO] Rollback during show update: " + ex.getMessage());
                 return false;
-            } finally {{
-                
-            }
+            } finally {
                 conn.setAutoCommit(true);
             }
         } catch (SQLException e) {
             System.err.println("[ShowDAO] Error updating show: " + e.getMessage());
-            return false;{
-                
-            }
-        }{
-                
-            }
+            return false;
+        }
     }
 
     // Helper: parses time string ("05:00 PM", "17:00", "5:00 PM") into minutes from midnight
     public static int parseTimeToMinutes(String timeStr) {
-        if (timeStr == null || timeStr.trim().isEmpty()) {
-            return -1;
-        }
+        if (timeStr == null || timeStr.trim().isEmpty()) return -1;
         String t = timeStr.trim().toUpperCase();
 
-        try {{
-            
-        }
+        try {
             boolean isPm = t.contains("PM");
             boolean isAm = t.contains("AM");
             t = t.replace("AM", "").replace("PM", "").trim();
 
-            String[] par{
-            ts = t.spli
-        }t(":");
-            if (parts.length < 2) {
-                return -1;
- 
-           }
+            String[] parts = t.split(":");
+            if (parts.length < 2) return -1;
 
             int hours = Integer.parseInt(parts[0].trim());
             int mins = Integer.parseInt(parts[1].trim());
 
-            if (isPm && hours < 12) {
-                hours += 12;
-            }
-            if (isAm && hours == 12) {
-                hours = 0;
-            }
+            if (isPm && hours < 12) hours += 12;
+            if (isAm && hours == 12) hours = 0;
 
             return hours * 60 + mins;
         } catch (Exception e) {
@@ -546,16 +482,12 @@ public class ShowDAO {
 
     // Helper: formats minutes from midnight into 12-hour display string ("05:00 PM")
     public static String formatMinutesToTime(int totalMinutes) {
-        if (totalMinutes < 0) {
-            return "10:00 AM";
-        }
+        if (totalMinutes < 0) return "10:00 AM";
         int h = (totalMinutes / 60) % 24;
         int m = totalMinutes % 60;
         String ampm = h >= 12 ? "PM" : "AM";
         int dispH = h % 12;
-        if (dispH == 0) {
-            dispH = 12;
-        }
+        if (dispH == 0) dispH = 12;
         return String.format("%02d:%02d %s", dispH, m, ampm);
     }
 }
