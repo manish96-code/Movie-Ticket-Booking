@@ -61,10 +61,23 @@ public class OverviewPage extends JPanel {
                 new EmptyBorder(16, 18, 16, 18)
         ));
 
+        JPanel tblHeader = new JPanel(new BorderLayout());
+        tblHeader.setOpaque(false);
         JLabel tblTitle = new JLabel("Recent Counter Bookings Stream");
         tblTitle.setFont(Theme.FONT_HEADER);
         tblTitle.setForeground(Theme.TEXT_DARK);
-        tableCard.add(tblTitle, BorderLayout.NORTH);
+        tblHeader.add(tblTitle, BorderLayout.WEST);
+
+        JButton viewAllBtn = new JButton("View All History →");
+        viewAllBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        viewAllBtn.setForeground(new Color(124, 58, 237));
+        viewAllBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        viewAllBtn.setContentAreaFilled(false);
+        viewAllBtn.setBorderPainted(false);
+        viewAllBtn.setFocusPainted(false);
+        viewAllBtn.addActionListener(e -> dashboard.switchToPage("PAGE_BOOKING_HISTORY"));
+        tblHeader.add(viewAllBtn, BorderLayout.EAST);
+        tableCard.add(tblHeader, BorderLayout.NORTH);
 
         String[] cols = {"Ticket ID", "Customer", "Movie", "Screen", "Seats", "Paid", "Cashier"};
         DefaultTableModel model = new DefaultTableModel(cols, 0) {
@@ -96,8 +109,12 @@ public class OverviewPage extends JPanel {
         actTitle.setForeground(Theme.TEXT_DARK);
         actionCard.add(actTitle, BorderLayout.NORTH);
 
-        JPanel btnCol = new JPanel(new GridLayout(4, 1, 0, 10));
+        JPanel btnCol = new JPanel(new GridLayout(5, 1, 0, 10));
         btnCol.setOpaque(false);
+
+        JButton actBookTicket = Theme.createPrimaryButton("🎟️ Book Movie Tickets");
+        actBookTicket.setBackground(new Color(225, 29, 72));
+        actBookTicket.addActionListener(e -> dashboard.switchToPage("PAGE_ORDER_BOOKING"));
 
         JButton actAddMovie = Theme.createPrimaryButton("+ Add New Movie Title");
         actAddMovie.setBackground(Theme.ACCENT_BLUE);
@@ -114,6 +131,7 @@ public class OverviewPage extends JPanel {
         JButton actReport = Theme.createSecondaryButton("📊 Export Financial Summary");
         actReport.addActionListener(e -> dashboard.switchToPage("PAGE_REPORTS"));
 
+        btnCol.add(actBookTicket);
         btnCol.add(actAddMovie);
         btnCol.add(actSchedule);
         btnCol.add(actAddStaff);

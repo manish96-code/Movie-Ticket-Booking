@@ -33,10 +33,12 @@ import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 
+import com.cinemats.ui.admin.AdminDashboard;
+
 // Enterprise Box Office Movie Ticket Booking Page matching physical screen layouts, rich posters, and counter flow
 public class OrderBookingPage extends JPanel {
 
-    private final StaffDashboard dashboard;
+    private final Component parentComponent;
 
     // --- 2-Step Workflow: Step 1 (Movies & Shows) -> Step 2 (Seats & Booking Summary) ---
     private final CardLayout stepCardLayout = new CardLayout();
@@ -150,13 +152,38 @@ public class OrderBookingPage extends JPanel {
     private DefaultTableModel bookingsTableModel;
     private List<Booking> recentBookingsList = new ArrayList<>();
 
+    public OrderBookingPage() {
+        this((Component) null);
+    }
+
     public OrderBookingPage(StaffDashboard dashboard) {
-        this.dashboard = dashboard;
+        this((Component) dashboard);
+    }
+
+    public OrderBookingPage(AdminDashboard dashboard) {
+        this((Component) dashboard);
+    }
+
+    public OrderBookingPage(Component parent) {
+        this.parentComponent = parent;
         setLayout(new BorderLayout());
         setBackground(Theme.BG_MAIN);
         setBorder(new EmptyBorder(10, 12, 10, 12));
 
         initUI();
+        loadMovies();
+        refreshRecentBookings();
+    }
+
+    public StaffDashboard getDashboard() {
+        return (parentComponent instanceof StaffDashboard) ? (StaffDashboard) parentComponent : null;
+    }
+
+    public Component getParentComponent() {
+        return parentComponent;
+    }
+
+    public void refreshData() {
         loadMovies();
         refreshRecentBookings();
     }
@@ -1671,7 +1698,7 @@ public class OrderBookingPage extends JPanel {
     // ==========================================================
     // LOGIC: LOADING MOVIES & INTERACTIVE WORKFLOW
     // ==========================================================
-    private void loadMovies() {
+    public void loadMovies() {
         posterImageCache.clear();
         allMoviesList = MovieDAO.getAllMovies();
         filteredMoviesList = new ArrayList<>(allMoviesList);
@@ -2627,7 +2654,7 @@ public class OrderBookingPage extends JPanel {
         updateSummary();
     }
 
-    private void refreshRecentBookings() {
+    public void refreshRecentBookings() {
         recentBookingsList = BookingService.getRecentBookings(25);
         if (bookingsTableModel != null) {
             bookingsTableModel.setRowCount(0);

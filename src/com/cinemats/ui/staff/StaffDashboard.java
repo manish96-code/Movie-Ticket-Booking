@@ -645,6 +645,10 @@ public class StaffDashboard extends JFrame {
                 todayShowsPage.refreshShows();
             } else if ("PAGE_MOVIES_LIST".equals(targetKey) && moviesListPage != null) {
                 moviesListPage.loadMoviesFromDatabase();
+            } else if ("PAGE_BOOKING_HISTORY".equals(targetKey) && bookingHistoryPage != null) {
+                bookingHistoryPage.loadBookings();
+            } else if ("PAGE_ORDER_BOOKING".equals(targetKey) && orderBookingPage != null) {
+                orderBookingPage.refreshData();
             }
         }
     }

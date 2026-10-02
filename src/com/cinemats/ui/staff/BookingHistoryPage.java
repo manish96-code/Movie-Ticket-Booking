@@ -11,9 +11,11 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 
+import com.cinemats.ui.admin.AdminDashboard;
+
 public class BookingHistoryPage extends JPanel {
 
-    private final StaffDashboard dashboard;
+    private final Component parentComponent;
 
     private JTable bookingTable;
     private DefaultTableModel tableModel;
@@ -21,11 +23,19 @@ public class BookingHistoryPage extends JPanel {
     private TableRowSorter<DefaultTableModel> rowSorter;
 
     public BookingHistoryPage() {
-        this(null);
+        this((Component) null);
     }
 
     public BookingHistoryPage(StaffDashboard dashboard) {
-        this.dashboard = dashboard;
+        this((Component) dashboard);
+    }
+
+    public BookingHistoryPage(AdminDashboard dashboard) {
+        this((Component) dashboard);
+    }
+
+    public BookingHistoryPage(Component parent) {
+        this.parentComponent = parent;
 
         setLayout(new BorderLayout(0, 20));
         setBackground(Theme.BG_MAIN);
@@ -113,6 +123,7 @@ public class BookingHistoryPage extends JPanel {
         JScrollPane scrollPane = new JScrollPane(bookingTable);
         scrollPane.setBorder(BorderFactory.createLineBorder(Theme.BORDER_COLOR, 1, true));
         scrollPane.getViewport().setBackground(Theme.BG_MAIN);
+        com.cinemats.util.ModernScrollBarUI.apply(scrollPane, 6);
         add(scrollPane, BorderLayout.CENTER);
 
         searchButton.addActionListener(e -> searchBookings());
@@ -123,7 +134,7 @@ public class BookingHistoryPage extends JPanel {
         loadBookings();
     }
 
-    private void loadBookings() {
+    public void loadBookings() {
         tableModel.setRowCount(0);
         List<Booking> bookings = BookingDAO.getRecentBookings(500);
 
@@ -202,6 +213,10 @@ public class BookingHistoryPage extends JPanel {
     }
 
     public StaffDashboard getDashboard() {
-        return dashboard;
+        return (parentComponent instanceof StaffDashboard) ? (StaffDashboard) parentComponent : null;
+    }
+
+    public Component getParentComponent() {
+        return parentComponent;
     }
 }

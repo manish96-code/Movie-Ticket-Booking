@@ -15,6 +15,8 @@ import com.cinemats.ui.admin.shows.ManageSchedulesPage;
 import com.cinemats.ui.admin.staff.AddStaffPage;
 import com.cinemats.ui.admin.staff.StaffAccountsPage;
 import com.cinemats.ui.auth.LoginFrame;
+import com.cinemats.ui.staff.BookingHistoryPage;
+import com.cinemats.ui.staff.OrderBookingPage;
 import com.cinemats.util.Theme;
 import java.awt.*;
 import java.text.SimpleDateFormat;
@@ -52,6 +54,8 @@ public class AdminDashboard extends JFrame {
     private AddMoviePage addMoviePage;
     private AddScreenPage addScreenPage;
     private AddShowPage addShowPage;
+    private BookingHistoryPage bookingHistoryPage;
+    private OrderBookingPage orderBookingPage;
 
     public AdminDashboard() {
         this("System Administrator");
@@ -251,6 +255,8 @@ public class AdminDashboard extends JFrame {
         ModernNavButton addScreenBtn = createNavButton("Add New Screen", "PAGE_ADD_SCREEN", false);
         ModernNavButton schedulesBtn = createNavButton("Show Schedules", "PAGE_SCHEDULES", false);
         ModernNavButton addShowBtn = createNavButton("Schedule a Show", "PAGE_ADD_SHOW", false);
+        ModernNavButton bookTicketBtn = createNavButton("Ticket Booking", "PAGE_ORDER_BOOKING", false);
+        ModernNavButton historyBtn = createNavButton("Booking History", "PAGE_BOOKING_HISTORY", false);
         navMenuPanel.add(moviesBtn);
         navMenuPanel.add(Box.createVerticalStrut(4));
         navMenuPanel.add(addMovieBtn);
@@ -264,6 +270,10 @@ public class AdminDashboard extends JFrame {
         navMenuPanel.add(schedulesBtn);
         navMenuPanel.add(Box.createVerticalStrut(4));
         navMenuPanel.add(addShowBtn);
+        navMenuPanel.add(Box.createVerticalStrut(4));
+        navMenuPanel.add(bookTicketBtn);
+        navMenuPanel.add(Box.createVerticalStrut(4));
+        navMenuPanel.add(historyBtn);
 
         navMenuPanel.add(Box.createVerticalStrut(14));
 
@@ -380,6 +390,8 @@ public class AdminDashboard extends JFrame {
         addMoviePage = new AddMoviePage(this);
         addScreenPage = new AddScreenPage(this);
         addShowPage = new AddShowPage(this);
+        bookingHistoryPage = new BookingHistoryPage(this);
+        orderBookingPage = new OrderBookingPage(this);
 
         // Register in CardLayout
         mainContentPanel.add(overviewPage, "PAGE_OVERVIEW");
@@ -394,6 +406,8 @@ public class AdminDashboard extends JFrame {
         mainContentPanel.add(addMoviePage, "PAGE_ADD_MOVIE");
         mainContentPanel.add(addScreenPage, "PAGE_ADD_SCREEN");
         mainContentPanel.add(addShowPage, "PAGE_ADD_SHOW");
+        mainContentPanel.add(bookingHistoryPage, "PAGE_BOOKING_HISTORY");
+        mainContentPanel.add(orderBookingPage, "PAGE_ORDER_BOOKING");
 
         bodyContainer.add(sidebar, BorderLayout.WEST);
         bodyContainer.add(mainContentPanel, BorderLayout.CENTER);
@@ -411,19 +425,27 @@ public class AdminDashboard extends JFrame {
     }
 
     public void switchToPage(String pageKey) {
-        cardLayout.show(mainContentPanel, pageKey);
-        ModernNavButton activeBtn = pageButtonMap.get(pageKey);
+        String targetKey = pageKey;
+        if ("PAGE_BOOK_TICKET".equals(targetKey)) {
+            targetKey = "PAGE_ORDER_BOOKING";
+        }
+        cardLayout.show(mainContentPanel, targetKey);
+        ModernNavButton activeBtn = pageButtonMap.get(targetKey);
         for (ModernNavButton b : sidebarButtons) {
             b.setActive(b == activeBtn);
         }
-        if ("PAGE_CATEGORIES".equals(pageKey) && categoriesPage != null) {
+        if ("PAGE_CATEGORIES".equals(targetKey) && categoriesPage != null) {
             categoriesPage.refreshCategoryTable();
-        } else if ("PAGE_MOVIES".equals(pageKey) && moviesPage != null) {
+        } else if ("PAGE_MOVIES".equals(targetKey) && moviesPage != null) {
             moviesPage.refreshMovieTable();
-        } else if ("PAGE_SCREENS".equals(pageKey) && screensPage != null) {
+        } else if ("PAGE_SCREENS".equals(targetKey) && screensPage != null) {
             screensPage.refreshScreens();
-        } else if ("PAGE_STAFF".equals(pageKey) && staffAccountsPage != null) {
+        } else if ("PAGE_STAFF".equals(targetKey) && staffAccountsPage != null) {
             staffAccountsPage.refreshStaffTable();
+        } else if ("PAGE_BOOKING_HISTORY".equals(targetKey) && bookingHistoryPage != null) {
+            bookingHistoryPage.loadBookings();
+        } else if ("PAGE_ORDER_BOOKING".equals(targetKey) && orderBookingPage != null) {
+            orderBookingPage.refreshData();
         }
     }
 
@@ -593,6 +615,20 @@ public class AdminDashboard extends JFrame {
                 // Arrow tip
                 g2.drawLine(x + 10, centerY - 6, x + 14, centerY - 6);
                 g2.drawLine(x + 14, centerY - 2, x + 14, centerY - 6);
+            } else if ("PAGE_BOOKING_HISTORY".equals(key)) {
+                // Receipt / Booking History Vector Icon
+                g2.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                g2.drawRoundRect(x + 1, centerY - 7, 13, 14, 2, 2);
+                g2.drawLine(x + 4, centerY - 3, x + 11, centerY - 3);
+                g2.drawLine(x + 4, centerY, x + 11, centerY);
+                g2.drawLine(x + 4, centerY + 3, x + 9, centerY + 3);
+            } else if ("PAGE_ORDER_BOOKING".equals(key)) {
+                // Movie Ticket with tear notches
+                g2.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                g2.drawRoundRect(x, centerY - 6, 15, 12, 3, 3);
+                g2.drawLine(x + 5, centerY - 6, x + 5, centerY + 6);
+                g2.drawLine(x + 8, centerY - 2, x + 12, centerY - 2);
+                g2.drawLine(x + 8, centerY + 2, x + 12, centerY + 2);
             }
 
             g2.setStroke(oldStroke);
@@ -713,6 +749,14 @@ public class AdminDashboard extends JFrame {
 
     public AddShowPage getAddShowPage() {
         return addShowPage;
+    }
+
+    public BookingHistoryPage getBookingHistoryPage() {
+        return bookingHistoryPage;
+    }
+
+    public OrderBookingPage getOrderBookingPage() {
+        return orderBookingPage;
     }
 
     public static void main(String[] args) {
