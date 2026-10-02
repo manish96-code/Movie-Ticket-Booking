@@ -1,168 +1,190 @@
 -- ====================================================================
--- Cinema Express - SQLite Database Schema Definition
--- Database File: cinema.db
+-- Cinema Express - MySQL Database Schema Definition
+-- Compatible with MySQL 8.0+ and MariaDB
 -- ====================================================================
+
+CREATE DATABASE IF NOT EXISTS cinema_db
+    CHARACTER SET utf8mb4
+    COLLATE utf8mb4_unicode_ci;
+
+USE cinema_db;
 
 -- 1. USERS & STAFF ACCOUNTS TABLE
 CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'STAFF',            -- 'ADMIN' or 'STAFF'
-    full_name TEXT NOT NULL,
-    counter TEXT DEFAULT 'Counter #01 (Main Concourse)',
-    shift TEXT DEFAULT 'Morning Shift (09:00 AM - 04:00 PM)',
-    phone TEXT DEFAULT '',
-    status TEXT DEFAULT 'ACTIVE',                  -- 'ACTIVE' or 'INACTIVE'
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    role VARCHAR(20) NOT NULL DEFAULT 'STAFF',
+    full_name VARCHAR(150) NOT NULL,
+    counter VARCHAR(100) DEFAULT 'Counter #01 (Main Concourse)',
+    shift VARCHAR(100) DEFAULT 'Morning Shift (09:00 AM - 04:00 PM)',
+    phone VARCHAR(30) DEFAULT '',
+    status VARCHAR(20) DEFAULT 'ACTIVE',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Default Super Admin
-INSERT OR IGNORE INTO users (id, username, password, role, full_name, counter, shift, phone, status)
-VALUES (1, 'admin', 'admin123', 'ADMIN', 'System Administrator', 'HQ Management Station', 'General Shift (10:00 AM - 07:00 PM)', '+91 98765 00001', 'ACTIVE');
-
--- Default Staff Cashier
-INSERT OR IGNORE INTO users (id, username, password, role, full_name, counter, shift, phone, status)
-VALUES (2, 'staff', 'staff123', 'STAFF', 'Rahul Sharma', 'Counter #01 (Main Concourse)', 'Morning Shift (09:00 AM - 04:00 PM)', '+91 98765 43210', 'ACTIVE');
-
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 2. MOVIE CATEGORIES TABLE
 CREATE TABLE IF NOT EXISTS categories (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT UNIQUE NOT NULL,
-    description TEXT,
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    description VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Seed Initial Default Movie Categories
-INSERT OR IGNORE INTO categories (id, name, description) VALUES
-(1, 'Action', 'High-energy sequences, stunts, pursuits, and physical conflicts'),
-(2, 'Adventure', 'Exciting journeys, expeditions, heroic quests, and exploration'),
-(3, 'Animation', 'CGI, 3D, and hand-drawn animated films for all audiences'),
-(4, 'Comedy', 'Lighthearted humor, satirical plots, and comedic entertainment'),
-(5, 'Crime', 'Detective investigations, criminal syndicates, and forensic drama'),
-(6, 'Drama', 'Character-driven realistic stories, conflicts, and deep emotion'),
-(7, 'Fantasy', 'Mythological realms, magical powers, folklore, and mythical creatures'),
-(8, 'Horror', 'Supernatural mysteries, psychological fear, and eerie atmosphere'),
-(9, 'Romance', 'Love stories, passionate relationships, and intimate journeys'),
-(10, 'Sci-Fi', 'Futuristic technology, space exploration, time travel, and AI'),
-(11, 'Thriller', 'High-stakes tension, psychological suspense, and unexpected twists');
-
-
--- 3. MOVIES TABLE (Price removed: ticket price belongs to Show + Seat Type)
+-- 3. MOVIES CATALOGUE TABLE
 CREATE TABLE IF NOT EXISTS movies (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    genre TEXT NOT NULL,
-    duration_mins INTEGER DEFAULT 150,
-    rating TEXT DEFAULT 'UA',
-    poster_label TEXT DEFAULT 'MOVIE POSTER',
-    image_path TEXT DEFAULT '',
-    status TEXT DEFAULT 'NOW_SHOWING',             -- 'NOW_SHOWING', 'UPCOMING', 'ARCHIVED'
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    genre VARCHAR(150) NOT NULL,
+    duration_mins INT DEFAULT 150,
+    rating VARCHAR(20) DEFAULT 'UA 13+',
+    poster_label VARCHAR(100) DEFAULT 'MOVIE POSTER',
+    image_path VARCHAR(255) DEFAULT '',
+    status VARCHAR(50) DEFAULT 'NOW_SHOWING',
+    language VARCHAR(50) DEFAULT 'Hindi',
+    release_date VARCHAR(50) DEFAULT '',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Seed Initial Default Movies (no price field)
-INSERT OR IGNORE INTO movies (id, title, genre, duration_mins, rating, poster_label, status) VALUES
-(1, 'Interstellar', 'Sci-Fi / Adventure', 169, 'UA', 'INTERSTELLAR', 'NOW_SHOWING'),
-(2, 'Dune: Part Two', 'Action / Adventure', 166, 'UA', 'DUNE: PART TWO', 'NOW_SHOWING'),
-(3, 'Oppenheimer', 'Biography / Drama', 180, 'A', 'OPPENHEIMER', 'NOW_SHOWING'),
-(4, 'Spider-Man: Across The Spider-Verse', 'Animation / Action', 140, 'U', 'SPIDER-MAN', 'NOW_SHOWING'),
-(5, 'Inception', 'Sci-Fi / Thriller', 148, 'UA', 'INCEPTION', 'NOW_SHOWING'),
-(6, 'The Dark Knight', 'Action / Crime', 152, 'UA', 'THE DARK KNIGHT', 'NOW_SHOWING');
-
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 4. SCREENS & AUDITORIUMS TABLE
 CREATE TABLE IF NOT EXISTS screens (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    screen_number INTEGER UNIQUE NOT NULL,
-    screen_type TEXT NOT NULL DEFAULT 'Standard',  -- 'Standard', 'Premium', 'IMAX', 'Dolby', '4DX', 'Other'
-    status TEXT NOT NULL DEFAULT 'ACTIVE',          -- 'ACTIVE', 'INACTIVE', 'MAINTENANCE'
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    screen_number INT NOT NULL UNIQUE,
+    screen_type VARCHAR(50) NOT NULL DEFAULT 'Standard',
+    status VARCHAR(50) NOT NULL DEFAULT 'ACTIVE',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Seed Initial Screens
-INSERT OR IGNORE INTO screens (id, name, screen_number, screen_type, status) VALUES
-(1, 'Screen 1', 1, 'IMAX', 'ACTIVE'),
-(2, 'Screen 2', 2, 'Premium', 'ACTIVE'),
-(3, 'Screen 3', 3, 'Standard', 'ACTIVE'),
-(4, 'Screen 4', 4, 'Dolby', 'MAINTENANCE');
-
-
--- 5. PHYSICAL SCREEN SEATS TABLE (Permanent physical seating layout)
+-- 5. PHYSICAL SCREEN SEATS TABLE
 CREATE TABLE IF NOT EXISTS screen_seats (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    screen_id INTEGER NOT NULL,
-    row_name TEXT NOT NULL,                        -- e.g. 'A', 'B', 'C'
-    seat_number INTEGER NOT NULL,                  -- e.g. 1, 2, 3
-    seat_label TEXT NOT NULL,                      -- e.g. 'A1', 'A2'
-    seat_type TEXT NOT NULL DEFAULT 'REGULAR',      -- 'REGULAR', 'PREMIUM', 'RECLINER'
-    status TEXT NOT NULL DEFAULT 'ACTIVE',          -- 'ACTIVE', 'BLOCKED'
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    screen_id INT NOT NULL,
+    row_name VARCHAR(10) NOT NULL,
+    seat_number INT NOT NULL,
+    seat_label VARCHAR(20) NOT NULL,
+    seat_type VARCHAR(50) NOT NULL DEFAULT 'REGULAR',
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (screen_id) REFERENCES screens(id) ON DELETE CASCADE,
-    UNIQUE(screen_id, seat_label)
-);
-
+    UNIQUE KEY uq_screen_seat (screen_id, seat_label)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 6. SCHEDULES & SHOWTIMES TABLE
 CREATE TABLE IF NOT EXISTS shows (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    movie_id INTEGER NOT NULL,
-    screen_id INTEGER NOT NULL,
-    show_date TEXT NOT NULL,                       -- e.g. '2026-09-27'
-    start_time TEXT NOT NULL,                      -- e.g. '17:00' / '05:00 PM'
-    end_time TEXT NOT NULL,                        -- e.g. '19:45' / '07:45 PM'
-    status TEXT DEFAULT 'OPEN',                    -- 'OPEN', 'HOUSEFULL', 'CANCELLED'
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    movie_id INT NOT NULL,
+    screen_id INT NOT NULL,
+    show_date VARCHAR(30) NOT NULL,
+    start_time VARCHAR(30) NOT NULL,
+    end_time VARCHAR(30) NOT NULL,
+    status VARCHAR(30) DEFAULT 'OPEN',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE CASCADE,
     FOREIGN KEY (screen_id) REFERENCES screens(id) ON DELETE CASCADE
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-
--- 7. SHOW TIERED SEAT PRICING TABLE (Seat category pricing per show)
+-- 7. SHOW TIERED SEAT PRICING TABLE
 CREATE TABLE IF NOT EXISTS show_prices (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    show_id INTEGER NOT NULL,
-    seat_type TEXT NOT NULL,                       -- 'REGULAR', 'PREMIUM', 'RECLINER'
-    price REAL NOT NULL,                           -- Monetary value stored as DECIMAL/REAL
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    show_id INT NOT NULL,
+    seat_type VARCHAR(50) NOT NULL,
+    price DECIMAL(10,2) NOT NULL DEFAULT 200.00,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (show_id) REFERENCES shows(id) ON DELETE CASCADE,
-    UNIQUE(show_id, seat_type)
-);
+    UNIQUE KEY uq_show_seat_type (show_id, seat_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-
--- 8. SHOWTIME SEATS INVENTORY TABLE (Runtime seat availability for a show)
+-- 8. SHOWTIME SEATS INVENTORY TABLE
 CREATE TABLE IF NOT EXISTS show_seats (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    show_id INTEGER NOT NULL,
-    screen_seat_id INTEGER NOT NULL,
-    price REAL NOT NULL,
-    status TEXT NOT NULL DEFAULT 'AVAILABLE',      -- 'AVAILABLE', 'BOOKED', 'BLOCKED'
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    show_id INT NOT NULL,
+    screen_seat_id INT NOT NULL,
+    price DECIMAL(10,2) NOT NULL DEFAULT 200.00,
+    status VARCHAR(20) NOT NULL DEFAULT 'AVAILABLE',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (show_id) REFERENCES shows(id) ON DELETE CASCADE,
     FOREIGN KEY (screen_seat_id) REFERENCES screen_seats(id) ON DELETE CASCADE,
-    UNIQUE(show_id, screen_seat_id)
-);
+    UNIQUE KEY uq_show_screen_seat (show_id, screen_seat_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- 9. CUSTOMERS TABLE
+CREATE TABLE IF NOT EXISTS customers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    phone VARCHAR(30) NOT NULL UNIQUE,
+    email VARCHAR(150) DEFAULT '',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_cust_phone (phone)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 9. BOOKINGS & TICKETS TABLE
+-- 10. BOOKINGS TABLE
 CREATE TABLE IF NOT EXISTS bookings (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    booking_code TEXT UNIQUE NOT NULL,             -- e.g. 'TKT-20260926-1001'
-    show_id INTEGER NOT NULL,
-    customer_name TEXT NOT NULL,
-    customer_phone TEXT NOT NULL,
-    seat_numbers TEXT NOT NULL,                    -- comma-separated: 'A1, A2, A3'
-    seat_count INTEGER NOT NULL DEFAULT 1,
-    total_amount REAL NOT NULL,
-    payment_mode TEXT DEFAULT 'CASH',              -- 'CASH', 'UPI', 'CARD'
-    booked_by_staff TEXT DEFAULT 'staff',
-    booked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (show_id) REFERENCES shows(id) ON DELETE CASCADE
-);
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    booking_number VARCHAR(60) NOT NULL UNIQUE,
+    customer_id INT NOT NULL,
+    show_id INT NOT NULL,
+    customer_name VARCHAR(150) NOT NULL,
+    customer_phone VARCHAR(30) NOT NULL,
+    movie_title VARCHAR(255) NOT NULL,
+    screen_name VARCHAR(100) NOT NULL,
+    show_date VARCHAR(30) NOT NULL,
+    start_time VARCHAR(30) NOT NULL,
+    cashier_name VARCHAR(100) DEFAULT '',
+    subtotal DECIMAL(10,2) NOT NULL,
+    discount DECIMAL(10,2) DEFAULT 0.00,
+    total_amount DECIMAL(10,2) NOT NULL,
+    status VARCHAR(30) DEFAULT 'CONFIRMED',
+    seat_count INT DEFAULT 1,
+    booked_at VARCHAR(40) DEFAULT '',
+    payment_mode VARCHAR(30) DEFAULT 'UPI',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_booking_num (booking_number),
+    INDEX idx_booking_date (show_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 11. BOOKING ITEMS TABLE
+CREATE TABLE IF NOT EXISTS booking_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    booking_id INT NOT NULL,
+    show_seat_id INT NOT NULL,
+    seat_label VARCHAR(20) NOT NULL,
+    seat_type VARCHAR(50) NOT NULL,
+    unit_price DECIMAL(10,2) NOT NULL,
+    FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
+    INDEX idx_booking_items_booking (booking_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 12. PAYMENTS TABLE
+CREATE TABLE IF NOT EXISTS payments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    booking_id INT NOT NULL,
+    payment_method VARCHAR(30) NOT NULL,
+    total_amount DECIMAL(10,2) NOT NULL,
+    amount_received DECIMAL(10,2) NOT NULL,
+    change_returned DECIMAL(10,2) NOT NULL,
+    transaction_ref VARCHAR(100) DEFAULT '',
+    status VARCHAR(30) DEFAULT 'COMPLETED',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 13. TICKETS TABLE
+CREATE TABLE IF NOT EXISTS tickets (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    booking_id INT NOT NULL,
+    ticket_number VARCHAR(60) NOT NULL UNIQUE,
+    seat_label VARCHAR(20) NOT NULL,
+    seat_type VARCHAR(50) NOT NULL,
+    price DECIMAL(10,2) NOT NULL,
+    qr_data TEXT NOT NULL,
+    status VARCHAR(30) DEFAULT 'ACTIVE',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
+    INDEX idx_ticket_num (ticket_number)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

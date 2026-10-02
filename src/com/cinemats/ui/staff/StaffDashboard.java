@@ -1,5 +1,6 @@
 package com.cinemats.ui.staff;
 
+import com.cinemats.config.DBConnection;
 import com.cinemats.ui.auth.LoginFrame;
 import com.cinemats.util.Theme;
 import java.awt.*;
@@ -673,7 +674,7 @@ public class StaffDashboard extends JFrame {
         statusText.setFont(Theme.FONT_SMALL);
         statusText.setForeground(Theme.TEXT_MUTED);
 
-        JLabel hintText = new JLabel("● Database: SQLite (cinema.db) • System Status: Active • Version 2.4");
+        JLabel hintText = new JLabel("● Database: " + DBConnection.getDatabaseType() + " • System Status: Active • Version 2.4");
         hintText.setFont(Theme.FONT_SMALL);
         hintText.setForeground(new Color(37, 99, 235));
 

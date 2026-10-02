@@ -206,8 +206,8 @@ public class LoginFrame extends JFrame {
 
         // --- 8. Database Status Badge ---
         JLabel dbStatus = new JLabel(DBConnection.isDriverAvailable()
-                ? "● Database: SQLite Connected (cinema.db)"
-                : "● Database: Ready (cinema.db)");
+                ? "● Database: " + DBConnection.getDatabaseType() + " (Connected)"
+                : "● Database: " + DBConnection.getDatabaseType() + " (Ready)");
         dbStatus.setFont(Theme.FONT_SMALL);
         dbStatus.setForeground(DBConnection.isDriverAvailable() ? Theme.COLOR_SUCCESS : Theme.TEXT_MUTED);
         dbStatus.setAlignmentX(Component.CENTER_ALIGNMENT);

@@ -51,7 +51,7 @@ public class ScreenDAO {
                         insertStmt.setString(7, s.getUpdatedAt());
                         insertStmt.executeUpdate();
                     }
-                    System.out.println("[ScreenDAO] Seeded default cinema screens into cinema.db.");
+                    System.out.println("[ScreenDAO] Seeded default cinema screens into MySQL database.");
                 }
             }
         } catch (SQLException e) {
@@ -196,7 +196,7 @@ public class ScreenDAO {
                     }
                 }
             } catch (SQLException e) {
-                System.err.println("[ScreenDAO] Error saving screen to SQLite: " + e.getMessage());
+                System.err.println("[ScreenDAO] Error saving screen to MySQL: " + e.getMessage());
             }
         }
 
@@ -230,7 +230,7 @@ public class ScreenDAO {
                     return true;
                 }
             } catch (SQLException e) {
-                System.err.println("[ScreenDAO] Error updating screen in SQLite: " + e.getMessage());
+                System.err.println("[ScreenDAO] Error updating screen in MySQL: " + e.getMessage());
             }
         }
 

@@ -442,7 +442,7 @@ public class AddStaffPage extends JPanel {
         previewShift.setText("Shift: " + (shift != null ? shift.split("\\(")[0].trim() : "General Shift"));
     }
 
-    // Validates inputs and inserts new staff record into SQLite
+    // Validates inputs and inserts new staff record into MySQL
     private void handleSaveStaff() {
         String name = fullNameField.getText().trim();
         String email = emailField.getText().trim();
@@ -491,7 +491,7 @@ public class AddStaffPage extends JPanel {
 
         if (hasError) return;
 
-        // Persist to SQLite
+        // Persist to MySQL
         try (Connection conn = DBConnection.getConnection()) {
             String insertSql = "INSERT INTO users (username, password, full_name, email, role) VALUES (?, ?, ?, ?, ?)";
             try (PreparedStatement stmt = conn.prepareStatement(insertSql)) {

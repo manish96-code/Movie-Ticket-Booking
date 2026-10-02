@@ -1,6 +1,6 @@
 # 🎬 Cinema Express - Cinema Management & Box Office POS System
 
-A high-performance desktop Cinema Management and Point of Sale (POS) system built with **Java Swing**, **JDBC**, and **SQLite**. Designed for modern single-theater and multi-screen cinema operations, Cinema Express provides role-based access for theater administrators and box office counter staff.
+A high-performance desktop Cinema Management and Point of Sale (POS) system built with **Java Swing**, **JDBC**, and **MySQL**. Designed for modern single-theater and multi-screen cinema operations, Cinema Express provides role-based access for theater administrators and box office counter staff.
 
 ---
 
@@ -73,7 +73,7 @@ Cinema Express strictly follows standard **Layered DAO + Service Architecture**:
                             │
 ┌───────────────────────────▼────────────────────────────┐
 │                   Database Engine                      │
-│             (SQLite Database: cinema.db)               │
+│             (MySQL Database: cinema_db)                │
 └────────────────────────────────────────────────────────┘
 ```
 
@@ -81,13 +81,16 @@ Cinema Express strictly follows standard **Layered DAO + Service Architecture**:
 
 ```
 ticket_booking/
+├── database/                          # MySQL DDL Schema
+│   └── schema_mysql.sql
+├── db.properties                      # MySQL connection configuration
 ├── lib/                               # Bundled runtime libraries
-│   ├── sqlite-jdbc-3.45.2.0.jar       # SQLite JDBC Driver
+│   ├── mysql-connector-j-8.3.0.jar   # MySQL JDBC Driver
 │   ├── zxing-core-3.5.3.jar           # QR Code generator engine
 │   ├── slf4j-api-2.0.12.jar           # Logging facade
 │   └── slf4j-simple-2.0.12.jar        # Simple logger implementation
 ├── src/com/cinemats/
-│   ├── config/                        # Database connection & table bootstrapping
+│   ├── config/                        # MySQL database connection manager
 │   │   └── DBConnection.java
 │   ├── dao/                           # Data Access Objects (CRUD queries)
 │   │   ├── BookingDAO.java
@@ -118,6 +121,7 @@ ticket_booking/
 │   └── util/                          # Utility & Helper classes
 │       ├── QRCodeRenderer.java        # ZXing-based standard QR generator
 │       └── Theme.java                 # UI Color Palette & Typography
+├── seed.sh                            # Database Seeder & Mock Data Reset
 ├── run.sh                             # Cross-platform launcher (Linux / Mac / Windows Git Bash)
 ├── run.bat                            # 1-Click launcher for Windows CMD / Explorer
 ├── run.ps1                            # PowerShell launcher for Windows
@@ -128,7 +132,7 @@ ticket_booking/
 
 ## 🗄️ Database Schema Overview
 
-The system uses an embedded **SQLite** database (`cinema.db`), which automatically initialises tables on first run:
+The system uses a **MySQL** database (`cinema_db`), configured in `db.properties`:
 
 | Table | Description |
 | :--- | :--- |
@@ -150,7 +154,32 @@ The system uses an embedded **SQLite** database (`cinema.db`), which automatical
 ### Prerequisites
 - **Java JDK 17 or higher** installed (`javac` compiler is required).
   - Download free OpenJDK from [Eclipse Adoptium (Temurin)](https://adoptium.net/).
+- **MySQL 8.0+ or MariaDB** (running locally or remotely).
 - **Git** (to clone the project).
+
+---
+
+### ⚙️ Database Setup (For You & Team Members)
+
+1. Create or copy your local configuration:
+   ```bash
+   cp db.properties.example db.properties
+   ```
+2. Open `db.properties` and enter your MySQL credentials:
+   ```properties
+   db.mysql.host=localhost
+   db.mysql.port=3306
+   db.mysql.database=cinema_db
+   db.mysql.user=root
+   db.mysql.password=YOUR_PASSWORD_HERE
+   ```
+   *(Note: `db.properties` is listed in `.gitignore`, so personal passwords will never be pushed to GitHub.)*
+
+3. Seed initial mock data and create all tables:
+   ```bash
+   ./seed.sh
+   # On Windows: seed.bat
+   ```
 
 ---
 
@@ -193,6 +222,6 @@ The system uses an embedded **SQLite** database (`cinema.db`), which automatical
 ## 🛠️ Built With
 - **Java 17+ (Core)**
 - **Java Swing & AWT** (Rich Desktop GUI)
-- **SQLite JDBC Driver** (`sqlite-jdbc-3.45.2.0.jar`)
+- **MySQL Connector/J** (`mysql-connector-j-8.3.0.jar`)
 - **Google ZXing** (`zxing-core-3.5.3.jar`) for ISO QR Matrix generation
 - **SLF4J** for database & runtime logging

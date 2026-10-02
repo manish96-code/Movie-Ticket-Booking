@@ -1,5 +1,6 @@
 package com.cinemats.ui.admin;
 
+import com.cinemats.config.DBConnection;
 import com.cinemats.model.Screen;
 import com.cinemats.service.ScreenSeatService;
 import com.cinemats.service.ScreenService;
@@ -637,7 +638,7 @@ public class AdminDashboard extends JFrame {
         statusText.setFont(Theme.FONT_SMALL);
         statusText.setForeground(Theme.TEXT_MUTED);
 
-        JLabel sysInfo = new JLabel("● Database: SQLite (cinema.db) • Mode: Full HQ Privilege");
+        JLabel sysInfo = new JLabel("● Database: " + DBConnection.getDatabaseType() + " • Mode: Full HQ Privilege");
         sysInfo.setFont(Theme.FONT_SMALL);
         sysInfo.setForeground(new Color(124, 58, 237));
 

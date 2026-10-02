@@ -1,0 +1,23 @@
+# ====================================================================
+# Cinema Express - MySQL Database Configuration Template
+# ====================================================================
+# INSTRUCTIONS FOR TEAM MEMBERS:
+# 1. Copy this file to 'db.properties':
+#      cp db.properties.example db.properties
+# 2. Update the credentials below with your local MySQL setup.
+# 3. 'db.properties' is gitignored, so your personal password won't be pushed.
+# ====================================================================
+
+# MySQL Host & Port
+db.mysql.host=localhost
+db.mysql.port=3306
+
+# Database Name (will be auto-created if it does not exist)
+db.mysql.database=cinema_db
+
+# MySQL Authentication
+db.mysql.user=root
+db.mysql.password=root
+
+# Connection Parameters
+db.mysql.params=?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&createDatabaseIfNotExist=true

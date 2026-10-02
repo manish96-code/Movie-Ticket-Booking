@@ -4,5 +4,10 @@
 # Build output directory
 bin/
 
-# Local SQLite databases
-*.db
+# Local database credentials (DO NOT COMMIT)
+db.properties
+
+# Temporary / OS files
+.DS_Store
+Thumbs.db
+*.log

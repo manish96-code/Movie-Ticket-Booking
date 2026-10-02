@@ -74,7 +74,7 @@ public class CategoryDAO {
                     return list;
                 }
             } catch (SQLException e) {
-                System.err.println("[CategoryDAO] Error loading categories from SQLite: " + e.getMessage());
+                System.err.println("[CategoryDAO] Error loading categories from MySQL: " + e.getMessage());
             }
         }
 
@@ -148,7 +148,7 @@ public class CategoryDAO {
                     return true;
                 }
             } catch (SQLException e) {
-                System.err.println("[CategoryDAO] Error saving category to SQLite: " + e.getMessage());
+                System.err.println("[CategoryDAO] Error saving category to MySQL: " + e.getMessage());
             }
         }
 
@@ -167,7 +167,7 @@ public class CategoryDAO {
                 fallbackCategories.removeIf(c -> c.getId() == id);
                 return rows > 0;
             } catch (SQLException e) {
-                System.err.println("[CategoryDAO] Error deleting category from SQLite: " + e.getMessage());
+                System.err.println("[CategoryDAO] Error deleting category from MySQL: " + e.getMessage());
             }
         }
 

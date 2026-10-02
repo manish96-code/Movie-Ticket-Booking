@@ -332,7 +332,7 @@ public class MoviesListPage extends JPanel {
         return card;
     }
 
-    // Fetches live movies and genres from SQLite database
+    // Fetches live movies and genres from MySQL database
     public void loadMoviesFromDatabase() {
         allMoviesList = MovieDAO.getAllMovies();
 

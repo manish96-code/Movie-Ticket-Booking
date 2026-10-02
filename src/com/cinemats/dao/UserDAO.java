@@ -100,7 +100,7 @@ public class UserDAO {
                 return true;
 
             } catch (SQLException e) {
-                System.err.println("[UserDAO] Failed to add user to SQLite: " + e.getMessage());
+                System.err.println("[UserDAO] Failed to add user to MySQL: " + e.getMessage());
                 return false;
             }
         } else {
@@ -160,7 +160,7 @@ public class UserDAO {
                 }
                 return list;
             } catch (SQLException e) {
-                System.err.println("[UserDAO] Failed to fetch users from SQLite: " + e.getMessage());
+                System.err.println("[UserDAO] Failed to fetch users from MySQL: " + e.getMessage());
             }
         }
         return DBConnection.getFallbackUsers();
@@ -202,7 +202,7 @@ public class UserDAO {
                 int rows = stmt.executeUpdate();
                 return rows > 0;
             } catch (SQLException e) {
-                System.err.println("[UserDAO] Failed to update user in SQLite: " + e.getMessage());
+                System.err.println("[UserDAO] Failed to update user in MySQL: " + e.getMessage());
                 return false;
             }
         } else {

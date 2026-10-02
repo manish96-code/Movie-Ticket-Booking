@@ -50,7 +50,7 @@ public class StaffAccountsPage extends JPanel {
     private void initUI() {
         // Banner Header
         add(createBanner("👥 Cinema Staff & Cashier Roster",
-                "Manage and monitor system personnel directly connected to the SQLite database (cinema.db). View stations, shifts, and credentials."),
+                "Manage and monitor system personnel directly connected to the MySQL database. View stations, shifts, and credentials."),
                 BorderLayout.NORTH);
 
         JPanel mainCard = new JPanel(new BorderLayout(0, 14));
@@ -73,7 +73,7 @@ public class StaffAccountsPage extends JPanel {
         totalCountBadge = createStatPill("Total Accounts: 0", new Color(241, 245, 249), Theme.TEXT_DARK);
         staffCountBadge = createStatPill("Staff Cashiers: 0", new Color(224, 242, 254), Theme.ACCENT_BLUE);
         adminCountBadge = createStatPill("HQ Admins: 0", new Color(243, 232, 255), new Color(124, 58, 237));
-        dbStatusBadge = createStatPill("● SQLite: cinema.db (Live)", new Color(220, 252, 231), Theme.COLOR_SUCCESS);
+        dbStatusBadge = createStatPill("● MySQL: cinema_db (Live)", new Color(220, 252, 231), Theme.COLOR_SUCCESS);
 
         statsRow.add(totalCountBadge);
         statsRow.add(staffCountBadge);
@@ -211,7 +211,7 @@ public class StaffAccountsPage extends JPanel {
         totalCountBadge.setText("Total Accounts: " + total);
         staffCountBadge.setText("Staff Cashiers: " + staffCount);
         adminCountBadge.setText("HQ Admins: " + adminCount);
-        dbStatusBadge.setText(DBConnection.isDriverAvailable() ? "● SQLite: cinema.db (Live)" : "○ SQLite Fallback Mode");
+        dbStatusBadge.setText(DBConnection.isDriverAvailable() ? "● " + DBConnection.getDatabaseType() + " (Live)" : "○ " + DBConnection.getDatabaseType() + " (Offline)");
 
         applyFilter();
     }
@@ -312,7 +312,7 @@ public class StaffAccountsPage extends JPanel {
                 "Are you sure you want to permanently delete user account:\n\n"
                         + "• Name: " + fullName + "\n"
                         + "• Email: " + email + "\n\n"
-                        + "This action will remove their terminal access immediately from cinema.db.",
+                        + "This action will remove their terminal access immediately from the MySQL database.",
                 "Confirm Staff Deletion",
                 JOptionPane.YES_NO_OPTION,
                 JOptionPane.WARNING_MESSAGE);
@@ -326,7 +326,7 @@ public class StaffAccountsPage extends JPanel {
                 refreshStaffTable();
             } else {
                 JOptionPane.showMessageDialog(this,
-                        "⚠️ Unable to delete user '" + email + "' from SQLite database.",
+                        "⚠️ Unable to delete user '" + email + "' from MySQL database.",
                         "Deletion Error", JOptionPane.ERROR_MESSAGE);
             }
         }

@@ -75,7 +75,7 @@ public class MovieDAO {
                         insertStmt.setString(9, m.getReleaseDate());
                         insertStmt.executeUpdate();
                     }
-                    System.out.println("[MovieDAO] Seeded default movies catalogue into cinema.db.");
+                    System.out.println("[MovieDAO] Seeded default movies catalogue into MySQL database.");
                 }
             }
         } catch (SQLException e) {
@@ -114,7 +114,7 @@ public class MovieDAO {
                     return list;
                 }
             } catch (SQLException e) {
-                System.err.println("[MovieDAO] Error loading movies from SQLite: " + e.getMessage());
+                System.err.println("[MovieDAO] Error loading movies from MySQL: " + e.getMessage());
             }
         }
         return new ArrayList<>(fallbackMovies);
@@ -217,7 +217,7 @@ public class MovieDAO {
                     return true;
                 }
             } catch (SQLException e) {
-                System.err.println("[MovieDAO] Error saving movie to SQLite: " + e.getMessage());
+                System.err.println("[MovieDAO] Error saving movie to MySQL: " + e.getMessage());
             }
         }
 
@@ -247,7 +247,7 @@ public class MovieDAO {
                 fallbackMovies.removeIf(m -> m.getId() == id);
                 return rows > 0;
             } catch (SQLException e) {
-                System.err.println("[MovieDAO] Error deleting movie from SQLite: " + e.getMessage());
+                System.err.println("[MovieDAO] Error deleting movie from MySQL: " + e.getMessage());
             }
         }
         return fallbackMovies.removeIf(m -> m.getId() == id);

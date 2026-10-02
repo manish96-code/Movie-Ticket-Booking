@@ -28,16 +28,23 @@ public class DatabaseSeeder {
             DBConnection.resetInitializedFlag();
         }
 
-        System.out.println("🌱 Initializing schema & seeding mock data...");
+        System.out.println("🌱 Initializing MySQL schema & seeding mock data...");
         DBConnection.initDatabase();
+
+        if (!DBConnection.isDriverAvailable()) {
+            System.err.println("\n❌ ERROR: Could not connect to MySQL server.");
+            System.err.println("👉 Please check 'db.properties' to ensure host, port, user, and password are correct.");
+            System.err.println("==================================================");
+            System.exit(1);
+        }
 
         printSummaryReport();
         System.out.println("==================================================");
-        System.out.println("✅ All fake/mock data successfully seeded in database!");
+        System.out.println("✅ All fake/mock data successfully seeded in MySQL database!");
         System.out.println("==================================================");
     }
 
-    // Completely clears all tables in cinema.db
+    // Completely clears all tables in MySQL database
     public static void resetDatabase() {
         try (Connection conn = DBConnection.getConnection();
              Statement stmt = conn.createStatement()) {
@@ -48,11 +55,7 @@ public class DatabaseSeeder {
                 "screen_seats", "screens", "movies", "categories", "customers", "users"
             };
 
-            if (DBConnection.isMySQL()) {
-                try { stmt.execute("SET FOREIGN_KEY_CHECKS = 0"); } catch (Exception ignored) {}
-            } else {
-                try { stmt.execute("PRAGMA foreign_keys = OFF"); } catch (Exception ignored) {}
-            }
+            try { stmt.execute("SET FOREIGN_KEY_CHECKS = 0;"); } catch (Exception ignored) {}
 
             for (String table : tables) {
                 try {
@@ -60,12 +63,8 @@ public class DatabaseSeeder {
                 } catch (Exception ignored) {}
             }
 
-            if (DBConnection.isMySQL()) {
-                try { stmt.execute("SET FOREIGN_KEY_CHECKS = 1"); } catch (Exception ignored) {}
-            } else {
-                try { stmt.execute("PRAGMA foreign_keys = ON"); } catch (Exception ignored) {}
-            }
-            System.out.println("[DatabaseSeeder] Dropped all tables cleanly.");
+            try { stmt.execute("SET FOREIGN_KEY_CHECKS = 1;"); } catch (Exception ignored) {}
+            System.out.println("[DatabaseSeeder] Dropped all MySQL tables cleanly.");
 
         } catch (Exception e) {
             System.err.println("[DatabaseSeeder] Notice during reset: " + e.getMessage());

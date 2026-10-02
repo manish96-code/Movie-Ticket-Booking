@@ -165,7 +165,7 @@ public class BookingDAO {
                 throw new SQLException("Failed to save or find customer record.");
             }
 
-            // 2. Lock & verify seat availability (Optimistic lock pattern on SQLite)
+            // 2. Lock & verify seat availability (Optimistic lock pattern in MySQL)
             String updateSeatSql = "UPDATE show_seats SET status = 'BOOKED' WHERE id = ? AND status = 'AVAILABLE'";
             try (PreparedStatement seatStmt = conn.prepareStatement(updateSeatSql)) {
                 for (ShowSeat ss : selectedSeats) {
