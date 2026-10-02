@@ -29,8 +29,6 @@ public class StaffDashboard extends JFrame {
     private BookingHistoryPage bookingHistoryPage;
     private TodayShowsPage todayShowsPage;
     private SearchTicketPage searchTicketPage;
-    private ShiftSummaryPage shiftSummaryPage;
-    private ReportsPage reportsPage;
     private MoviesPanel moviesPanel;
 
     // --- Header & User Session ---
@@ -302,16 +300,6 @@ public class StaffDashboard extends JFrame {
         navMenuPanel.add(Box.createVerticalStrut(4));
         navMenuPanel.add(todayShowsBtn);
 
-        navMenuPanel.add(Box.createVerticalStrut(14));
-
-        // Category 3: Register & Audit
-        navMenuPanel.add(createCategoryHeader("REGISTER & AUDIT"));
-        ModernNavButton shiftSummaryBtn = createNavButton("Shift Summary", "PAGE_SHIFT_SUMMARY", false);
-        ModernNavButton reportsBtn = createNavButton("Sales Reports", "PAGE_REPORTS", false);
-        navMenuPanel.add(shiftSummaryBtn);
-        navMenuPanel.add(Box.createVerticalStrut(4));
-        navMenuPanel.add(reportsBtn);
-
         navMenuPanel.add(Box.createVerticalGlue());
 
         JScrollPane navScrollPane = new JScrollPane(navMenuPanel);
@@ -435,8 +423,6 @@ public class StaffDashboard extends JFrame {
         bookingHistoryPage = new BookingHistoryPage(this);
         todayShowsPage = new TodayShowsPage(this);
         searchTicketPage = new SearchTicketPage(this);
-        shiftSummaryPage = new ShiftSummaryPage(this, staffName, counterName);
-        reportsPage = new ReportsPage();
         moviesPanel = new MoviesPanel(this);
 
         // Register Pages in CardLayout
@@ -445,8 +431,6 @@ public class StaffDashboard extends JFrame {
         mainContentPanel.add(bookingHistoryPage, "PAGE_BOOKING_HISTORY");
         mainContentPanel.add(todayShowsPage, "PAGE_TODAY_SHOWS");
         mainContentPanel.add(searchTicketPage, "PAGE_SEARCH_TICKET");
-        mainContentPanel.add(shiftSummaryPage, "PAGE_SHIFT_SUMMARY");
-        mainContentPanel.add(reportsPage, "PAGE_REPORTS");
 
         bodyContainer.add(sidebar, BorderLayout.WEST);
         bodyContainer.add(mainContentPanel, BorderLayout.CENTER);
@@ -601,21 +585,6 @@ public class StaffDashboard extends JFrame {
                 g2.drawOval(x, centerY - 7, 14, 14);
                 g2.drawLine(x + 7, centerY, x + 7, centerY - 4);
                 g2.drawLine(x + 7, centerY, x + 10, centerY);
-            } else if ("PAGE_SHIFT_SUMMARY".equals(key)) {
-                // Cash Register / Drawer
-                g2.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                g2.drawRoundRect(x, centerY - 6, 15, 12, 2, 2);
-                g2.drawLine(x, centerY + 2, x + 15, centerY + 2);
-                g2.fillOval(x + 6, centerY + 4, 3, 3);
-                g2.drawLine(x + 4, centerY - 2, x + 11, centerY - 2);
-            } else if ("PAGE_REPORTS".equals(key)) {
-                // Analytics Trendline Arrow
-                g2.setStroke(new BasicStroke(1.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                g2.drawLine(x, centerY + 4, x + 4, centerY);
-                g2.drawLine(x + 4, centerY, x + 8, centerY + 2);
-                g2.drawLine(x + 8, centerY + 2, x + 14, centerY - 6);
-                g2.drawLine(x + 10, centerY - 6, x + 14, centerY - 6);
-                g2.drawLine(x + 14, centerY - 2, x + 14, centerY - 6);
             }
 
             g2.setStroke(oldStroke);
@@ -737,7 +706,6 @@ public class StaffDashboard extends JFrame {
     public BookingHistoryPage getBookingHistoryPage() { return bookingHistoryPage; }
     public TodayShowsPage getTodayShowsPage() { return todayShowsPage; }
     public SearchTicketPage getSearchTicketPage() { return searchTicketPage; }
-    public ShiftSummaryPage getShiftSummaryPage() { return shiftSummaryPage; }
     public MoviesPanel getMoviesPanel() { return moviesPanel; }
 
     public static void main(String[] args) {

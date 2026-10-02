@@ -48,6 +48,11 @@ public class DBConnection {
         return DriverManager.getConnection(DB_URL);
     }
 
+    // Resets initialized state for re-seeding / testing
+    public static synchronized void resetInitializedFlag() {
+        initialized = false;
+    }
+
     // Initializes database tables and default user credentials
     public static synchronized void initDatabase() {
         if (!driverAvailable || initialized) return;

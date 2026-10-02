@@ -77,7 +77,7 @@ public class ManageSchedulesPage extends JPanel {
         add(card, BorderLayout.CENTER);
     }
 
-    private void refreshSchedules() {
+    public void refreshSchedules() {
         scheduleModel.setRowCount(0);
         for (Show show : ShowDAO.getAllShows()) {
             int totalSeats = show.getTotalSeats();
@@ -113,7 +113,7 @@ public class ManageSchedulesPage extends JPanel {
     }
 
     private JPanel createBanner(String titleText, String descText) {
-        JPanel banner = new JPanel(new BorderLayout());
+        JPanel banner = new JPanel(new BorderLayout(16, 0));
         banner.setBackground(Theme.CARD_BG);
         banner.setBorder(new CompoundBorder(
                 new LineBorder(Theme.BORDER_COLOR, 1, true),
@@ -136,6 +136,20 @@ public class ManageSchedulesPage extends JPanel {
         titleBlock.add(desc);
 
         banner.add(titleBlock, BorderLayout.WEST);
+
+        JButton addShowBtn = Theme.createPrimaryButton("+ Schedule New Show");
+        addShowBtn.setPreferredSize(new Dimension(190, 40));
+        addShowBtn.addActionListener(e -> {
+            if (dashboard != null) {
+                dashboard.switchToPage("PAGE_ADD_SHOW");
+            }
+        });
+
+        JPanel rightBox = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 4));
+        rightBox.setOpaque(false);
+        rightBox.add(addShowBtn);
+
+        banner.add(rightBox, BorderLayout.EAST);
         return banner;
     }
 

@@ -80,6 +80,9 @@ public class BookingDAO {
         } catch (SQLException e) {
             System.err.println("[BookingDAO] Error initializing booking tables: " + e.getMessage());
         }
+
+        // Seed default bookings, payments, and tickets if empty
+        com.cinemats.data.BookingMockData.seedBookingsIfEmpty();
     }
 
     private static void migrateLegacyBookingColumns(Connection conn) throws SQLException {

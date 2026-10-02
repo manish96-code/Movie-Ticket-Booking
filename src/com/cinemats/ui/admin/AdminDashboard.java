@@ -249,27 +249,18 @@ public class AdminDashboard extends JFrame {
         // Group 2: Operations
         navMenuPanel.add(createCategoryHeader("THEATER OPERATIONS"));
         ModernNavButton moviesBtn = createNavButton("Manage Movies", "PAGE_MOVIES", false);
-        ModernNavButton addMovieBtn = createNavButton("Add New Movie", "PAGE_ADD_MOVIE", false);
         ModernNavButton categoriesBtn = createNavButton("Movie Categories", "PAGE_CATEGORIES", false);
         ModernNavButton screensBtn = createNavButton("Screens & Seats", "PAGE_SCREENS", false);
-        ModernNavButton addScreenBtn = createNavButton("Add New Screen", "PAGE_ADD_SCREEN", false);
         ModernNavButton schedulesBtn = createNavButton("Show Schedules", "PAGE_SCHEDULES", false);
-        ModernNavButton addShowBtn = createNavButton("Schedule a Show", "PAGE_ADD_SHOW", false);
         ModernNavButton bookTicketBtn = createNavButton("Ticket Booking", "PAGE_ORDER_BOOKING", false);
         ModernNavButton historyBtn = createNavButton("Booking History", "PAGE_BOOKING_HISTORY", false);
         navMenuPanel.add(moviesBtn);
-        navMenuPanel.add(Box.createVerticalStrut(4));
-        navMenuPanel.add(addMovieBtn);
         navMenuPanel.add(Box.createVerticalStrut(4));
         navMenuPanel.add(categoriesBtn);
         navMenuPanel.add(Box.createVerticalStrut(4));
         navMenuPanel.add(screensBtn);
         navMenuPanel.add(Box.createVerticalStrut(4));
-        navMenuPanel.add(addScreenBtn);
-        navMenuPanel.add(Box.createVerticalStrut(4));
         navMenuPanel.add(schedulesBtn);
-        navMenuPanel.add(Box.createVerticalStrut(4));
-        navMenuPanel.add(addShowBtn);
         navMenuPanel.add(Box.createVerticalStrut(4));
         navMenuPanel.add(bookTicketBtn);
         navMenuPanel.add(Box.createVerticalStrut(4));
@@ -280,10 +271,7 @@ public class AdminDashboard extends JFrame {
         // Group 3: Personnel
         navMenuPanel.add(createCategoryHeader("STAFF & SECURITY"));
         ModernNavButton staffBtn = createNavButton("Staff Accounts", "PAGE_STAFF", false);
-        ModernNavButton addStaffBtn = createNavButton("Add Staff Member", "PAGE_ADD_STAFF", false);
         navMenuPanel.add(staffBtn);
-        navMenuPanel.add(Box.createVerticalStrut(4));
-        navMenuPanel.add(addStaffBtn);
 
         navMenuPanel.add(Box.createVerticalStrut(14));
 
@@ -442,6 +430,8 @@ public class AdminDashboard extends JFrame {
             screensPage.refreshScreens();
         } else if ("PAGE_STAFF".equals(targetKey) && staffAccountsPage != null) {
             staffAccountsPage.refreshStaffTable();
+        } else if ("PAGE_SCHEDULES".equals(targetKey) && schedulesPage != null) {
+            schedulesPage.refreshSchedules();
         } else if ("PAGE_BOOKING_HISTORY".equals(targetKey) && bookingHistoryPage != null) {
             bookingHistoryPage.loadBookings();
         } else if ("PAGE_ORDER_BOOKING".equals(targetKey) && orderBookingPage != null) {
