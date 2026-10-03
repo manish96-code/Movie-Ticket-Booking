@@ -1,226 +1,423 @@
 package com.cinemats.ui.admin;
 
+import com.cinemats.dao.AnalyticsDAO;
+import com.cinemats.dao.AnalyticsDAO.DashboardKPIs;
 import com.cinemats.data.BookingMockData;
+import com.cinemats.ui.admin.charts.OccupancyDonutChartPanel;
+import com.cinemats.ui.admin.charts.TopMoviesLeaderboardPanel;
+import com.cinemats.ui.admin.charts.WeeklyRevenueChartPanel;
 import com.cinemats.util.Theme;
-import java.awt.*;
+
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
-// Overview and analytics page
+/**
+ * Redesigned Executive Admin Overview Dashboard featuring
+ * real-time revenue velocity charts, seat occupancy donut graphs,
+ * top movies leaderboard, live counter stream, and management actions.
+ */
 public class OverviewPage extends JPanel {
 
     private final AdminDashboard dashboard;
 
+    // Visual Charts
+    private WeeklyRevenueChartPanel revenueChart;
+    private OccupancyDonutChartPanel donutChart;
+    private TopMoviesLeaderboardPanel leaderboard;
+
+    // KPI Metric value labels
+    private JLabel revValueLbl;
+    private JLabel ticketValueLbl;
+    private JLabel movieValueLbl;
+    private JLabel screenValueLbl;
+    private DefaultTableModel tableModel;
+
     public OverviewPage(AdminDashboard dashboard) {
         this.dashboard = dashboard;
-        setLayout(new BorderLayout(0, 16));
+        setLayout(new BorderLayout());
         setBackground(Theme.BG_MAIN);
-        setBorder(new EmptyBorder(22, 26, 22, 26));
 
         initUI();
     }
 
     private void initUI() {
-        // Top Banner
-        add(createBanner("📊 Executive Dashboard Overview",
-                "Real-time key performance indicators, active screens, and recent counter bookings."),
-                BorderLayout.NORTH);
+        JPanel scrollContent = new JPanel();
+        scrollContent.setLayout(new BoxLayout(scrollContent, BoxLayout.Y_AXIS));
+        scrollContent.setBackground(Theme.BG_MAIN);
+        scrollContent.setBorder(new EmptyBorder(20, 24, 24, 24));
 
-        JPanel center = new JPanel(new BorderLayout(0, 16));
-        center.setOpaque(false);
+        // 1. Top Executive Banner
+        scrollContent.add(createHeaderBanner());
+        scrollContent.add(Box.createVerticalStrut(16));
 
-        // 1. Four KPI Metric Cards Header
-        JPanel kpiGrid = new JPanel(new GridLayout(1, 4, 14, 0));
-        kpiGrid.setOpaque(false);
-        kpiGrid.setPreferredSize(new Dimension(0, 100));
+        // 2. Row of 4 KPI Metric Cards
+        scrollContent.add(createKpiSection());
+        scrollContent.add(Box.createVerticalStrut(16));
 
-        kpiGrid.add(createKpiCard("💵 Today's Total Revenue", "$4,850.00", "+14.2% vs yesterday", Theme.COLOR_SUCCESS));
-        kpiGrid.add(createKpiCard("🎟️ Tickets Sold Today", "385 Tickets", "Across 4 active screens", Theme.ACCENT_BLUE));
-        kpiGrid.add(createKpiCard("🎬 Movies Running", "6 Titles", "Now in cinema halls", Theme.COLOR_GOLD));
-        kpiGrid.add(createKpiCard("🖥️ Active Screens", "4 / 4 Screens", "100% capacity online", new Color(124, 58, 237)));
+        // 3. Row of Visual Graphs & Charts (Weekly Bar/Trend + Donut Share)
+        scrollContent.add(createChartsSection());
+        scrollContent.add(Box.createVerticalStrut(16));
 
-        center.add(kpiGrid, BorderLayout.NORTH);
+        // 4. Operational Stream (Recent Bookings Table + Leaderboard & Actions)
+        scrollContent.add(createOperationsSection());
 
-        // 2. Split Content: Recent Bookings Table (68%) + Quick Actions (32%)
-        JPanel splitGrid = new JPanel(new GridBagLayout());
-        splitGrid.setOpaque(false);
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.fill = GridBagConstraints.BOTH;
-        gbc.insets = new Insets(0, 0, 0, 12);
-        gbc.weighty = 1.0;
+        // Wrap in clean modern scrollpane
+        JScrollPane scrollPane = new JScrollPane(scrollContent);
+        scrollPane.setBorder(null);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        Theme.applyModernScrollBars(scrollPane);
 
-        // Recent Bookings Table Card
-        JPanel tableCard = new JPanel(new BorderLayout(0, 10));
-        tableCard.setBackground(Theme.CARD_BG);
-        tableCard.setBorder(new CompoundBorder(
-                new LineBorder(Theme.BORDER_COLOR, 1, true),
-                new EmptyBorder(16, 18, 16, 18)
-        ));
-
-        JPanel tblHeader = new JPanel(new BorderLayout());
-        tblHeader.setOpaque(false);
-        JLabel tblTitle = new JLabel("Recent Counter Bookings Stream");
-        tblTitle.setFont(Theme.FONT_HEADER);
-        tblTitle.setForeground(Theme.TEXT_DARK);
-        tblHeader.add(tblTitle, BorderLayout.WEST);
-
-        JButton viewAllBtn = new JButton("View All History →");
-        viewAllBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        viewAllBtn.setForeground(new Color(124, 58, 237));
-        viewAllBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        viewAllBtn.setContentAreaFilled(false);
-        viewAllBtn.setBorderPainted(false);
-        viewAllBtn.setFocusPainted(false);
-        viewAllBtn.addActionListener(e -> dashboard.switchToPage("PAGE_BOOKING_HISTORY"));
-        tblHeader.add(viewAllBtn, BorderLayout.EAST);
-        tableCard.add(tblHeader, BorderLayout.NORTH);
-
-        String[] cols = {"Ticket ID", "Customer", "Movie", "Screen", "Seats", "Paid", "Cashier"};
-        DefaultTableModel model = new DefaultTableModel(cols, 0) {
-            @Override
-            public boolean isCellEditable(int r, int c) { return false; }
-        };
-        for (Object[] row : BookingMockData.getRecentBookings()) {
-            model.addRow(row);
-        }
-
-        JTable table = new JTable(model);
-        JScrollPane tableScroll = new JScrollPane(table);
-        Theme.applyModernScrollBars(tableScroll);
-        tableCard.add(tableScroll, BorderLayout.CENTER);
-
-        gbc.gridx = 0; gbc.weightx = 0.68;
-        splitGrid.add(tableCard, gbc);
-
-        // Quick Actions Card
-        JPanel actionCard = new JPanel(new BorderLayout(0, 12));
-        actionCard.setBackground(Theme.CARD_BG);
-        actionCard.setBorder(new CompoundBorder(
-                new LineBorder(Theme.BORDER_COLOR, 1, true),
-                new EmptyBorder(16, 18, 16, 18)
-        ));
-
-        JLabel actTitle = new JLabel("Quick Management Actions");
-        actTitle.setFont(Theme.FONT_HEADER);
-        actTitle.setForeground(Theme.TEXT_DARK);
-        actionCard.add(actTitle, BorderLayout.NORTH);
-
-        JPanel btnCol = new JPanel(new GridLayout(5, 1, 0, 10));
-        btnCol.setOpaque(false);
-
-        JButton actBookTicket = Theme.createPrimaryButton("🎟️ Book Movie Tickets");
-        actBookTicket.setBackground(new Color(225, 29, 72));
-        actBookTicket.addActionListener(e -> dashboard.switchToPage("PAGE_ORDER_BOOKING"));
-
-        JButton actAddMovie = Theme.createPrimaryButton("+ Add New Movie Title");
-        actAddMovie.setBackground(Theme.ACCENT_BLUE);
-        actAddMovie.addActionListener(e -> dashboard.switchToPage("PAGE_ADD_MOVIE"));
-
-        JButton actSchedule = Theme.createPrimaryButton("+ Schedule New Showtime");
-        actSchedule.setBackground(new Color(124, 58, 237));
-        actSchedule.addActionListener(e -> dashboard.switchToPage("PAGE_ADD_SHOW"));
-
-        JButton actAddStaff = Theme.createPrimaryButton("+ Register New Staff");
-        actAddStaff.setBackground(Theme.COLOR_SUCCESS);
-        actAddStaff.addActionListener(e -> dashboard.switchToPage("PAGE_ADD_STAFF"));
-
-        JButton actReport = Theme.createSecondaryButton("📊 Export Financial Summary");
-        actReport.addActionListener(e -> dashboard.switchToPage("PAGE_REPORTS"));
-
-        btnCol.add(actBookTicket);
-        btnCol.add(actAddMovie);
-        btnCol.add(actSchedule);
-        btnCol.add(actAddStaff);
-        btnCol.add(actReport);
-
-        actionCard.add(btnCol, BorderLayout.CENTER);
-
-        gbc.gridx = 1; gbc.weightx = 0.32;
-        gbc.insets = new Insets(0, 0, 0, 0);
-        splitGrid.add(actionCard, gbc);
-
-        center.add(splitGrid, BorderLayout.CENTER);
-        add(center, BorderLayout.CENTER);
+        add(scrollPane, BorderLayout.CENTER);
     }
 
-    private JPanel createBanner(String titleText, String descText) {
-        JPanel banner = new JPanel(new BorderLayout());
+    private JPanel createHeaderBanner() {
+        JPanel banner = new JPanel(new BorderLayout(16, 0));
         banner.setBackground(Theme.CARD_BG);
         banner.setBorder(new CompoundBorder(
                 new LineBorder(Theme.BORDER_COLOR, 1, true),
-                new EmptyBorder(18, 22, 18, 22)
+                new EmptyBorder(16, 20, 16, 20)
         ));
 
-        JLabel title = new JLabel(titleText);
-        title.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        // Left title & subtitle
+        JPanel left = new JPanel();
+        left.setLayout(new BoxLayout(left, BoxLayout.Y_AXIS));
+        left.setOpaque(false);
+
+        JLabel title = new JLabel("📊 Executive Management Overview");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 20));
         title.setForeground(Theme.TEXT_DARK);
 
-        JLabel desc = new JLabel(descText);
-        desc.setFont(Theme.FONT_REGULAR);
-        desc.setForeground(Theme.TEXT_MUTED);
+        JLabel sub = new JLabel("Real-time revenue metrics, seat occupancy analytics, and live counter stream.");
+        sub.setFont(Theme.FONT_REGULAR);
+        sub.setForeground(Theme.TEXT_MUTED);
 
-        JPanel titleBlock = new JPanel();
-        titleBlock.setLayout(new BoxLayout(titleBlock, BoxLayout.Y_AXIS));
-        titleBlock.setOpaque(false);
-        titleBlock.add(title);
-        titleBlock.add(Box.createVerticalStrut(4));
-        titleBlock.add(desc);
+        left.add(title);
+        left.add(Box.createVerticalStrut(3));
+        left.add(sub);
 
-        banner.add(titleBlock, BorderLayout.WEST);
+        // Right date badge & refresh button
+        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        right.setOpaque(false);
+
+        String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, dd MMM yyyy"));
+        JLabel dateBadge = new JLabel(" 📅 " + dateStr + " ");
+        dateBadge.setFont(Theme.FONT_BOLD_SM);
+        dateBadge.setForeground(new Color(71, 85, 105));
+        dateBadge.setOpaque(true);
+        dateBadge.setBackground(new Color(241, 245, 249));
+        dateBadge.setBorder(new LineBorder(Theme.BORDER_COLOR, 1, true));
+        dateBadge.setPreferredSize(new Dimension(dateBadge.getPreferredSize().width + 12, 34));
+
+        JButton refreshBtn = new JButton("⟳ Refresh");
+        refreshBtn.setFont(Theme.FONT_BOLD_SM);
+        refreshBtn.setBackground(Color.WHITE);
+        refreshBtn.setForeground(Theme.ACCENT_BLUE);
+        refreshBtn.setFocusPainted(false);
+        refreshBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        refreshBtn.setBorder(new CompoundBorder(
+                new LineBorder(new Color(191, 219, 254), 1, true),
+                new EmptyBorder(6, 14, 6, 14)
+        ));
+        refreshBtn.addActionListener(e -> refreshDashboardData());
+
+        right.add(dateBadge);
+        right.add(refreshBtn);
+
+        banner.add(left, BorderLayout.WEST);
+        banner.add(right, BorderLayout.EAST);
         return banner;
     }
 
-    private JPanel createKpiCard(String label, String value, String sub, Color accent) {
-        JPanel card = new JPanel(new BorderLayout(0, 4));
+    private JPanel createKpiSection() {
+        JPanel kpiGrid = new JPanel(new GridLayout(1, 4, 14, 0));
+        kpiGrid.setOpaque(false);
+        kpiGrid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 108));
+
+        DashboardKPIs kpi = AnalyticsDAO.getDashboardKPIs();
+
+        // Card 1: Revenue
+        JPanel card1 = buildKpiCard("💵 Today's Total Revenue",
+                String.format("₹%,.2f", kpi.todayRevenue),
+                "+" + kpi.revenueGrowth + "% vs yesterday",
+                Theme.COLOR_SUCCESS,
+                new Color(22, 163, 74));
+        revValueLbl = (JLabel) card1.getClientProperty("valLbl");
+
+        // Card 2: Tickets
+        JPanel card2 = buildKpiCard("🎟️ Admissions Issued",
+                kpi.todayTickets + " Tickets",
+                "Across " + kpi.activeScreens + " active screens",
+                Theme.ACCENT_BLUE,
+                new Color(37, 99, 235));
+        ticketValueLbl = (JLabel) card2.getClientProperty("valLbl");
+
+        // Card 3: Movies
+        JPanel card3 = buildKpiCard("🎬 Running Catalogue",
+                kpi.activeMovies + " Titles",
+                "Now showing in theaters",
+                Theme.COLOR_GOLD,
+                new Color(217, 119, 6));
+        movieValueLbl = (JLabel) card3.getClientProperty("valLbl");
+
+        // Card 4: Screen Capacity
+        JPanel card4 = buildKpiCard("🖥️ Theater Utilization",
+                kpi.occupancyRate + "% Occupancy",
+                kpi.activeScreens + " / " + kpi.activeScreens + " auditoriums online",
+                new Color(124, 58, 237),
+                new Color(124, 58, 237));
+        screenValueLbl = (JLabel) card4.getClientProperty("valLbl");
+
+        kpiGrid.add(card1);
+        kpiGrid.add(card2);
+        kpiGrid.add(card3);
+        kpiGrid.add(card4);
+
+        return kpiGrid;
+    }
+
+    private JPanel buildKpiCard(String title, String val, String sub, Color topAccent, Color fg) {
+        JPanel card = new JPanel(new BorderLayout(0, 6));
         card.setBackground(Theme.CARD_BG);
         card.setBorder(new CompoundBorder(
                 BorderFactory.createCompoundBorder(
                         new LineBorder(Theme.BORDER_COLOR, 1, true),
-                        BorderFactory.createMatteBorder(3, 0, 0, 0, accent)
+                        BorderFactory.createMatteBorder(3, 0, 0, 0, topAccent)
                 ),
                 new EmptyBorder(12, 16, 12, 16)
         ));
 
-        JLabel lbl = new JLabel(label);
-        lbl.setFont(Theme.FONT_SMALL);
-        lbl.setForeground(Theme.TEXT_MUTED);
+        JLabel titleLbl = new JLabel(title);
+        titleLbl.setFont(Theme.FONT_SMALL);
+        titleLbl.setForeground(Theme.TEXT_MUTED);
 
-        JLabel val = new JLabel(value);
-        val.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        val.setForeground(Theme.TEXT_DARK);
+        JLabel valLbl = new JLabel(val);
+        valLbl.setFont(new Font("Segoe UI", Font.BOLD, 21));
+        valLbl.setForeground(Theme.TEXT_DARK);
+        card.putClientProperty("valLbl", valLbl);
 
         JLabel subLbl = new JLabel(sub);
         subLbl.setFont(Theme.FONT_SMALL);
-        subLbl.setForeground(accent);
+        subLbl.setForeground(fg);
 
-        card.add(lbl, BorderLayout.NORTH);
-        card.add(val, BorderLayout.CENTER);
+        card.add(titleLbl, BorderLayout.NORTH);
+        card.add(valLbl, BorderLayout.CENTER);
         card.add(subLbl, BorderLayout.SOUTH);
 
         return card;
     }
 
-    private void styleTable(JTable table) {
-        table.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        table.setRowHeight(32);
-        table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
-        table.getTableHeader().setBackground(new Color(241, 245, 249));
-        table.getTableHeader().setForeground(Theme.TEXT_DARK);
-        table.setSelectionBackground(new Color(237, 233, 254));
-        table.setSelectionForeground(Theme.TEXT_DARK);
-        table.setShowGrid(true);
-        table.setGridColor(Theme.BORDER_COLOR);
+    private JPanel createChartsSection() {
+        JPanel grid = new JPanel(new GridBagLayout());
+        grid.setOpaque(false);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.BOTH;
+        gbc.weighty = 1.0;
 
-        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
-        centerRenderer.setHorizontalAlignment(JLabel.CENTER);
-        for (int i = 0; i < table.getColumnCount(); i++) {
-            if (i == 0 || i >= table.getColumnCount() - 2) {
-                table.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
-            }
+        // Chart 1: Weekly Revenue Velocity Bar Chart (62%)
+        revenueChart = new WeeklyRevenueChartPanel();
+        gbc.gridx = 0;
+        gbc.weightx = 0.62;
+        gbc.insets = new Insets(0, 0, 0, 14);
+        grid.add(revenueChart, gbc);
+
+        // Chart 2: Seat Tier Distribution Donut Chart (38%)
+        donutChart = new OccupancyDonutChartPanel();
+        gbc.gridx = 1;
+        gbc.weightx = 0.38;
+        gbc.insets = new Insets(0, 0, 0, 0);
+        grid.add(donutChart, gbc);
+
+        return grid;
+    }
+
+    private JPanel createOperationsSection() {
+        JPanel grid = new JPanel(new GridBagLayout());
+        grid.setOpaque(false);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.BOTH;
+        gbc.weighty = 1.0;
+
+        // Left (62%): Recent Counter Bookings Stream
+        JPanel bookingsCard = buildRecentBookingsCard();
+        gbc.gridx = 0;
+        gbc.weightx = 0.62;
+        gbc.insets = new Insets(0, 0, 0, 14);
+        grid.add(bookingsCard, gbc);
+
+        // Right (38%): Leaderboard + Quick Action buttons
+        JPanel rightCol = new JPanel();
+        rightCol.setLayout(new BoxLayout(rightCol, BoxLayout.Y_AXIS));
+        rightCol.setOpaque(false);
+
+        leaderboard = new TopMoviesLeaderboardPanel();
+        leaderboard.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JPanel quickActions = buildQuickActionsCard();
+        quickActions.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        rightCol.add(leaderboard);
+        rightCol.add(Box.createVerticalStrut(14));
+        rightCol.add(quickActions);
+
+        gbc.gridx = 1;
+        gbc.weightx = 0.38;
+        gbc.insets = new Insets(0, 0, 0, 0);
+        grid.add(rightCol, gbc);
+
+        return grid;
+    }
+
+    private JPanel buildRecentBookingsCard() {
+        JPanel card = new JPanel(new BorderLayout(0, 12));
+        card.setBackground(Theme.CARD_BG);
+        card.setBorder(new CompoundBorder(
+                new LineBorder(Theme.BORDER_COLOR, 1, true),
+                new EmptyBorder(16, 18, 16, 18)
+        ));
+
+        // Header
+        JPanel header = new JPanel(new BorderLayout());
+        header.setOpaque(false);
+
+        JLabel title = new JLabel("🎟️ Real-Time Counter Bookings Feed");
+        title.setFont(Theme.FONT_HEADER);
+        title.setForeground(Theme.TEXT_DARK);
+
+        JButton viewAllBtn = new JButton("View Full Stream →");
+        viewAllBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        viewAllBtn.setForeground(Theme.ACCENT_BLUE);
+        viewAllBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        viewAllBtn.setContentAreaFilled(false);
+        viewAllBtn.setBorderPainted(false);
+        viewAllBtn.setFocusPainted(false);
+        viewAllBtn.addActionListener(e -> dashboard.switchToPage("PAGE_BOOKING_HISTORY"));
+
+        header.add(title, BorderLayout.WEST);
+        header.add(viewAllBtn, BorderLayout.EAST);
+        card.add(header, BorderLayout.NORTH);
+
+        // Table
+        String[] cols = {"Booking Ref", "Customer", "Movie Title", "Auditorium", "Seat Details", "Amount", "Cashier"};
+        tableModel = new DefaultTableModel(cols, 0) {
+            @Override
+            public boolean isCellEditable(int r, int c) { return false; }
+        };
+
+        loadRecentBookingsToTable();
+
+        JTable table = new JTable(tableModel);
+        styleTable(table);
+
+        JScrollPane tableScroll = new JScrollPane(table);
+        tableScroll.setPreferredSize(new Dimension(500, 240));
+        Theme.applyModernScrollBars(tableScroll);
+        card.add(tableScroll, BorderLayout.CENTER);
+
+        return card;
+    }
+
+    private void loadRecentBookingsToTable() {
+        tableModel.setRowCount(0);
+        for (Object[] row : BookingMockData.getRecentBookings()) {
+            tableModel.addRow(row);
         }
+    }
+
+    private void styleTable(JTable table) {
+        table.setRowHeight(36);
+        table.setFont(Theme.FONT_REGULAR);
+        table.setShowVerticalLines(false);
+        table.setShowHorizontalLines(true);
+        table.setGridColor(new Color(241, 245, 249));
+        table.setSelectionBackground(new Color(239, 246, 255));
+        table.setSelectionForeground(Theme.TEXT_DARK);
+
+        table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 11));
+        table.getTableHeader().setBackground(new Color(248, 250, 252));
+        table.getTableHeader().setForeground(new Color(71, 85, 105));
+        table.getTableHeader().setPreferredSize(new Dimension(0, 34));
+        table.getTableHeader().setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Theme.BORDER_COLOR));
+
+        DefaultTableCellRenderer center = new DefaultTableCellRenderer();
+        center.setHorizontalAlignment(SwingConstants.CENTER);
+
+        DefaultTableCellRenderer boldCell = new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable t, Object val, boolean sel, boolean foc, int row, int col) {
+                JLabel l = (JLabel) super.getTableCellRendererComponent(t, val, sel, foc, row, col);
+                l.setFont(new Font("Segoe UI", Font.BOLD, 12));
+                l.setForeground(new Color(15, 23, 42));
+                return l;
+            }
+        };
+
+        if (table.getColumnCount() > 0) table.getColumnModel().getColumn(0).setCellRenderer(boldCell);
+        if (table.getColumnCount() > 5) table.getColumnModel().getColumn(5).setCellRenderer(boldCell);
+    }
+
+    private JPanel buildQuickActionsCard() {
+        JPanel card = new JPanel(new BorderLayout(0, 10));
+        card.setBackground(Theme.CARD_BG);
+        card.setBorder(new CompoundBorder(
+                new LineBorder(Theme.BORDER_COLOR, 1, true),
+                new EmptyBorder(14, 16, 14, 16)
+        ));
+
+        JLabel title = new JLabel("⚡ Fast Dispatch Controls");
+        title.setFont(Theme.FONT_HEADER);
+        title.setForeground(Theme.TEXT_DARK);
+        card.add(title, BorderLayout.NORTH);
+
+        JPanel btnGrid = new JPanel(new GridLayout(2, 2, 8, 8));
+        btnGrid.setOpaque(false);
+
+        JButton btn1 = Theme.createPrimaryButton("🎟️ Book Ticket");
+        btn1.setBackground(new Color(225, 29, 72));
+        btn1.addActionListener(e -> dashboard.switchToPage("PAGE_ORDER_BOOKING"));
+
+        JButton btn2 = Theme.createPrimaryButton("+ New Movie");
+        btn2.setBackground(Theme.ACCENT_BLUE);
+        btn2.addActionListener(e -> dashboard.switchToPage("PAGE_ADD_MOVIE"));
+
+        JButton btn3 = Theme.createPrimaryButton("+ Showtime");
+        btn3.setBackground(new Color(124, 58, 237));
+        btn3.addActionListener(e -> dashboard.switchToPage("PAGE_ADD_SHOW"));
+
+        JButton btn4 = Theme.createSecondaryButton("📊 Settlement");
+        btn4.addActionListener(e -> dashboard.switchToPage("PAGE_REPORTS"));
+
+        btnGrid.add(btn1);
+        btnGrid.add(btn2);
+        btnGrid.add(btn3);
+        btnGrid.add(btn4);
+
+        card.add(btnGrid, BorderLayout.CENTER);
+        return card;
+    }
+
+    /**
+     * Refreshes dashboard metrics, graphs, and live stream.
+     */
+    public void refreshDashboardData() {
+        DashboardKPIs kpi = AnalyticsDAO.getDashboardKPIs();
+        if (revValueLbl != null) revValueLbl.setText(String.format("₹%,.2f", kpi.todayRevenue));
+        if (ticketValueLbl != null) ticketValueLbl.setText(kpi.todayTickets + " Tickets");
+        if (movieValueLbl != null) movieValueLbl.setText(kpi.activeMovies + " Titles");
+        if (screenValueLbl != null) screenValueLbl.setText(kpi.occupancyRate + "% Occupancy");
+
+        if (revenueChart != null) revenueChart.reloadData();
+        if (donutChart != null) donutChart.reloadData();
+        if (leaderboard != null) leaderboard.reloadData();
+        if (tableModel != null) loadRecentBookingsToTable();
+
+        revalidate();
+        repaint();
     }
 }

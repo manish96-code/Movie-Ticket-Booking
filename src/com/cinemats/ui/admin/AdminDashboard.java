@@ -423,7 +423,10 @@ public class AdminDashboard extends JFrame {
         for (ModernNavButton b : sidebarButtons) {
             b.setActive(b == activeBtn);
         }
-        if ("PAGE_CATEGORIES".equals(targetKey) && categoriesPage != null) {
+
+        if ("PAGE_OVERVIEW".equals(targetKey) && overviewPage != null) {
+            overviewPage.refreshDashboardData();
+        } else if ("PAGE_CATEGORIES".equals(targetKey) && categoriesPage != null) {
             categoriesPage.refreshCategoryTable();
         } else if ("PAGE_MOVIES".equals(targetKey) && moviesPage != null) {
             moviesPage.refreshMovieTable();
