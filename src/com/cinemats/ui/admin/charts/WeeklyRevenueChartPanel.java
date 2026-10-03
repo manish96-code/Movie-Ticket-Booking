@@ -13,12 +13,13 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
 import java.awt.geom.RoundRectangle2D;
 import java.text.DecimalFormat;
+import java.time.LocalDate;
 import java.util.List;
 
 /**
- * High-performance, anti-aliased 2D Vector Bar & Trend Chart
- * displaying weekly box office revenue with gradient fills, gridlines,
- * and interactive hover tooltips.
+ * Standard enterprise 2D Vector Bar Chart displaying weekly box office revenue
+ * with clean subtle gridlines, restrained corporate slate palette,
+ * and highlighted selected date.
  */
 public class WeeklyRevenueChartPanel extends JPanel {
 
@@ -26,6 +27,7 @@ public class WeeklyRevenueChartPanel extends JPanel {
     private int hoveredIndex = -1;
     private Point mousePoint = null;
     private final DecimalFormat currencyFmt = new DecimalFormat("₹#,##0");
+    private LocalDate activeDate = LocalDate.now();
 
     public WeeklyRevenueChartPanel() {
         setLayout(new BorderLayout());
@@ -35,7 +37,7 @@ public class WeeklyRevenueChartPanel extends JPanel {
                 new EmptyBorder(16, 20, 16, 20)
         ));
 
-        reloadData();
+        reloadData(LocalDate.now());
 
         JPanel chartCanvas = new JPanel() {
             @Override
@@ -45,7 +47,7 @@ public class WeeklyRevenueChartPanel extends JPanel {
             }
         };
         chartCanvas.setOpaque(false);
-        chartCanvas.setPreferredSize(new Dimension(500, 220));
+        chartCanvas.setPreferredSize(new Dimension(500, 240));
 
         chartCanvas.addMouseMotionListener(new MouseMotionAdapter() {
             @Override
@@ -64,7 +66,36 @@ public class WeeklyRevenueChartPanel extends JPanel {
     }
 
     public void reloadData() {
-        this.dataPoints = AnalyticsDAO.getWeeklyRevenuePoints();
+        reloadData(this.activeDate);
+    }
+
+    public void reloadData(LocalDate date) {
+        this.activeDate = (date != null) ? date : LocalDate.now();
+        this.dataPoints = AnalyticsDAO.getWeeklyRevenuePoints(this.activeDate);
+        removeAll();
+        add(buildHeader(), BorderLayout.NORTH);
+        JPanel chartCanvas = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                renderChart((Graphics2D) g);
+            }
+        };
+        chartCanvas.setOpaque(false);
+        chartCanvas.setPreferredSize(new Dimension(500, 240));
+        chartCanvas.addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                mousePoint = e.getPoint();
+                int prev = hoveredIndex;
+                hoveredIndex = findBarIndexAt(e.getX(), chartCanvas.getWidth());
+                if (prev != hoveredIndex) {
+                    chartCanvas.repaint();
+                }
+            }
+        });
+        add(chartCanvas, BorderLayout.CENTER);
+        revalidate();
         repaint();
     }
 
@@ -78,11 +109,11 @@ public class WeeklyRevenueChartPanel extends JPanel {
         left.setLayout(new BoxLayout(left, BoxLayout.Y_AXIS));
         left.setOpaque(false);
 
-        JLabel title = new JLabel("📊 Box Office Revenue Velocity");
+        JLabel title = new JLabel("Box Office Revenue Velocity");
         title.setFont(Theme.FONT_HEADER);
         title.setForeground(Theme.TEXT_DARK);
 
-        JLabel sub = new JLabel("Daily gross earnings (Mon - Sun) across all active screens");
+        JLabel sub = new JLabel("7-day trend leading to the selected date");
         sub.setFont(Theme.FONT_SMALL);
         sub.setForeground(Theme.TEXT_MUTED);
 
@@ -95,19 +126,21 @@ public class WeeklyRevenueChartPanel extends JPanel {
         right.setOpaque(false);
 
         double total7Days = 0;
-        for (DailyRevenuePoint p : dataPoints) {
-            total7Days += p.revenue;
+        if (dataPoints != null) {
+            for (DailyRevenuePoint p : dataPoints) {
+                total7Days += p.revenue;
+            }
         }
 
         JLabel totalLbl = new JLabel(String.format("7-Day Total: ₹%,.0f", total7Days));
-        totalLbl.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        totalLbl.setFont(new Font("Segoe UI", Font.BOLD, 12));
         totalLbl.setForeground(new Color(30, 41, 59));
 
-        JLabel badge = new JLabel("  +18.4% WoW ↗  ");
+        JLabel badge = new JLabel("  +18.4% WoW  ");
         badge.setFont(new Font("Segoe UI", Font.BOLD, 11));
         badge.setForeground(new Color(22, 163, 74));
         badge.setOpaque(true);
-        badge.setBackground(new Color(220, 252, 231));
+        badge.setBackground(new Color(240, 253, 244));
         badge.setBorder(new LineBorder(new Color(187, 247, 208), 1, true));
 
         right.add(totalLbl);
@@ -118,179 +151,154 @@ public class WeeklyRevenueChartPanel extends JPanel {
         return header;
     }
 
-    private int findBarIndexAt(int mouseX, int totalWidth) {
-        if (dataPoints == null || dataPoints.isEmpty()) return -1;
-        int leftPadding = 65;
-        int rightPadding = 20;
-        int chartW = totalWidth - leftPadding - rightPadding;
-        if (chartW <= 0) return -1;
-
-        int n = dataPoints.size();
-        int step = chartW / n;
-        for (int i = 0; i < n; i++) {
-            int barCenterX = leftPadding + (i * step) + (step / 2);
-            int barWidth = Math.min(48, Math.max(28, step - 24));
-            int barLeft = barCenterX - (barWidth / 2);
-            int barRight = barLeft + barWidth;
-            if (mouseX >= barLeft - 4 && mouseX <= barRight + 4) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
     private void renderChart(Graphics2D g2) {
+        if (dataPoints == null || dataPoints.isEmpty()) return;
+
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_HRGB);
 
-        int w = getWidth() - 40;
-        int h = getHeight() - 85;
-        if (w < 100 || h < 80) return;
+        int width = getWidth() - 56;
+        int height = getHeight() - 72;
+        int startX = 48;
+        int startY = 16;
 
-        int leftPadding = 65;
-        int rightPadding = 20;
-        int topPadding = 20;
-        int bottomPadding = 35;
+        if (width < 200 || height < 100) return;
 
-        int chartW = w - leftPadding - rightPadding;
-        int chartH = h - topPadding - bottomPadding;
-
-        // Determine max revenue for scaling (round up to clean thousands)
+        // Calculate max value for scale
         double maxRev = 1000.0;
         for (DailyRevenuePoint p : dataPoints) {
             if (p.revenue > maxRev) maxRev = p.revenue;
         }
-        // Round up max to clean 5000 interval
-        double scaleMax = Math.ceil(maxRev * 1.15 / 5000.0) * 5000.0;
-        if (scaleMax <= 0) scaleMax = 10000.0;
+        maxRev = Math.ceil(maxRev / 5000.0) * 5000.0;
+        if (maxRev < 5000.0) maxRev = 5000.0;
 
-        // 1. Draw subtle horizontal gridlines & Y-axis labels
-        int gridSteps = 4;
-        g2.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        // Horizontal gridlines & Y-axis labels
+        int gridLines = 4;
+        g2.setFont(new Font("Segoe UI", Font.PLAIN, 10));
         FontMetrics fm = g2.getFontMetrics();
 
-        for (int i = 0; i <= gridSteps; i++) {
-            double val = (scaleMax / gridSteps) * i;
-            int y = topPadding + chartH - (int) ((val / scaleMax) * chartH);
+        for (int i = 0; i <= gridLines; i++) {
+            int y = startY + (int) ((height) * (1.0 - (double) i / gridLines));
+            double val = (maxRev / gridLines) * i;
 
-            // Gridline
+            // Clean subtle gridline
             g2.setColor(new Color(241, 245, 249));
-            g2.drawLine(leftPadding, y, leftPadding + chartW, y);
+            g2.drawLine(startX, y, startX + width, y);
 
-            // Label
-            String lblText = (val >= 1000) ? String.format("₹%.0fk", val / 1000.0) : String.format("₹%.0f", val);
-            g2.setColor(Theme.TEXT_MUTED);
-            int lblW = fm.stringWidth(lblText);
-            g2.drawString(lblText, leftPadding - lblW - 10, y + 4);
+            // Y-axis label
+            g2.setColor(new Color(148, 163, 184));
+            String lbl = (val >= 1000) ? String.format("₹%.0fk", val / 1000) : "₹0";
+            g2.drawString(lbl, startX - fm.stringWidth(lbl) - 8, y + 4);
         }
 
-        // 2. Draw bars
-        int n = dataPoints.size();
-        int step = chartW / n;
+        // Draw Bars
+        int barCount = dataPoints.size();
+        int slotWidth = width / barCount;
+        int barWidth = Math.min(36, slotWidth - 16);
 
-        Color blueTop = new Color(59, 130, 246);
-        Color blueBottom = new Color(37, 99, 235);
-        Color todayTop = new Color(124, 58, 237);     // Purple accent for Today
-        Color todayBottom = new Color(79, 70, 229);
-        Color hoverBorder = new Color(30, 58, 138);
+        for (int i = 0; i < barCount; i++) {
+            DailyRevenuePoint p = dataPoints.get(i);
+            int slotX = startX + i * slotWidth;
+            int barX = slotX + (slotWidth - barWidth) / 2;
 
-        for (int i = 0; i < n; i++) {
-            DailyRevenuePoint pt = dataPoints.get(i);
-            int barCenterX = leftPadding + (i * step) + (step / 2);
-            int barWidth = Math.min(46, Math.max(26, step - 24));
-            int barH = (int) ((pt.revenue / scaleMax) * chartH);
-            if (barH < 6) barH = 6;
-
-            int barX = barCenterX - (barWidth / 2);
-            int barY = topPadding + chartH - barH;
+            double ratio = Math.min(1.0, p.revenue / maxRev);
+            int barHeight = Math.max(4, (int) (height * ratio));
+            int barY = startY + (height - barHeight);
 
             boolean isHovered = (i == hoveredIndex);
+            boolean isSelected = p.isSelected;
 
-            // Gradient Paint
-            Color c1 = pt.isToday ? todayTop : blueTop;
-            Color c2 = pt.isToday ? todayBottom : blueBottom;
-
-            if (isHovered) {
-                c1 = c1.brighter();
-                c2 = c2.brighter();
+            // Restrained corporate palette: Selected = Deep Slate Navy, Others = Soft Slate
+            if (isSelected) {
+                g2.setColor(new Color(15, 23, 42)); // Deep Slate Navy
+            } else if (isHovered) {
+                g2.setColor(new Color(100, 116, 139)); // Slate 500 hover
+            } else {
+                g2.setColor(new Color(203, 213, 225)); // Slate 300 clean muted
             }
 
-            g2.setPaint(new GradientPaint(barX, barY, c1, barX, barY + barH, c2));
-            RoundRectangle2D barShape = new RoundRectangle2D.Float(barX, barY, barWidth, barH, 8, 8);
+            // Rounded top corners on bar
+            Shape barShape = new RoundRectangle2D.Float(barX, barY, barWidth, barHeight, 6, 6);
             g2.fill(barShape);
 
-            if (isHovered) {
-                g2.setColor(hoverBorder);
-                g2.setStroke(new BasicStroke(1.5f));
-                g2.draw(barShape);
+            // Value text above bar
+            if (p.revenue > 0) {
+                g2.setFont(new Font("Segoe UI", Font.BOLD, 10));
+                String revText = (p.revenue >= 1000) ? String.format("₹%.0fk", p.revenue / 1000.0) : String.format("₹%.0f", p.revenue);
+                int tw = g2.getFontMetrics().stringWidth(revText);
+                g2.setColor(isSelected ? new Color(15, 23, 42) : new Color(71, 85, 105));
+                g2.drawString(revText, barX + (barWidth - tw) / 2, barY - 5);
             }
 
-            // Value badge on top of each bar
-            String valStr = currencyFmt.format(pt.revenue);
-            g2.setFont(new Font("Segoe UI", Font.BOLD, 10));
-            FontMetrics valFm = g2.getFontMetrics();
-            int valW = valFm.stringWidth(valStr);
+            // X-axis Day label
+            g2.setFont(new Font("Segoe UI", isSelected ? Font.BOLD : Font.PLAIN, 11));
+            g2.setColor(isSelected ? new Color(15, 23, 42) : new Color(100, 116, 139));
+            String dayText = p.dayLabel;
+            int dtw = g2.getFontMetrics().stringWidth(dayText);
+            g2.drawString(dayText, barX + (barWidth - dtw) / 2, startY + height + 16);
 
-            if (barH > 22 && isHovered) {
-                g2.setColor(Color.WHITE);
-                g2.drawString(valStr, barCenterX - (valW / 2), barY + 16);
-            } else {
-                g2.setColor(isHovered ? Theme.TEXT_DARK : new Color(71, 85, 105));
-                g2.drawString(valStr, barCenterX - (valW / 2), barY - 6);
+            // Selected pill indicator
+            if (isSelected) {
+                g2.setColor(new Color(15, 23, 42));
+                g2.fillRoundRect(barX + (barWidth - 14) / 2, startY + height + 20, 14, 3, 2, 2);
             }
-
-            // X-axis day & date label
-            g2.setFont(new Font("Segoe UI", pt.isToday ? Font.BOLD : Font.PLAIN, 11));
-            g2.setColor(pt.isToday ? new Color(124, 58, 237) : Theme.TEXT_DARK);
-            String dayStr = pt.dayLabel + (pt.isToday ? " (Today)" : "");
-            FontMetrics dayFm = g2.getFontMetrics();
-            int dayW = dayFm.stringWidth(dayStr);
-            g2.drawString(dayStr, barCenterX - (dayW / 2), topPadding + chartH + 18);
         }
 
-        // 3. Render elevated interactive tooltip if bar hovered
+        // Hover tooltip
         if (hoveredIndex >= 0 && hoveredIndex < dataPoints.size() && mousePoint != null) {
-            DailyRevenuePoint pt = dataPoints.get(hoveredIndex);
-            renderTooltip(g2, pt, mousePoint.x, mousePoint.y);
+            DailyRevenuePoint hp = dataPoints.get(hoveredIndex);
+            drawTooltip(g2, hp, mousePoint.x, mousePoint.y);
         }
     }
 
-    private void renderTooltip(Graphics2D g2, DailyRevenuePoint pt, int mx, int my) {
-        String line1 = pt.dayLabel + " • " + pt.dateStr + (pt.isToday ? " (Today)" : "");
-        String line2 = "Revenue: " + currencyFmt.format(pt.revenue);
-        String line3 = "Tickets Sold: " + pt.tickets + " admissions";
+    private void drawTooltip(Graphics2D g2, DailyRevenuePoint p, int mouseX, int mouseY) {
+        String title = p.dateStr;
+        String rev = "Revenue: " + currencyFmt.format(p.revenue);
+        String tkts = "Tickets: " + p.tickets + " tickets";
 
-        g2.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        FontMetrics fm1 = g2.getFontMetrics();
-        g2.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        FontMetrics fm2 = g2.getFontMetrics();
+        Font titleFont = new Font("Segoe UI", Font.BOLD, 11);
+        Font bodyFont = new Font("Segoe UI", Font.PLAIN, 11);
 
-        int tw = Math.max(fm1.stringWidth(line1), Math.max(fm2.stringWidth(line2), fm2.stringWidth(line3))) + 24;
-        int th = 62;
+        FontMetrics fmT = g2.getFontMetrics(titleFont);
+        FontMetrics fmB = g2.getFontMetrics(bodyFont);
 
-        int tx = mx - (tw / 2);
-        int ty = my - th - 12;
+        int maxW = Math.max(fmT.stringWidth(title), Math.max(fmB.stringWidth(rev), fmB.stringWidth(tkts)));
+        int pad = 10;
+        int tipW = maxW + pad * 2;
+        int tipH = 58;
 
-        if (tx < 10) tx = 10;
-        if (tx + tw > getWidth() - 10) tx = getWidth() - tw - 10;
-        if (ty < 10) ty = my + 20;
+        int tipX = Math.min(mouseX + 12, getWidth() - tipW - 10);
+        int tipY = Math.max(10, mouseY - tipH - 8);
 
-        // Tooltip card with subtle drop shadow
-        g2.setColor(new Color(15, 23, 42, 230));
-        g2.fillRoundRect(tx, ty, tw, th, 8, 8);
+        // Tooltip card with dark slate background
+        g2.setColor(new Color(15, 23, 42));
+        g2.fillRoundRect(tipX, tipY, tipW, tipH, 8, 8);
         g2.setColor(new Color(51, 65, 85));
-        g2.drawRoundRect(tx, ty, tw, th, 8, 8);
+        g2.drawRoundRect(tipX, tipY, tipW, tipH, 8, 8);
 
-        // Tooltip contents
-        g2.setColor(new Color(248, 250, 252));
-        g2.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        g2.drawString(line1, tx + 12, ty + 18);
+        g2.setFont(titleFont);
+        g2.setColor(Color.WHITE);
+        g2.drawString(title, tipX + pad, tipY + 16);
 
-        g2.setColor(new Color(147, 197, 253));
-        g2.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        g2.drawString(line2, tx + 12, ty + 34);
+        g2.setFont(bodyFont);
+        g2.setColor(new Color(226, 232, 240));
+        g2.drawString(rev, tipX + pad, tipY + 32);
 
-        g2.setColor(new Color(187, 247, 208));
-        g2.drawString(line3, tx + 12, ty + 50);
+        g2.setColor(new Color(148, 163, 184));
+        g2.drawString(tkts, tipX + pad, tipY + 48);
+    }
+
+    private int findBarIndexAt(int mouseX, int totalWidth) {
+        if (dataPoints == null || dataPoints.isEmpty()) return -1;
+        int width = totalWidth - 40;
+        int startX = 48;
+        int slotWidth = width / dataPoints.size();
+        if (slotWidth <= 0) return -1;
+
+        int idx = (mouseX - startX) / slotWidth;
+        if (idx >= 0 && idx < dataPoints.size()) {
+            return idx;
+        }
+        return -1;
     }
 }

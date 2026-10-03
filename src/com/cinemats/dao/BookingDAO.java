@@ -363,6 +363,27 @@ public class BookingDAO {
         return list;
     }
 
+    public static List<Booking> getBookingsByDate(String dateStr, int limit) {
+        List<Booking> list = new ArrayList<>();
+        String sql = "SELECT * FROM bookings WHERE (show_date = ? OR DATE(created_at) = ?) ORDER BY id DESC LIMIT ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, dateStr);
+            ps.setString(2, dateStr);
+            ps.setInt(3, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Booking b = mapBookingResultSet(rs);
+                    loadBookingChildren(conn, b);
+                    list.add(b);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[BookingDAO] Error fetching bookings by date: " + e.getMessage());
+        }
+        return list;
+    }
+
     public static Booking getBookingByNumber(String bookingNumber) {
         String sql = "SELECT * FROM bookings WHERE booking_number = ? LIMIT 1";
         try (Connection conn = DBConnection.getConnection();

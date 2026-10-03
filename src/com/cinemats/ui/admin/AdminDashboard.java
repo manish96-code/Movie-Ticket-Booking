@@ -112,7 +112,7 @@ public class AdminDashboard extends JFrame {
 
         JLabel subtitle = new JLabel("ADMINISTRATOR CONTROL PANEL • HQ EXECUTIVE");
         subtitle.setFont(Theme.FONT_BOLD_SM);
-        subtitle.setForeground(new Color(124, 58, 237)); // Regal Purple
+        subtitle.setForeground(new Color(100, 116, 139)); // Clean Muted Slate
 
         brandText.add(title);
         brandText.add(subtitle);
@@ -181,14 +181,14 @@ public class AdminDashboard extends JFrame {
                 int x = (getWidth() - size) / 2;
                 int y = (getHeight() - size) / 2;
 
-                // Modern purple gradient background
-                Color c1 = isHovered ? new Color(109, 40, 217) : new Color(124, 58, 237);
-                Color c2 = isHovered ? new Color(76, 29, 149) : new Color(91, 33, 182);
+                // Modern dark slate background
+                Color c1 = isHovered ? new Color(30, 41, 59) : new Color(15, 23, 42);
+                Color c2 = isHovered ? new Color(15, 23, 42) : new Color(2, 6, 23);
                 g2.setPaint(new GradientPaint(x, y, c1, x + size, y + size, c2));
                 g2.fillOval(x, y, size, size);
 
                 // Subtle ring outline
-                g2.setColor(isHovered ? new Color(221, 214, 254) : new Color(255, 255, 255, 140));
+                g2.setColor(isHovered ? new Color(148, 163, 184) : new Color(203, 213, 225, 140));
                 g2.setStroke(new BasicStroke(1.5f));
                 g2.drawOval(x, y, size, size);
 
@@ -324,17 +324,17 @@ public class AdminDashboard extends JFrame {
                 int height = getHeight();
 
                 if (isHovered) {
-                    g2.setColor(new Color(254, 226, 226));
+                    g2.setColor(new Color(241, 245, 249));
                     g2.fillRoundRect(2, 2, width - 4, height - 4, 10, 10);
-                    g2.setColor(new Color(244, 63, 94));
+                    g2.setColor(new Color(203, 213, 225));
                     g2.drawRoundRect(2, 2, width - 4, height - 4, 10, 10);
-                    g2.setColor(new Color(225, 29, 72));
+                    g2.setColor(new Color(15, 23, 42));
                 } else {
-                    g2.setColor(new Color(255, 241, 242));
+                    g2.setColor(Color.WHITE);
                     g2.fillRoundRect(2, 2, width - 4, height - 4, 10, 10);
-                    g2.setColor(new Color(254, 205, 211));
+                    g2.setColor(new Color(226, 232, 240));
                     g2.drawRoundRect(2, 2, width - 4, height - 4, 10, 10);
-                    g2.setColor(new Color(225, 29, 72));
+                    g2.setColor(new Color(71, 85, 105));
                 }
 
                 g2.setFont(new Font("Segoe UI", Font.BOLD, 13));
@@ -506,15 +506,11 @@ public class AdminDashboard extends JFrame {
             int centerY = height / 2;
 
             if (isActive) {
-                GradientPaint gp = new GradientPaint(
-                        0, 0, new Color(124, 58, 237),
-                        width, height, new Color(109, 40, 217)
-                );
-                g2.setPaint(gp);
+                g2.setColor(new Color(15, 23, 42)); // Deep Slate Navy
                 g2.fillRoundRect(2, 2, width - 4, height - 4, 10, 10);
 
-                // Left glowing indicator bar
-                g2.setColor(new Color(233, 213, 255));
+                // Left crisp blue indicator bar
+                g2.setColor(new Color(59, 130, 246));
                 g2.fillRoundRect(6, 8, 4, height - 16, 4, 4);
 
             } else if (isHovered) {
@@ -526,7 +522,7 @@ public class AdminDashboard extends JFrame {
 
             // Draw Vector Icon (Works 100% on Linux, Windows & Mac without emoji font dependence)
             int iconX = 18;
-            Color iconColor = isActive ? Color.WHITE : (isHovered ? new Color(124, 58, 237) : new Color(100, 116, 139));
+            Color iconColor = isActive ? Color.WHITE : (isHovered ? new Color(15, 23, 42) : new Color(100, 116, 139));
             drawVectorIcon(g2, pageKey, iconX, centerY, iconColor);
 
             // Draw Title Text

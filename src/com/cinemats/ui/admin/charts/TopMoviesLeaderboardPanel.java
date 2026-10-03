@@ -9,16 +9,18 @@ import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import java.awt.*;
+import java.time.LocalDate;
 import java.util.List;
 
 /**
  * Top Performing Box Office Titles Leaderboard Component
- * with rank chips, revenue meters, and ticket admissions.
+ * with clean subtle rank chips, refined slate progress meters, and admissions info.
  */
 public class TopMoviesLeaderboardPanel extends JPanel {
 
     private List<MovieRanking> rankings;
     private final JPanel rowsContainer;
+    private LocalDate activeDate = LocalDate.now();
 
     public TopMoviesLeaderboardPanel() {
         setLayout(new BorderLayout(0, 10));
@@ -36,24 +38,39 @@ public class TopMoviesLeaderboardPanel extends JPanel {
 
         add(rowsContainer, BorderLayout.CENTER);
 
-        reloadData();
+        reloadData(LocalDate.now());
     }
 
     public void reloadData() {
-        this.rankings = AnalyticsDAO.getTopMovies(5);
+        reloadData(this.activeDate);
+    }
+
+    public void reloadData(LocalDate date) {
+        this.activeDate = (date != null) ? date : LocalDate.now();
+        this.rankings = AnalyticsDAO.getTopMovies(5, this.activeDate);
         rowsContainer.removeAll();
 
-        Color[] rankColors = {
-                new Color(217, 119, 6),    // #1 Gold
-                new Color(100, 116, 139),  // #2 Silver/Slate
-                new Color(180, 83, 9),     // #3 Bronze
-                new Color(71, 85, 105),
-                new Color(71, 85, 105)
+        Color[] rankBgColors = {
+                new Color(15, 23, 42),     // #1 Deep Slate Navy
+                new Color(51, 65, 85),     // #2 Slate 700
+                new Color(71, 85, 105),    // #3 Slate 600
+                new Color(148, 163, 184),  // #4 Slate 400
+                new Color(203, 213, 225)   // #5 Slate 300
+        };
+
+        Color[] rankFgColors = {
+                Color.WHITE,
+                Color.WHITE,
+                Color.WHITE,
+                Color.WHITE,
+                new Color(15, 23, 42)
         };
 
         for (int i = 0; i < rankings.size(); i++) {
             MovieRanking r = rankings.get(i);
-            rowsContainer.add(createMovieRow(i + 1, r, rankColors[Math.min(i, rankColors.length - 1)]));
+            Color bg = rankBgColors[Math.min(i, rankBgColors.length - 1)];
+            Color fg = rankFgColors[Math.min(i, rankFgColors.length - 1)];
+            rowsContainer.add(createMovieRow(i + 1, r, bg, fg));
             if (i < rankings.size() - 1) {
                 rowsContainer.add(Box.createVerticalStrut(10));
             }
@@ -68,11 +85,11 @@ public class TopMoviesLeaderboardPanel extends JPanel {
         header.setOpaque(false);
         header.setBorder(new EmptyBorder(0, 0, 8, 0));
 
-        JLabel title = new JLabel("🎬 Top Grossing Screenings");
+        JLabel title = new JLabel("Top Grossing Screenings");
         title.setFont(Theme.FONT_HEADER);
         title.setForeground(Theme.TEXT_DARK);
 
-        JLabel sub = new JLabel("Ranked by box office revenue & admissions");
+        JLabel sub = new JLabel("Ranked by box office revenue & tickets sold");
         sub.setFont(Theme.FONT_SMALL);
         sub.setForeground(Theme.TEXT_MUTED);
 
@@ -87,64 +104,71 @@ public class TopMoviesLeaderboardPanel extends JPanel {
         return header;
     }
 
-    private JPanel createMovieRow(int rank, MovieRanking r, Color rankColor) {
-        JPanel row = new JPanel(new BorderLayout(10, 4));
+    private JPanel createMovieRow(int rank, MovieRanking r, Color rankBg, Color rankFg) {
+        JPanel row = new JPanel(new BorderLayout(12, 0));
         row.setOpaque(false);
-        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 46));
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
 
-        // Rank Badge + Movie Title
-        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        left.setOpaque(false);
+        // Rank Badge
+        JLabel rankLbl = new JLabel(String.valueOf(rank), SwingConstants.CENTER) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(rankBg);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 6, 6);
+                super.paintComponent(g);
+            }
+        };
+        rankLbl.setPreferredSize(new Dimension(22, 22));
+        rankLbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        rankLbl.setForeground(rankFg);
 
-        JLabel rankBadge = new JLabel(String.valueOf(rank));
-        rankBadge.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        rankBadge.setForeground(Color.WHITE);
-        rankBadge.setOpaque(true);
-        rankBadge.setBackground(rankColor);
-        rankBadge.setHorizontalAlignment(SwingConstants.CENTER);
-        rankBadge.setPreferredSize(new Dimension(22, 22));
-        rankBadge.setBorder(new LineBorder(rankColor.darker(), 1, true));
-
-        JPanel titleBlock = new JPanel();
-        titleBlock.setLayout(new BoxLayout(titleBlock, BoxLayout.Y_AXIS));
-        titleBlock.setOpaque(false);
+        // Center: Title + Subtitle
+        JPanel center = new JPanel();
+        center.setLayout(new BoxLayout(center, BoxLayout.Y_AXIS));
+        center.setOpaque(false);
 
         JLabel titleLbl = new JLabel(r.title);
-        titleLbl.setFont(Theme.FONT_BOLD_SM);
+        titleLbl.setFont(new Font("Segoe UI", Font.BOLD, 12));
         titleLbl.setForeground(Theme.TEXT_DARK);
 
-        JLabel genreLbl = new JLabel(r.genre + " • " + r.tickets + " tickets");
-        genreLbl.setFont(new Font("Segoe UI", Font.PLAIN, 10));
-        genreLbl.setForeground(Theme.TEXT_MUTED);
+        JLabel subLbl = new JLabel(r.genre + " • " + r.tickets + " tickets");
+        subLbl.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+        subLbl.setForeground(Theme.TEXT_MUTED);
 
-        titleBlock.add(titleLbl);
-        titleBlock.add(genreLbl);
+        center.add(titleLbl);
+        center.add(Box.createVerticalStrut(2));
+        center.add(subLbl);
 
-        left.add(rankBadge);
-        left.add(titleBlock);
-
-        // Right side: Revenue & Progress bar
-        JPanel right = new JPanel(new BorderLayout(0, 4));
+        // Right: Revenue + Progress bar
+        JPanel right = new JPanel();
+        right.setLayout(new BoxLayout(right, BoxLayout.Y_AXIS));
         right.setOpaque(false);
-        right.setPreferredSize(new Dimension(130, 36));
+        right.setPreferredSize(new Dimension(100, 36));
 
-        JLabel revLbl = new JLabel(String.format("₹%,.0f", r.revenue));
+        JLabel revLbl = new JLabel(String.format("₹%,.0f", r.revenue), SwingConstants.RIGHT);
         revLbl.setFont(new Font("Segoe UI", Font.BOLD, 12));
         revLbl.setForeground(Theme.TEXT_DARK);
-        revLbl.setHorizontalAlignment(SwingConstants.RIGHT);
+        revLbl.setAlignmentX(Component.RIGHT_ALIGNMENT);
 
-        JProgressBar pb = new JProgressBar(0, 100);
-        pb.setValue((int) r.sharePercent);
-        pb.setPreferredSize(new Dimension(130, 6));
-        pb.setForeground(rank == 1 ? new Color(217, 119, 6) : new Color(37, 99, 235));
-        pb.setBackground(new Color(241, 245, 249));
-        pb.setBorderPainted(false);
+        JProgressBar bar = new JProgressBar(0, 100);
+        bar.setValue((int) r.sharePercent);
+        bar.setPreferredSize(new Dimension(100, 4));
+        bar.setMaximumSize(new Dimension(100, 4));
+        bar.setForeground(new Color(15, 23, 42)); // Deep Slate Navy
+        bar.setBackground(new Color(241, 245, 249));
+        bar.setBorderPainted(false);
+        bar.setAlignmentX(Component.RIGHT_ALIGNMENT);
 
-        right.add(revLbl, BorderLayout.NORTH);
-        right.add(pb, BorderLayout.SOUTH);
+        right.add(revLbl);
+        right.add(Box.createVerticalStrut(4));
+        right.add(bar);
 
-        row.add(left, BorderLayout.WEST);
+        row.add(rankLbl, BorderLayout.WEST);
+        row.add(center, BorderLayout.CENTER);
         row.add(right, BorderLayout.EAST);
+
         return row;
     }
 }

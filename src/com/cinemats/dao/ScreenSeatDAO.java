@@ -342,22 +342,26 @@ public class ScreenSeatDAO {
     public static synchronized List<String> getActiveSeatTypesByScreenId(int screenId) {
         List<String> list = new ArrayList<>();
         if (DBConnection.isDriverAvailable()) {
-            String sql = "SELECT DISTINCT UPPER(seat_type) AS st FROM screen_seats "
-                    + "WHERE screen_id = ? AND status = 'ACTIVE' ORDER BY "
-                    + "CASE WHEN UPPER(seat_type) = 'REGULAR' THEN 1 "
-                    + "WHEN UPPER(seat_type) = 'PREMIUM' THEN 2 "
-                    + "WHEN UPPER(seat_type) = 'RECLINER' THEN 3 ELSE 4 END";
+            String sql = "SELECT DISTINCT seat_type FROM screen_seats WHERE screen_id = ? AND status = 'ACTIVE'";
             try (Connection conn = DBConnection.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql)) {
                 stmt.setInt(1, screenId);
                 try (ResultSet rs = stmt.executeQuery()) {
                     while (rs.next()) {
-                        list.add(rs.getString("st"));
+                        String st = rs.getString("seat_type");
+                        if (st != null && !st.trim().isEmpty()) {
+                            list.add(st.toUpperCase().trim());
+                        }
                     }
                 }
             } catch (SQLException e) {
                 System.err.println("[ScreenSeatDAO] Error querying seat types: " + e.getMessage());
             }
+            list.sort((a, b) -> {
+                int rankA = a.contains("REGULAR") ? 1 : a.contains("PREMIUM") ? 2 : a.contains("RECLINER") ? 3 : 4;
+                int rankB = b.contains("REGULAR") ? 1 : b.contains("PREMIUM") ? 2 : b.contains("RECLINER") ? 3 : 4;
+                return Integer.compare(rankA, rankB);
+            });
         }
         if (list.isEmpty()) {
             list.add("REGULAR");
