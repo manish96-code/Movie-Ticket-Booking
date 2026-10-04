@@ -6,6 +6,20 @@
             "name": "Main",
             "request": "launch",
             "mainClass": "com.cinemats.Main",
+            "projectName": "Movie-Ticket-Booking_800a2b49"
+        },
+        {
+            "type": "java",
+            "name": "AdminDashboard",
+            "request": "launch",
+            "mainClass": "com.cinemats.ui.admin.AdminDashboard",
+            "projectName": "Movie-Ticket-Booking_800a2b49"
+        },
+        {
+            "type": "java",
+            "name": "Main",
+            "request": "launch",
+            "mainClass": "com.cinemats.Main",
             "projectName": "Movie-Ticket-Booking_8bb536f0"
         },
         {

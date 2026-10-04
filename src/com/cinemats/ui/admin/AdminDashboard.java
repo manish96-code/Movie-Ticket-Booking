@@ -440,6 +440,8 @@ public class AdminDashboard extends JFrame {
             bookingHistoryPage.loadBookings();
         } else if ("PAGE_ORDER_BOOKING".equals(targetKey) && orderBookingPage != null) {
             orderBookingPage.refreshData();
+        } else if ("PAGE_REPORTS".equals(targetKey) && reportsPage != null) {
+            reportsPage.refreshReports();
         }
     }
 

@@ -20,7 +20,7 @@ import java.time.format.DateTimeFormatter;
 
 /**
  * Standard enterprise Admin Overview Dashboard featuring:
- * - Date filtering (Today, Tomorrow, and custom Date chooser)
+ * - Date filtering (Today, and custom Date chooser)
  * - Restrained corporate slate palette (no clashing rainbow colors)
  * - Executive KPI cards with clean uniform borders
  * - Real-time revenue velocity & occupancy charts
@@ -33,11 +33,10 @@ public class OverviewPage extends JPanel {
 
     // Date Filter State
     private LocalDate selectedDate = LocalDate.now();
-    private String filterMode = "TODAY"; // TODAY, TOMORROW, CUSTOM
+    private String filterMode = "TODAY";
 
     // Filter UI components
     private JButton todayFilterBtn;
-    private JButton tomorrowFilterBtn;
     private JButton pickDateFilterBtn;
     private JLabel activeDateBadge;
 
@@ -155,14 +154,10 @@ public class OverviewPage extends JPanel {
         todayFilterBtn = createFilterButton("Today", true);
         todayFilterBtn.addActionListener(e -> selectFilter("TODAY", LocalDate.now()));
 
-        tomorrowFilterBtn = createFilterButton("Tomorrow", false);
-        tomorrowFilterBtn.addActionListener(e -> selectFilter("TOMORROW", LocalDate.now().plusDays(1)));
-
         pickDateFilterBtn = createFilterButton("Pick Date 📅", false);
         pickDateFilterBtn.addActionListener(e -> showDatePickerModal());
 
         filterGroup.add(todayFilterBtn);
-        filterGroup.add(tomorrowFilterBtn);
         filterGroup.add(pickDateFilterBtn);
 
         // Active Date Indicator Pill
@@ -223,7 +218,6 @@ public class OverviewPage extends JPanel {
         this.selectedDate = (date != null) ? date : LocalDate.now();
 
         applyFilterButtonState(todayFilterBtn, "TODAY".equals(mode));
-        applyFilterButtonState(tomorrowFilterBtn, "TOMORROW".equals(mode));
         applyFilterButtonState(pickDateFilterBtn, "CUSTOM".equals(mode));
 
         if ("CUSTOM".equals(mode)) {
