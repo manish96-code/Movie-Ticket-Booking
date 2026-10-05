@@ -44,8 +44,8 @@ public class ScreenSeatDAO {
                 String insertSQL = "INSERT INTO screen_seats (screen_id, row_name, seat_number, seat_label, seat_type, status, created_at, updated_at) "
                         + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
                 try (PreparedStatement insertStmt = conn.prepareStatement(insertSQL)) {
-                    for (int screenId = 1; screenId <= 4; screenId++) {
-                        for (ScreenSeat seat : ScreenMockData.getInitialSeats(screenId)) {
+                    for (com.cinemats.model.Screen screen : ScreenMockData.getInitialScreens()) {
+                        for (ScreenSeat seat : ScreenMockData.getInitialSeats(screen.getId())) {
                             insertStmt.setInt(1, seat.getScreenId());
                             insertStmt.setString(2, seat.getRowName());
                             insertStmt.setInt(3, seat.getSeatNumber());
@@ -58,7 +58,7 @@ public class ScreenSeatDAO {
                         }
                     }
                     insertStmt.executeBatch();
-                    System.out.println("[ScreenSeatDAO] Seeded default physical seats for screens 1-4.");
+                    System.out.println("[ScreenSeatDAO] Seeded default physical seats for all configured screens.");
                 }
             }
         } catch (SQLException e) {
