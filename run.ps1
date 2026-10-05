@@ -67,12 +67,10 @@ if (-not (Test-Path "bin")) {
 }
 
 Write-Host "[1/2] Compiling sources..." -ForegroundColor Green
-$sources = Get-ChildItem -Path "src" -Filter "*.java" -Recurse | ForEach-Object { "`"$($_.FullName)`"" }
-$sources | Out-File -FilePath "sources.txt" -Encoding utf8
+$sources = Get-ChildItem -Path "src" -Filter "*.java" -Recurse | ForEach-Object { $_.FullName }
 
-& $javacCmd -d bin -cp "lib/*;src" "@sources.txt"
+& $javacCmd -d bin -cp "lib/*;src" $sources
 $compileSuccess = ($LASTEXITCODE -eq 0)
-Remove-Item -Force "sources.txt" -ErrorAction SilentlyContinue
 
 if (-not $compileSuccess) {
     Write-Host "`n[ERROR] Compilation failed!" -ForegroundColor Red
