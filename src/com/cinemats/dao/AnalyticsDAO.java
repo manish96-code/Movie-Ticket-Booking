@@ -22,7 +22,7 @@ public class AnalyticsDAO {
         public double todayRevenue = 0.0;
         public int todayTickets = 0;
         public int activeMovies = 0;
-        public int activeScreens = 4;
+        public int activeScreens = 3;
         public double occupancyRate = 0.0;
         public double revenueGrowth = 0.0;
         public String dateLabel = "";
@@ -207,7 +207,7 @@ public class AnalyticsDAO {
             kpis.todayTickets = 4;
             kpis.revenueGrowth = 18.2;
             kpis.activeMovies = 8;
-            kpis.activeScreens = 4;
+            kpis.activeScreens = 3;
             kpis.occupancyRate = 78.4;
         }
 
