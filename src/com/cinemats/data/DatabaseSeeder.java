@@ -11,16 +11,28 @@ public class DatabaseSeeder {
 
     public static void main(String[] args) {
         boolean forceReset = false;
+        boolean futureOnly = false;
         for (String arg : args) {
             if ("--reset".equalsIgnoreCase(arg) || "-r".equalsIgnoreCase(arg) || "reset".equalsIgnoreCase(arg)) {
                 forceReset = true;
-                break;
+            } else if ("--future".equalsIgnoreCase(arg) || "-f".equalsIgnoreCase(arg) || "future".equalsIgnoreCase(arg)) {
+                futureOnly = true;
             }
         }
 
         System.out.println("==================================================");
         System.out.println("   Cinema Express - Database Seeder Utility       ");
         System.out.println("==================================================");
+
+        if (futureOnly) {
+            System.out.println("📅 Seeding future shows (+3 to +10 days)...");
+            ScheduleMockData.seedShowsForRange(3, 10);
+            printSummaryReport();
+            System.out.println("==================================================");
+            System.out.println("✅ Future show schedules successfully seeded!");
+            System.out.println("==================================================");
+            return;
+        }
 
         if (forceReset) {
             System.out.println("⚡ Reset mode activated: clearing all existing tables...");
