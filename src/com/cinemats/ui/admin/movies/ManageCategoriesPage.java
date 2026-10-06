@@ -25,6 +25,13 @@ public class ManageCategoriesPage extends JPanel {
     private JTextField searchField;
     private JLabel countBadge;
 
+    // Unified Form state & controls
+    private JLabel formTitle;
+    private JLabel formSubtitle;
+    private JButton submitBtn;
+    private JButton cancelEditBtn;
+    private Integer editingCategoryId = null;
+
     public ManageCategoriesPage(AdminDashboard dashboard) {
         this.dashboard = dashboard;
         setLayout(new BorderLayout(0, 16));
@@ -45,7 +52,7 @@ public class ManageCategoriesPage extends JPanel {
         JPanel mainContent = new JPanel(new BorderLayout(16, 0));
         mainContent.setOpaque(false);
 
-        // Left Panel: Create Category Form
+        // Left Panel: Create / Edit Category Form
         JPanel formCard = createFormCard();
         formCard.setPreferredSize(new Dimension(340, 0));
         mainContent.add(formCard, BorderLayout.WEST);
@@ -70,17 +77,17 @@ public class ManageCategoriesPage extends JPanel {
         titlePanel.setLayout(new BoxLayout(titlePanel, BoxLayout.Y_AXIS));
         titlePanel.setOpaque(false);
 
-        JLabel title = new JLabel("Create New Category");
-        title.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        title.setForeground(Theme.TEXT_DARK);
+        formTitle = new JLabel("Create New Category");
+        formTitle.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        formTitle.setForeground(Theme.TEXT_DARK);
 
-        JLabel subtitle = new JLabel("Add a genre required for film cataloguing");
-        subtitle.setFont(Theme.FONT_SMALL);
-        subtitle.setForeground(Theme.TEXT_MUTED);
+        formSubtitle = new JLabel("Add a genre required for film cataloguing");
+        formSubtitle.setFont(Theme.FONT_SMALL);
+        formSubtitle.setForeground(Theme.TEXT_MUTED);
 
-        titlePanel.add(title);
+        titlePanel.add(formTitle);
         titlePanel.add(Box.createVerticalStrut(4));
-        titlePanel.add(subtitle);
+        titlePanel.add(formSubtitle);
         card.add(titlePanel, BorderLayout.NORTH);
 
         // Input Fields Panel
@@ -143,14 +150,27 @@ public class ManageCategoriesPage extends JPanel {
 
         card.add(fieldsPanel, BorderLayout.CENTER);
 
-        // Submit Button
-        JPanel bottomAction = new JPanel(new GridLayout(1, 1));
+        // Action Buttons: Save / Update + Cancel Edit
+        JPanel bottomAction = new JPanel();
+        bottomAction.setLayout(new BoxLayout(bottomAction, BoxLayout.Y_AXIS));
         bottomAction.setOpaque(false);
-        JButton addBtn = Theme.createPrimaryButton("+ Save Category");
-        addBtn.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        addBtn.setPreferredSize(new Dimension(0, 42));
-        addBtn.addActionListener(e -> handleAddCategory());
-        bottomAction.add(addBtn);
+
+        submitBtn = Theme.createPrimaryButton("+ Save Category");
+        submitBtn.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        submitBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
+        submitBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        submitBtn.addActionListener(e -> handleSaveCategory());
+
+        cancelEditBtn = Theme.createSecondaryButton("Cancel Edit");
+        cancelEditBtn.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        cancelEditBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+        cancelEditBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        cancelEditBtn.setVisible(false);
+        cancelEditBtn.addActionListener(e -> resetToCreateMode());
+
+        bottomAction.add(submitBtn);
+        bottomAction.add(Box.createVerticalStrut(8));
+        bottomAction.add(cancelEditBtn);
 
         card.add(bottomAction, BorderLayout.SOUTH);
 
@@ -203,12 +223,15 @@ public class ManageCategoriesPage extends JPanel {
         JPanel rightToolbar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         rightToolbar.setOpaque(false);
 
+        JButton refreshBtn = Theme.createSecondaryButton("Refresh");
+        refreshBtn.addActionListener(e -> refreshCategoryTable());
+
+        JButton editBtn = Theme.createSecondaryButton("✏️ Edit Category");
+        editBtn.addActionListener(e -> handleEditCategory());
+
         JButton deleteBtn = Theme.createSecondaryButton("Remove Selected");
         deleteBtn.setForeground(Theme.ACCENT_RED);
         deleteBtn.addActionListener(e -> handleDeleteCategory());
-
-        JButton refreshBtn = Theme.createSecondaryButton("Refresh");
-        refreshBtn.addActionListener(e -> refreshCategoryTable());
 
         JButton goToMoviesBtn = Theme.createPrimaryButton("Manage Movies");
         goToMoviesBtn.addActionListener(e -> {
@@ -218,6 +241,7 @@ public class ManageCategoriesPage extends JPanel {
         });
 
         rightToolbar.add(refreshBtn);
+        rightToolbar.add(editBtn);
         rightToolbar.add(deleteBtn);
         rightToolbar.add(goToMoviesBtn);
 
@@ -241,13 +265,49 @@ public class ManageCategoriesPage extends JPanel {
         categoryTable.getColumnModel().getColumn(3).setPreferredWidth(95);
         categoryTable.getColumnModel().getColumn(4).setPreferredWidth(130);
 
+        // Double-click row listener to edit
+        categoryTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mousePressed(java.awt.event.MouseEvent e) {
+                if (SwingUtilities.isRightMouseButton(e)) {
+                    int r = categoryTable.rowAtPoint(e.getPoint());
+                    if (r >= 0 && r < categoryTable.getRowCount()) {
+                        categoryTable.setRowSelectionInterval(r, r);
+                    }
+                }
+            }
+
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2 && categoryTable.getSelectedRow() >= 0) {
+                    handleEditCategory();
+                }
+            }
+        });
+
+        // Right-click context popup menu
+        JPopupMenu contextMenu = new JPopupMenu();
+        JMenuItem editItem = new JMenuItem("✏️ Edit Category Details");
+        editItem.setFont(Theme.FONT_REGULAR);
+        editItem.addActionListener(e -> handleEditCategory());
+
+        JMenuItem deleteItem = new JMenuItem("🗑️ Remove Category");
+        deleteItem.setFont(Theme.FONT_REGULAR);
+        deleteItem.setForeground(Theme.ACCENT_RED);
+        deleteItem.addActionListener(e -> handleDeleteCategory());
+
+        contextMenu.add(editItem);
+        contextMenu.addSeparator();
+        contextMenu.add(deleteItem);
+        categoryTable.setComponentPopupMenu(contextMenu);
+
         JScrollPane catScroll = new JScrollPane(categoryTable);
         com.cinemats.util.Theme.applyModernScrollBars(catScroll);
         card.add(catScroll, BorderLayout.CENTER);
         return card;
     }
 
-    private void handleAddCategory() {
+    private void handleSaveCategory() {
         String name = nameField.getText().trim();
         String desc = descArea.getText().trim();
 
@@ -260,30 +320,105 @@ public class ManageCategoriesPage extends JPanel {
             return;
         }
 
-        if (CategoryDAO.categoryExists(name)) {
+        if (editingCategoryId == null) {
+            // --- CREATE MODE ---
+            if (CategoryDAO.categoryExists(name)) {
+                JOptionPane.showMessageDialog(this,
+                        "A category with name '" + name + "' already exists.",
+                        "Duplicate Category",
+                        JOptionPane.WARNING_MESSAGE);
+                nameField.requestFocus();
+                return;
+            }
+
+            boolean success = CategoryDAO.addCategory(name, desc);
+            if (success) {
+                JOptionPane.showMessageDialog(this,
+                        "Category '" + name + "' added successfully!",
+                        "Category Created",
+                        JOptionPane.INFORMATION_MESSAGE);
+                resetToCreateMode();
+                refreshCategoryTable();
+            } else {
+                JOptionPane.showMessageDialog(this,
+                        "Failed to save category. Please try again.",
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
+            }
+        } else {
+            // --- EDIT MODE ---
+            if (CategoryDAO.categoryExists(name, editingCategoryId)) {
+                JOptionPane.showMessageDialog(this,
+                        "Another category with name '" + name + "' already exists.",
+                        "Duplicate Category",
+                        JOptionPane.WARNING_MESSAGE);
+                nameField.requestFocus();
+                return;
+            }
+
+            boolean success = CategoryDAO.updateCategory(editingCategoryId, name, desc);
+            if (success) {
+                JOptionPane.showMessageDialog(this,
+                        "Category '" + name + "' updated successfully!",
+                        "Category Updated",
+                        JOptionPane.INFORMATION_MESSAGE);
+                resetToCreateMode();
+                refreshCategoryTable();
+            } else {
+                JOptionPane.showMessageDialog(this,
+                        "Failed to update category. Please verify your database connection.",
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private void handleEditCategory() {
+        int selectedRow = categoryTable.getSelectedRow();
+        if (selectedRow < 0) {
             JOptionPane.showMessageDialog(this,
-                    "A category with name '" + name + "' already exists.",
-                    "Duplicate Category",
-                    JOptionPane.WARNING_MESSAGE);
-            nameField.requestFocus();
+                    "Please select a category row from the table to edit.",
+                    "No Category Selected",
+                    JOptionPane.INFORMATION_MESSAGE);
             return;
         }
 
-        boolean success = CategoryDAO.addCategory(name, desc);
-        if (success) {
-            JOptionPane.showMessageDialog(this,
-                    "Category '" + name + "' added successfully!",
-                    "Category Created",
-                    JOptionPane.INFORMATION_MESSAGE);
-            nameField.setText("");
-            descArea.setText("");
-            refreshCategoryTable();
-        } else {
-            JOptionPane.showMessageDialog(this,
-                    "Failed to save category. Please try again.",
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
+        int catId = Integer.parseInt(categoryTableModel.getValueAt(selectedRow, 0).toString());
+        Category category = CategoryDAO.getCategoryById(catId);
+        if (category == null) {
+            String catName = (String) categoryTableModel.getValueAt(selectedRow, 1);
+            String desc = (String) categoryTableModel.getValueAt(selectedRow, 2);
+            category = new Category(catId, catName, "—".equals(desc) ? "" : desc, "");
         }
+
+        setEditMode(category);
+    }
+
+    public void setEditMode(Category category) {
+        if (category == null) return;
+        this.editingCategoryId = category.getId();
+        formTitle.setText("Edit Category #" + category.getId());
+        formSubtitle.setText("Modifying: " + category.getName());
+        nameField.setText(category.getName());
+        descArea.setText(category.getDescription() != null ? category.getDescription() : "");
+        submitBtn.setText("💾 Update Category");
+        cancelEditBtn.setVisible(true);
+        nameField.requestFocus();
+        revalidate();
+        repaint();
+    }
+
+    public void resetToCreateMode() {
+        this.editingCategoryId = null;
+        formTitle.setText("Create New Category");
+        formSubtitle.setText("Add a genre required for film cataloguing");
+        nameField.setText("");
+        descArea.setText("");
+        submitBtn.setText("+ Save Category");
+        cancelEditBtn.setVisible(false);
+        categoryTable.clearSelection();
+        revalidate();
+        repaint();
     }
 
     private void handleDeleteCategory() {
@@ -319,6 +454,9 @@ public class ManageCategoriesPage extends JPanel {
                         "Category '" + catName + "' was deleted.",
                         "Deleted",
                         JOptionPane.INFORMATION_MESSAGE);
+                if (editingCategoryId != null && editingCategoryId == catId) {
+                    resetToCreateMode();
+                }
                 refreshCategoryTable();
             } else {
                 JOptionPane.showMessageDialog(this,

@@ -272,4 +272,47 @@ public class MovieDAO {
         }
         return fallbackMovies.removeIf(m -> m.getTitle().equalsIgnoreCase(t));
     }
+
+    // Updates movie genre across database and fallback cache when a category is renamed
+    public static synchronized void updateMovieGenre(String oldGenre, String newGenre) {
+        if (oldGenre == null || newGenre == null || oldGenre.trim().equalsIgnoreCase(newGenre.trim())) {
+            return;
+        }
+        String oldClean = oldGenre.trim();
+        String newClean = newGenre.trim();
+
+        if (DBConnection.isDriverAvailable()) {
+            String sql = "UPDATE movies SET genre = REPLACE(genre, ?, ?) WHERE LOWER(genre) LIKE ?";
+            try (Connection conn = DBConnection.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, oldClean);
+                stmt.setString(2, newClean);
+                stmt.setString(3, "%" + oldClean.toLowerCase() + "%");
+                int updated = stmt.executeUpdate();
+                System.out.println("[MovieDAO] Updated genre for " + updated + " movies from '" + oldClean + "' to '" + newClean + "'.");
+            } catch (SQLException e) {
+                System.err.println("[MovieDAO] Error updating movie genres: " + e.getMessage());
+            }
+        }
+
+        for (int i = 0; i < fallbackMovies.size(); i++) {
+            Movie m = fallbackMovies.get(i);
+            if (m.getGenre() != null && m.getGenre().toLowerCase().contains(oldClean.toLowerCase())) {
+                String updatedGenre = m.getGenre().replace(oldClean, newClean);
+                fallbackMovies.set(i, new Movie(
+                        m.getId(),
+                        m.getTitle(),
+                        updatedGenre,
+                        m.getDurationMins(),
+                        m.getRating(),
+                        m.getPosterLabel(),
+                        m.getStatus(),
+                        m.getImagePath(),
+                        m.getLanguage(),
+                        m.getReleaseDate()
+                ));
+            }
+        }
+    }
 }
+
