@@ -4,7 +4,6 @@ import com.cinemats.config.DBConnection;
 import com.cinemats.model.User;
 import com.cinemats.ui.admin.AdminDashboard;
 import com.cinemats.ui.staff.StaffDashboard;
-import com.cinemats.util.Theme;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -34,11 +33,11 @@ public class LoginFrame extends JFrame {
 
     private void loadBackgroundImage() {
         String[] paths = {
+                "assets/cinema_3d_background.jpg",
+                "assets/cinema_3d_bg.png",
                 "assets/cinema_background.jpg",
-                "assets/cinema_bg.png",
-                "assets/cinema_background.png",
-                System.getProperty("user.dir") + "/assets/cinema_background.jpg",
-                System.getProperty("user.dir") + "/bin/assets/cinema_background.jpg"
+                System.getProperty("user.dir") + "/assets/cinema_3d_background.jpg",
+                System.getProperty("user.dir") + "/bin/assets/cinema_3d_background.jpg"
         };
         for (String p : paths) {
             try {
@@ -53,7 +52,10 @@ public class LoginFrame extends JFrame {
         }
         if (backgroundImage == null) {
             try {
-                java.net.URL url = getClass().getResource("/assets/cinema_background.jpg");
+                java.net.URL url = getClass().getResource("/assets/cinema_3d_background.jpg");
+                if (url == null) {
+                    url = getClass().getResource("/assets/cinema_background.jpg");
+                }
                 if (url != null) {
                     backgroundImage = ImageIO.read(url);
                 }
@@ -63,14 +65,14 @@ public class LoginFrame extends JFrame {
 
     private void initWindow() {
         setTitle("Cinema Express - Counter Terminal Sign In");
-        setSize(920, 650);
+        setSize(960, 650);
         setMinimumSize(new Dimension(460, 600));
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     }
 
     private void buildUI() {
-        // Background panel with cinema auditorium imagery and light ambient wash
+        // Background panel with 3D cinema imagery
         BackgroundPanel backgroundPanel = new BackgroundPanel();
         backgroundPanel.setLayout(new GridBagLayout());
         setContentPane(backgroundPanel);
@@ -164,7 +166,7 @@ public class LoginFrame extends JFrame {
         statusCard.setBackground(new Color(241, 245, 249));
         statusCard.setBorder(new EmptyBorder(8, 12, 8, 12));
         statusCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
-        statusCard.setPreferredSize(new Dimension(350, 36));
+        statusCard.setPreferredSize(new Dimension(340, 36));
         statusCard.setAlignmentX(Component.CENTER_ALIGNMENT);
         statusCard.setVisible(false);
 
@@ -280,7 +282,7 @@ public class LoginFrame extends JFrame {
         loginButton.setFont(new Font("Segoe UI", Font.BOLD, 13));
         loginButton.setForeground(Color.WHITE);
         loginButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        loginButton.setPreferredSize(new Dimension(350, 44));
+        loginButton.setPreferredSize(new Dimension(340, 44));
         loginButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
         loginButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         loginButton.addActionListener(e -> handleLogin());
@@ -558,8 +560,8 @@ public class LoginFrame extends JFrame {
         public LightLoginCard() {
             setOpaque(false);
             setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-            setPreferredSize(new Dimension(410, 580));
-            setMaximumSize(new Dimension(440, 600));
+            setPreferredSize(new Dimension(400, 570));
+            setMaximumSize(new Dimension(430, 590));
             setBorder(new EmptyBorder(26, 30, 22, 30));
         }
 
@@ -573,8 +575,8 @@ public class LoginFrame extends JFrame {
             int arc = 22;
 
             // Soft elevation shadow
-            g2.setColor(new Color(0, 0, 0, 48));
-            g2.fillRoundRect(3, 5, w - 6, h - 6, arc, arc);
+            g2.setColor(new Color(0, 0, 0, 70));
+            g2.fillRoundRect(3, 6, w - 6, h - 7, arc, arc);
 
             // Clean crisp light card surface
             g2.setColor(new Color(255, 255, 255, 248));
@@ -590,7 +592,7 @@ public class LoginFrame extends JFrame {
         }
     }
 
-    // --- Custom Background Panel with cinema image and soft ambient wash ---
+    // --- Custom Background Panel with 3D cinema image and soft ambient wash ---
     private class BackgroundPanel extends JPanel {
         @Override
         protected void paintComponent(Graphics g) {
@@ -613,24 +615,13 @@ public class LoginFrame extends JFrame {
                 int sy = (h - sh) / 2;
                 g2.drawImage(backgroundImage, sx, sy, sw, sh, null);
 
-                // Soft ambient tint so background cinema hall is bright and visible
-                g2.setColor(new Color(15, 23, 42, 60));
+                // Gentle lighting wash to make 3D elements blend seamlessly
+                GradientPaint softGlow = new GradientPaint(
+                        0, 0, new Color(15, 23, 42, 25),
+                        0, h, new Color(15, 23, 42, 55)
+                );
+                g2.setPaint(softGlow);
                 g2.fillRect(0, 0, w, h);
-
-                // Subtle top-bottom gradient for depth
-                GradientPaint topFade = new GradientPaint(
-                        0, 0, new Color(15, 23, 42, 80),
-                        0, h * 0.35f, new Color(15, 23, 42, 10)
-                );
-                g2.setPaint(topFade);
-                g2.fillRect(0, 0, w, (int) (h * 0.35f));
-
-                GradientPaint bottomFade = new GradientPaint(
-                        0, h * 0.65f, new Color(15, 23, 42, 10),
-                        0, h, new Color(15, 23, 42, 100)
-                );
-                g2.setPaint(bottomFade);
-                g2.fillRect(0, (int) (h * 0.65f), w, (int) (h * 0.35f) + 2);
             } else {
                 g2.setColor(new Color(241, 245, 249));
                 g2.fillRect(0, 0, w, h);
