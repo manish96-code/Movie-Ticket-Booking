@@ -29,7 +29,6 @@ public class StaffDashboard extends JFrame {
     private MoviesListPage moviesListPage;
     private BookingHistoryPage bookingHistoryPage;
     private TodayShowsPage todayShowsPage;
-    private MoviesPanel moviesPanel;
 
     // --- Header & User Session ---
     private JLabel clockLabel;
@@ -419,7 +418,6 @@ public class StaffDashboard extends JFrame {
         moviesListPage = new MoviesListPage(this);
         bookingHistoryPage = new BookingHistoryPage(this);
         todayShowsPage = new TodayShowsPage(this);
-        moviesPanel = new MoviesPanel(this);
 
         // Register Pages in CardLayout
         mainContentPanel.add(orderBookingPage, "PAGE_ORDER_BOOKING");
@@ -695,7 +693,6 @@ public class StaffDashboard extends JFrame {
     public OrderBookingPage getOrderBookingPage() { return orderBookingPage; }
     public BookingHistoryPage getBookingHistoryPage() { return bookingHistoryPage; }
     public TodayShowsPage getTodayShowsPage() { return todayShowsPage; }
-    public MoviesPanel getMoviesPanel() { return moviesPanel; }
 
     public static void main(String[] args) {
         try {
