@@ -57,26 +57,47 @@ public class MovieDAO {
                 } catch (SQLException ignored) {}
             }
 
-            // Check if movies table is empty
-            ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM movies");
-            if (rs.next() && rs.getInt(1) == 0) {
-                String insertSQL = "INSERT INTO movies (title, genre, duration_mins, rating, poster_label, status, image_path, language, release_date) "
-                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                try (PreparedStatement insertStmt = conn.prepareStatement(insertSQL)) {
-                    for (Movie m : fallbackMovies) {
-                        insertStmt.setString(1, m.getTitle());
-                        insertStmt.setString(2, m.getGenre());
-                        insertStmt.setInt(3, m.getDurationMins());
-                        insertStmt.setString(4, m.getRating());
-                        insertStmt.setString(5, m.getPosterLabel());
-                        insertStmt.setString(6, m.getStatus());
-                        insertStmt.setString(7, m.getImagePath());
-                        insertStmt.setString(8, m.getLanguage());
-                        insertStmt.setString(9, m.getReleaseDate());
-                        insertStmt.executeUpdate();
+            // Synchronize movie catalogue: seed new movies and update posters for existing movies
+            String checkSQL = "SELECT id, image_path FROM movies WHERE LOWER(TRIM(title)) = LOWER(TRIM(?))";
+            String updateSQL = "UPDATE movies SET image_path = ?, language = ?, release_date = ?, genre = ?, duration_mins = ?, rating = ? WHERE id = ?";
+            String insertSQL = "INSERT INTO movies (title, genre, duration_mins, rating, poster_label, status, image_path, language, release_date) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+            try (PreparedStatement checkStmt = conn.prepareStatement(checkSQL);
+                 PreparedStatement updateStmt = conn.prepareStatement(updateSQL);
+                 PreparedStatement insertStmt = conn.prepareStatement(insertSQL)) {
+
+                for (Movie m : MovieMockData.getInitialMovies()) {
+                    checkStmt.setString(1, m.getTitle());
+                    try (ResultSet checkRs = checkStmt.executeQuery()) {
+                        if (checkRs.next()) {
+                            int existingId = checkRs.getInt("id");
+                            String existingImg = checkRs.getString("image_path");
+                            if (existingImg == null || existingImg.trim().isEmpty() || !existingImg.equals(m.getImagePath())) {
+                                updateStmt.setString(1, m.getImagePath());
+                                updateStmt.setString(2, m.getLanguage());
+                                updateStmt.setString(3, m.getReleaseDate());
+                                updateStmt.setString(4, m.getGenre());
+                                updateStmt.setInt(5, m.getDurationMins());
+                                updateStmt.setString(6, m.getRating());
+                                updateStmt.setInt(7, existingId);
+                                updateStmt.executeUpdate();
+                            }
+                        } else {
+                            insertStmt.setString(1, m.getTitle());
+                            insertStmt.setString(2, m.getGenre());
+                            insertStmt.setInt(3, m.getDurationMins());
+                            insertStmt.setString(4, m.getRating());
+                            insertStmt.setString(5, m.getPosterLabel());
+                            insertStmt.setString(6, m.getStatus());
+                            insertStmt.setString(7, m.getImagePath());
+                            insertStmt.setString(8, m.getLanguage());
+                            insertStmt.setString(9, m.getReleaseDate());
+                            insertStmt.executeUpdate();
+                        }
                     }
-                    System.out.println("[MovieDAO] Seeded default movies catalogue into MySQL database.");
                 }
+                System.out.println("[MovieDAO] Verified and synchronized movie catalogue with poster assets.");
             }
         } catch (SQLException e) {
             System.err.println("[MovieDAO] Failed to initialize movies table: " + e.getMessage());
