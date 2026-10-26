@@ -57,26 +57,47 @@ public class MovieDAO {
                 } catch (SQLException ignored) {}
             }
 
-            // Check if movies table is empty
-            ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM movies");
-            if (rs.next() && rs.getInt(1) == 0) {
-                String insertSQL = "INSERT INTO movies (title, genre, duration_mins, rating, poster_label, status, image_path, language, release_date) "
-                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                try (PreparedStatement insertStmt = conn.prepareStatement(insertSQL)) {
-                    for (Movie m : fallbackMovies) {
-                        insertStmt.setString(1, m.getTitle());
-                        insertStmt.setString(2, m.getGenre());
-                        insertStmt.setInt(3, m.getDurationMins());
-                        insertStmt.setString(4, m.getRating());
-                        insertStmt.setString(5, m.getPosterLabel());
-                        insertStmt.setString(6, m.getStatus());
-                        insertStmt.setString(7, m.getImagePath());
-                        insertStmt.setString(8, m.getLanguage());
-                        insertStmt.setString(9, m.getReleaseDate());
-                        insertStmt.executeUpdate();
+            // Synchronize movie catalogue: seed new movies and update posters for existing movies
+            String checkSQL = "SELECT id, image_path FROM movies WHERE LOWER(TRIM(title)) = LOWER(TRIM(?))";
+            String updateSQL = "UPDATE movies SET image_path = ?, language = ?, release_date = ?, genre = ?, duration_mins = ?, rating = ? WHERE id = ?";
+            String insertSQL = "INSERT INTO movies (title, genre, duration_mins, rating, poster_label, status, image_path, language, release_date) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+            try (PreparedStatement checkStmt = conn.prepareStatement(checkSQL);
+                 PreparedStatement updateStmt = conn.prepareStatement(updateSQL);
+                 PreparedStatement insertStmt = conn.prepareStatement(insertSQL)) {
+
+                for (Movie m : MovieMockData.getInitialMovies()) {
+                    checkStmt.setString(1, m.getTitle());
+                    try (ResultSet checkRs = checkStmt.executeQuery()) {
+                        if (checkRs.next()) {
+                            int existingId = checkRs.getInt("id");
+                            String existingImg = checkRs.getString("image_path");
+                            if (existingImg == null || existingImg.trim().isEmpty() || !existingImg.equals(m.getImagePath())) {
+                                updateStmt.setString(1, m.getImagePath());
+                                updateStmt.setString(2, m.getLanguage());
+                                updateStmt.setString(3, m.getReleaseDate());
+                                updateStmt.setString(4, m.getGenre());
+                                updateStmt.setInt(5, m.getDurationMins());
+                                updateStmt.setString(6, m.getRating());
+                                updateStmt.setInt(7, existingId);
+                                updateStmt.executeUpdate();
+                            }
+                        } else {
+                            insertStmt.setString(1, m.getTitle());
+                            insertStmt.setString(2, m.getGenre());
+                            insertStmt.setInt(3, m.getDurationMins());
+                            insertStmt.setString(4, m.getRating());
+                            insertStmt.setString(5, m.getPosterLabel());
+                            insertStmt.setString(6, m.getStatus());
+                            insertStmt.setString(7, m.getImagePath());
+                            insertStmt.setString(8, m.getLanguage());
+                            insertStmt.setString(9, m.getReleaseDate());
+                            insertStmt.executeUpdate();
+                        }
                     }
-                    System.out.println("[MovieDAO] Seeded default movies catalogue into MySQL database.");
                 }
+                System.out.println("[MovieDAO] Verified and synchronized movie catalogue with poster assets.");
             }
         } catch (SQLException e) {
             System.err.println("[MovieDAO] Failed to initialize movies table: " + e.getMessage());
@@ -272,4 +293,47 @@ public class MovieDAO {
         }
         return fallbackMovies.removeIf(m -> m.getTitle().equalsIgnoreCase(t));
     }
+
+    // Updates movie genre across database and fallback cache when a category is renamed
+    public static synchronized void updateMovieGenre(String oldGenre, String newGenre) {
+        if (oldGenre == null || newGenre == null || oldGenre.trim().equalsIgnoreCase(newGenre.trim())) {
+            return;
+        }
+        String oldClean = oldGenre.trim();
+        String newClean = newGenre.trim();
+
+        if (DBConnection.isDriverAvailable()) {
+            String sql = "UPDATE movies SET genre = REPLACE(genre, ?, ?) WHERE LOWER(genre) LIKE ?";
+            try (Connection conn = DBConnection.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, oldClean);
+                stmt.setString(2, newClean);
+                stmt.setString(3, "%" + oldClean.toLowerCase() + "%");
+                int updated = stmt.executeUpdate();
+                System.out.println("[MovieDAO] Updated genre for " + updated + " movies from '" + oldClean + "' to '" + newClean + "'.");
+            } catch (SQLException e) {
+                System.err.println("[MovieDAO] Error updating movie genres: " + e.getMessage());
+            }
+        }
+
+        for (int i = 0; i < fallbackMovies.size(); i++) {
+            Movie m = fallbackMovies.get(i);
+            if (m.getGenre() != null && m.getGenre().toLowerCase().contains(oldClean.toLowerCase())) {
+                String updatedGenre = m.getGenre().replace(oldClean, newClean);
+                fallbackMovies.set(i, new Movie(
+                        m.getId(),
+                        m.getTitle(),
+                        updatedGenre,
+                        m.getDurationMins(),
+                        m.getRating(),
+                        m.getPosterLabel(),
+                        m.getStatus(),
+                        m.getImagePath(),
+                        m.getLanguage(),
+                        m.getReleaseDate()
+                ));
+            }
+        }
+    }
 }
+

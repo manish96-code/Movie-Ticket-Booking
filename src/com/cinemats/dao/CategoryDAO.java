@@ -95,17 +95,24 @@ public class CategoryDAO {
 
     // Checks if category name already exists
     public static synchronized boolean categoryExists(String name) {
+        return categoryExists(name, 0);
+    }
+
+    // Checks if category name already exists (excluding a specific category ID)
+    public static synchronized boolean categoryExists(String name, int excludeId) {
         if (name == null || name.trim().isEmpty()) return false;
         String clean = name.trim();
 
         if (DBConnection.isDriverAvailable()) {
-            String sql = "SELECT COUNT(*) FROM categories WHERE LOWER(name) = LOWER(?)";
+            String sql = "SELECT COUNT(*) FROM categories WHERE LOWER(name) = LOWER(?) AND id <> ?";
             try (Connection conn = DBConnection.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql)) {
                 stmt.setString(1, clean);
-                ResultSet rs = stmt.executeQuery();
-                if (rs.next() && rs.getInt(1) > 0) {
-                    return true;
+                stmt.setInt(2, excludeId);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next() && rs.getInt(1) > 0) {
+                        return true;
+                    }
                 }
             } catch (SQLException e) {
                 System.err.println("[CategoryDAO] Error checking category existence: " + e.getMessage());
@@ -113,12 +120,111 @@ public class CategoryDAO {
         }
 
         for (Category c : fallbackCategories) {
-            if (c.getName().equalsIgnoreCase(clean)) {
+            if (c.getId() != excludeId && c.getName().equalsIgnoreCase(clean)) {
                 return true;
             }
         }
         return false;
     }
+
+    // Finds category by ID
+    public static synchronized Category getCategoryById(int id) {
+        if (DBConnection.isDriverAvailable()) {
+            String sql = "SELECT id, name, description, created_at FROM categories WHERE id = ?";
+            try (Connection conn = DBConnection.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setInt(1, id);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        return new Category(
+                                rs.getInt("id"),
+                                rs.getString("name"),
+                                rs.getString("description"),
+                                rs.getString("created_at")
+                        );
+                    }
+                }
+            } catch (SQLException e) {
+                System.err.println("[CategoryDAO] Error finding category by id: " + e.getMessage());
+            }
+        }
+
+        for (Category c : fallbackCategories) {
+            if (c.getId() == id) {
+                return c;
+            }
+        }
+        return null;
+    }
+
+    // Updates an existing category
+    public static synchronized boolean updateCategory(int id, String name, String description) {
+        if (name == null || name.trim().isEmpty()) {
+            return false;
+        }
+        String cleanName = name.trim();
+        String cleanDesc = description != null ? description.trim() : "";
+
+        if (categoryExists(cleanName, id)) {
+            return false;
+        }
+
+        String oldName = null;
+        for (Category c : fallbackCategories) {
+            if (c.getId() == id) {
+                oldName = c.getName();
+                break;
+            }
+        }
+
+        if (DBConnection.isDriverAvailable()) {
+            if (oldName == null) {
+                Category existing = getCategoryById(id);
+                if (existing != null) {
+                    oldName = existing.getName();
+                }
+            }
+
+            String sql = "UPDATE categories SET name = ?, description = ? WHERE id = ?";
+            try (Connection conn = DBConnection.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, cleanName);
+                stmt.setString(2, cleanDesc);
+                stmt.setInt(3, id);
+                int rows = stmt.executeUpdate();
+                if (rows > 0) {
+                    if (oldName != null && !oldName.equalsIgnoreCase(cleanName)) {
+                        MovieDAO.updateMovieGenre(oldName, cleanName);
+                    }
+
+                    for (int i = 0; i < fallbackCategories.size(); i++) {
+                        Category c = fallbackCategories.get(i);
+                        if (c.getId() == id) {
+                            fallbackCategories.set(i, new Category(id, cleanName, cleanDesc, c.getCreatedAt()));
+                            break;
+                        }
+                    }
+                    System.out.println("[CategoryDAO] Category updated: ID=" + id + ", Name=" + cleanName);
+                    return true;
+                }
+            } catch (SQLException e) {
+                System.err.println("[CategoryDAO] Error updating category in MySQL: " + e.getMessage());
+            }
+        }
+
+        for (int i = 0; i < fallbackCategories.size(); i++) {
+            Category c = fallbackCategories.get(i);
+            if (c.getId() == id) {
+                if (oldName != null && !oldName.equalsIgnoreCase(cleanName)) {
+                    MovieDAO.updateMovieGenre(oldName, cleanName);
+                }
+                fallbackCategories.set(i, new Category(id, cleanName, cleanDesc, c.getCreatedAt()));
+                return true;
+            }
+        }
+        return false;
+    }
+
 
     // Adds a new category
     public static synchronized boolean addCategory(String name, String description) {
