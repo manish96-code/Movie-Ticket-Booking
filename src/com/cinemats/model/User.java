@@ -74,6 +74,10 @@ public class User {
         return "ADMIN".equalsIgnoreCase(role);
     }
 
+    public boolean isStaff() {
+        return "STAFF".equalsIgnoreCase(role);
+    }
+
     @Override
     public String toString() {
         return fullName + " (" + username + " - " + role + ")";

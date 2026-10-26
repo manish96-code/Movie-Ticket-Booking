@@ -1,6 +1,7 @@
 package com.cinemats;
 
-import com.cinemats.ui.auth.LoginFrame;
+import com.cinemats.model.User;
+import com.cinemats.ui.admin.AdminDashboard;
 import com.cinemats.util.Theme;
 
 import javax.swing.*;
@@ -25,8 +26,8 @@ public class Main {
         Theme.initGlobalTheme();
 
         SwingUtilities.invokeLater(() -> {
-            LoginFrame loginFrame = new LoginFrame();
-            loginFrame.setVisible(true);
+            AdminDashboard dashboard = new AdminDashboard((User) null);
+            dashboard.setVisible(true);
         });
     }
 }

@@ -21,7 +21,8 @@ import javax.swing.table.DefaultTableModel;
 // Dynamic, professional movies catalogue page for staff counter terminal
 public class MoviesListPage extends JPanel {
 
-    private final StaffDashboard dashboard;
+    private StaffDashboard dashboard;
+    private com.cinemats.ui.admin.AdminDashboard adminDashboard;
 
     // Filter controls
     private JTextField searchField;
@@ -47,11 +48,22 @@ public class MoviesListPage extends JPanel {
     private JButton bookTicketsBtn;
 
     public MoviesListPage() {
-        this(null);
+        this((StaffDashboard) null);
     }
 
     public MoviesListPage(StaffDashboard dashboard) {
         this.dashboard = dashboard;
+
+        setLayout(new BorderLayout(0, 14));
+        setBackground(Theme.BG_MAIN);
+        setBorder(new EmptyBorder(20, 24, 20, 24));
+
+        initUI();
+        loadMoviesFromDatabase();
+    }
+
+    public MoviesListPage(com.cinemats.ui.admin.AdminDashboard adminDashboard) {
+        this.adminDashboard = adminDashboard;
 
         setLayout(new BorderLayout(0, 14));
         setBackground(Theme.BG_MAIN);
@@ -114,6 +126,8 @@ public class MoviesListPage extends JPanel {
         orderBookingBtn.addActionListener(e -> {
             if (dashboard != null) {
                 dashboard.showPage("PAGE_ORDER_BOOKING");
+            } else if (adminDashboard != null) {
+                adminDashboard.showPage("PAGE_ORDER_BOOKING");
             }
         });
 
@@ -313,6 +327,11 @@ public class MoviesListPage extends JPanel {
                         dashboard.getOrderBookingPage().selectMovieFromExternal(selected.getId());
                     }
                     dashboard.showPage("PAGE_ORDER_BOOKING");
+                } else if (adminDashboard != null) {
+                    if (adminDashboard.getOrderBookingPage() != null) {
+                        adminDashboard.getOrderBookingPage().selectMovieFromExternal(selected.getId());
+                    }
+                    adminDashboard.showPage("PAGE_ORDER_BOOKING");
                 } else {
                     JOptionPane.showMessageDialog(this,
                             "Selected: " + selected.getTitle() + "\nProceeding to Booking Flow.",
@@ -643,6 +662,8 @@ public class MoviesListPage extends JPanel {
             dialog.dispose();
             if (dashboard != null) {
                 dashboard.showPage("PAGE_ORDER_BOOKING");
+            } else if (adminDashboard != null) {
+                adminDashboard.showPage("PAGE_ORDER_BOOKING");
             }
         });
 

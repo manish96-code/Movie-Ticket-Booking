@@ -514,13 +514,8 @@ public class LoginFrame extends JFrame {
                 // Small delay for smooth feedback before switching screens
                 Timer timer = new Timer(350, evt -> {
                     dispose(); // Close login window
-                    if (user.isAdmin()) {
-                        AdminDashboard adminDashboard = new AdminDashboard(user.getFullName());
-                        adminDashboard.setVisible(true);
-                    } else {
-                        StaffDashboard staffDashboard = new StaffDashboard(user.getFullName(), user.getRole());
-                        staffDashboard.setVisible(true);
-                    }
+                    AdminDashboard dashboard = new AdminDashboard(user);
+                    dashboard.setVisible(true);
                 });
                 timer.setRepeats(false);
                 timer.start();
