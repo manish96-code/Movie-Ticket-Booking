@@ -1,7 +1,7 @@
 package com.cinemats.ui.staff;
 
 import com.cinemats.config.DBConnection;
-import com.cinemats.ui.auth.LoginFrame;
+import com.cinemats.ui.admin.AdminDashboard;
 import com.cinemats.util.Theme;
 import java.awt.*;
 import java.text.SimpleDateFormat;
@@ -655,7 +655,7 @@ public class StaffDashboard extends JFrame {
                 JOptionPane.YES_NO_OPTION);
         if (confirm == JOptionPane.YES_OPTION) {
             dispose();
-            new LoginFrame().setVisible(true);
+            new AdminDashboard((com.cinemats.model.User) null).setVisible(true);
         }
     }
 
