@@ -156,10 +156,6 @@ public class OrderBookingPage extends JPanel {
         this((Component) null);
     }
 
-    public OrderBookingPage(StaffDashboard dashboard) {
-        this((Component) dashboard);
-    }
-
     public OrderBookingPage(AdminDashboard dashboard) {
         this((Component) dashboard);
     }
@@ -175,8 +171,8 @@ public class OrderBookingPage extends JPanel {
         refreshRecentBookings();
     }
 
-    public StaffDashboard getDashboard() {
-        return (parentComponent instanceof StaffDashboard) ? (StaffDashboard) parentComponent : null;
+    public AdminDashboard getDashboard() {
+        return (parentComponent instanceof AdminDashboard) ? (AdminDashboard) parentComponent : null;
     }
 
     public Component getParentComponent() {

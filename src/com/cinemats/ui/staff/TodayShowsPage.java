@@ -20,8 +20,7 @@ import javax.swing.table.DefaultTableModel;
 // Displays live showtimes and schedule availability for counter staff
 public class TodayShowsPage extends JPanel {
 
-    private StaffDashboard dashboard;
-    private com.cinemats.ui.admin.AdminDashboard adminDashboard;
+    private com.cinemats.ui.admin.AdminDashboard dashboard;
     private JTextField searchField;
     private JComboBox<String> screenFilterCombo;
     private JComboBox<String> statusFilterCombo;
@@ -37,18 +36,8 @@ public class TodayShowsPage extends JPanel {
     private JLabel selectedShowLbl;
     private JButton bookShowBtn;
 
-    public TodayShowsPage(StaffDashboard dashboard) {
+    public TodayShowsPage(com.cinemats.ui.admin.AdminDashboard dashboard) {
         this.dashboard = dashboard;
-        setLayout(new BorderLayout(0, 16));
-        setBackground(Theme.BG_MAIN);
-        setBorder(new EmptyBorder(20, 24, 20, 24));
-
-        initUI();
-        refreshShows();
-    }
-
-    public TodayShowsPage(com.cinemats.ui.admin.AdminDashboard adminDashboard) {
-        this.adminDashboard = adminDashboard;
         setLayout(new BorderLayout(0, 16));
         setBackground(Theme.BG_MAIN);
         setBorder(new EmptyBorder(20, 24, 20, 24));
@@ -383,11 +372,6 @@ public class TodayShowsPage extends JPanel {
                     dashboard.getOrderBookingPage().selectShowFromExternal(s);
                 }
                 dashboard.showPage("PAGE_ORDER_BOOKING");
-            } else if (adminDashboard != null) {
-                if (adminDashboard.getOrderBookingPage() != null) {
-                    adminDashboard.getOrderBookingPage().selectShowFromExternal(s);
-                }
-                adminDashboard.showPage("PAGE_ORDER_BOOKING");
             }
         }
     }

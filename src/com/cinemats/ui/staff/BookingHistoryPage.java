@@ -60,10 +60,6 @@ public class BookingHistoryPage extends JPanel {
         this((Component) null);
     }
 
-    public BookingHistoryPage(StaffDashboard dashboard) {
-        this((Component) dashboard);
-    }
-
     public BookingHistoryPage(AdminDashboard dashboard) {
         this((Component) dashboard);
     }
@@ -631,9 +627,7 @@ public class BookingHistoryPage extends JPanel {
     }
 
     private void navigateToNewBooking() {
-        if (parentComponent instanceof StaffDashboard) {
-            ((StaffDashboard) parentComponent).showPage("PAGE_ORDER_BOOKING");
-        } else if (parentComponent instanceof AdminDashboard) {
+        if (parentComponent instanceof AdminDashboard) {
             ((AdminDashboard) parentComponent).switchToPage("PAGE_ORDER_BOOKING");
         } else {
             JOptionPane.showMessageDialog(this, "Navigate to Order Booking to make a new reservation.",
@@ -935,8 +929,8 @@ public class BookingHistoryPage extends JPanel {
         }
     }
 
-    public StaffDashboard getDashboard() {
-        return (parentComponent instanceof StaffDashboard) ? (StaffDashboard) parentComponent : null;
+    public AdminDashboard getDashboard() {
+        return (parentComponent instanceof AdminDashboard) ? (AdminDashboard) parentComponent : null;
     }
 
     public Component getParentComponent() {
