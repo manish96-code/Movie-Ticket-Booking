@@ -42,6 +42,7 @@ public class DatabaseSeeder {
 
         System.out.println("🌱 Initializing MySQL schema & seeding mock data...");
         DBConnection.initDatabase();
+        BookingMockData.seedWeeklyBookings(6, 1);
 
         if (!DBConnection.isDriverAvailable()) {
             System.err.println("\n❌ ERROR: Could not connect to MySQL server.");
