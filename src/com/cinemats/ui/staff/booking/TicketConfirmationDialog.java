@@ -6,6 +6,7 @@ import com.cinemats.model.Ticket;
 import com.cinemats.util.QRCodeRenderer;
 import com.cinemats.util.Theme;
 
+import java.math.BigDecimal;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
@@ -157,6 +158,73 @@ public class TicketConfirmationDialog extends JDialog {
                 receipt.add(itemRow);
                 receipt.add(Box.createVerticalStrut(2));
             }
+        }
+
+        receipt.add(Box.createVerticalStrut(6));
+        receipt.add(createDashedDivider());
+        receipt.add(Box.createVerticalStrut(8));
+
+        // Subtotal row
+        JPanel subtotalRow = new JPanel(new BorderLayout());
+        subtotalRow.setOpaque(false);
+        subtotalRow.setMaximumSize(new Dimension(400, 18));
+        JLabel subtotalTxt = new JLabel("Tickets Subtotal:");
+        subtotalTxt.setFont(Theme.FONT_SMALL);
+        subtotalTxt.setForeground(Theme.TEXT_MUTED);
+        JLabel subtotalVal = new JLabel("₹" + (booking.getSubtotal() != null ? booking.getSubtotal().toPlainString() : "0.00"));
+        subtotalVal.setFont(Theme.FONT_BOLD_SM);
+        subtotalVal.setForeground(Theme.TEXT_DARK);
+        subtotalRow.add(subtotalTxt, BorderLayout.WEST);
+        subtotalRow.add(subtotalVal, BorderLayout.EAST);
+        receipt.add(subtotalRow);
+        receipt.add(Box.createVerticalStrut(2));
+
+        // GST / Tax row
+        JPanel gstRow = new JPanel(new BorderLayout());
+        gstRow.setOpaque(false);
+        gstRow.setMaximumSize(new Dimension(400, 18));
+        boolean hasGst = booking.isGstApplied();
+        String gstLabel = hasGst ? ("GST (" + booking.getGstRate().intValue() + "%):") : "GST (Tax Exempt):";
+        JLabel gstTxt = new JLabel(gstLabel);
+        gstTxt.setFont(Theme.FONT_SMALL);
+        gstTxt.setForeground(hasGst ? new Color(15, 23, 42) : Theme.TEXT_MUTED);
+        JLabel gstVal = new JLabel("₹" + (hasGst ? booking.getTaxAmount().toPlainString() : "0.00"));
+        gstVal.setFont(Theme.FONT_BOLD_SM);
+        gstVal.setForeground(hasGst ? new Color(15, 23, 42) : Theme.TEXT_MUTED);
+        gstRow.add(gstTxt, BorderLayout.WEST);
+        gstRow.add(gstVal, BorderLayout.EAST);
+        receipt.add(gstRow);
+
+        if (hasGst && booking.getTaxAmount().compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal halfTax = booking.getTaxAmount().divide(BigDecimal.valueOf(2), 2, java.math.RoundingMode.HALF_UP);
+            JPanel cgstRow = new JPanel(new BorderLayout());
+            cgstRow.setOpaque(false);
+            cgstRow.setMaximumSize(new Dimension(400, 16));
+            JLabel cgstTxt = new JLabel("  ↳ CGST (9%) + SGST (9%)");
+            cgstTxt.setFont(new Font("Segoe UI", Font.ITALIC, 10));
+            cgstTxt.setForeground(new Color(100, 116, 139));
+            JLabel cgstVal = new JLabel("₹" + halfTax.toPlainString() + " + ₹" + halfTax.toPlainString());
+            cgstVal.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+            cgstVal.setForeground(new Color(100, 116, 139));
+            cgstRow.add(cgstTxt, BorderLayout.WEST);
+            cgstRow.add(cgstVal, BorderLayout.EAST);
+            receipt.add(cgstRow);
+        }
+
+        if (booking.getDiscount() != null && booking.getDiscount().compareTo(BigDecimal.ZERO) > 0) {
+            receipt.add(Box.createVerticalStrut(2));
+            JPanel discRow = new JPanel(new BorderLayout());
+            discRow.setOpaque(false);
+            discRow.setMaximumSize(new Dimension(400, 18));
+            JLabel discTxt = new JLabel("Discount Applied:");
+            discTxt.setFont(Theme.FONT_SMALL);
+            discTxt.setForeground(new Color(22, 163, 74));
+            JLabel discVal = new JLabel("-₹" + booking.getDiscount().toPlainString());
+            discVal.setFont(Theme.FONT_BOLD_SM);
+            discVal.setForeground(new Color(22, 163, 74));
+            discRow.add(discTxt, BorderLayout.WEST);
+            discRow.add(discVal, BorderLayout.EAST);
+            receipt.add(discRow);
         }
 
         receipt.add(Box.createVerticalStrut(6));

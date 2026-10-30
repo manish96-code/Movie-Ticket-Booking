@@ -55,6 +55,23 @@ public class MovieDAO {
                 try {
                     stmt.execute("ALTER TABLE movies DROP COLUMN price");
                 } catch (SQLException ignored) {}
+
+                // Safe migration: add is_gst_applicable and gst_rate columns if table already existed without them
+                try {
+                    stmt.execute("ALTER TABLE movies ADD COLUMN is_gst_applicable TINYINT(1) DEFAULT 1");
+                } catch (SQLException ignored) {}
+
+                try {
+                    stmt.execute("ALTER TABLE movies ADD COLUMN gst_rate DECIMAL(5,2) DEFAULT 18.00");
+                } catch (SQLException ignored) {}
+            } else {
+                // MySQL safe migration
+                try {
+                    stmt.execute("ALTER TABLE movies ADD COLUMN is_gst_applicable TINYINT(1) DEFAULT 1");
+                } catch (SQLException ignored) {}
+                try {
+                    stmt.execute("ALTER TABLE movies ADD COLUMN gst_rate DECIMAL(5,2) DEFAULT 18.00");
+                } catch (SQLException ignored) {}
             }
 
             // Synchronize movie catalogue: seed new movies and update posters for existing movies
@@ -111,7 +128,9 @@ public class MovieDAO {
             String sql = "SELECT id, title, genre, duration_mins, rating, poster_label, status, "
                     + "COALESCE(image_path, '') AS image_path, "
                     + "COALESCE(language, 'Hindi') AS language, "
-                    + "COALESCE(release_date, '') AS release_date "
+                    + "COALESCE(release_date, '') AS release_date, "
+                    + "COALESCE(is_gst_applicable, 1) AS is_gst_applicable, "
+                    + "COALESCE(gst_rate, 18.00) AS gst_rate "
                     + "FROM movies ORDER BY id ASC";
             try (Connection conn = DBConnection.getConnection();
                  Statement stmt = conn.createStatement();
@@ -128,7 +147,9 @@ public class MovieDAO {
                             rs.getString("status"),
                             rs.getString("image_path"),
                             rs.getString("language"),
-                            rs.getString("release_date")
+                            rs.getString("release_date"),
+                            rs.getInt("is_gst_applicable") == 1,
+                            rs.getDouble("gst_rate")
                     ));
                 }
                 if (!list.isEmpty()) {
@@ -147,7 +168,9 @@ public class MovieDAO {
             String sql = "SELECT id, title, genre, duration_mins, rating, poster_label, status, "
                     + "COALESCE(image_path, '') AS image_path, "
                     + "COALESCE(language, 'Hindi') AS language, "
-                    + "COALESCE(release_date, '') AS release_date "
+                    + "COALESCE(release_date, '') AS release_date, "
+                    + "COALESCE(is_gst_applicable, 1) AS is_gst_applicable, "
+                    + "COALESCE(gst_rate, 18.00) AS gst_rate "
                     + "FROM movies WHERE id = ?";
             try (Connection conn = DBConnection.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -164,7 +187,9 @@ public class MovieDAO {
                                 rs.getString("status"),
                                 rs.getString("image_path"),
                                 rs.getString("language"),
-                                rs.getString("release_date")
+                                rs.getString("release_date"),
+                                rs.getInt("is_gst_applicable") == 1,
+                                rs.getDouble("gst_rate")
                         );
                     }
                 }
@@ -199,8 +224,8 @@ public class MovieDAO {
         if (movie == null || movie.getTitle().isEmpty()) return false;
 
         if (DBConnection.isDriverAvailable()) {
-            String sql = "INSERT INTO movies (title, genre, duration_mins, rating, poster_label, status, image_path, language, release_date) "
-                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            String sql = "INSERT INTO movies (title, genre, duration_mins, rating, poster_label, status, image_path, language, release_date, is_gst_applicable, gst_rate) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             try (Connection conn = DBConnection.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
@@ -213,6 +238,8 @@ public class MovieDAO {
                 stmt.setString(7, movie.getImagePath() != null ? movie.getImagePath() : "");
                 stmt.setString(8, movie.getLanguage() != null ? movie.getLanguage() : "Hindi");
                 stmt.setString(9, movie.getReleaseDate() != null ? movie.getReleaseDate() : "");
+                stmt.setInt(10, movie.isGstApplicable() ? 1 : 0);
+                stmt.setDouble(11, movie.getGstRate());
 
                 int rows = stmt.executeUpdate();
                 if (rows > 0) {
@@ -232,9 +259,11 @@ public class MovieDAO {
                             movie.getStatus(),
                             movie.getImagePath(),
                             movie.getLanguage(),
-                            movie.getReleaseDate()
+                            movie.getReleaseDate(),
+                            movie.isGstApplicable(),
+                            movie.getGstRate()
                     ));
-                    System.out.println("[MovieDAO] Movie saved to database: " + movie.getTitle());
+                    System.out.println("[MovieDAO] Movie saved to database: " + movie.getTitle() + " (GST: " + movie.getGstLabel() + ")");
                     return true;
                 }
             } catch (SQLException e) {
@@ -252,9 +281,44 @@ public class MovieDAO {
                 movie.getStatus(),
                 movie.getImagePath(),
                 movie.getLanguage(),
-                movie.getReleaseDate()
+                movie.getReleaseDate(),
+                movie.isGstApplicable(),
+                movie.getGstRate()
         ));
         return true;
+    }
+
+    // Updates GST applicability and rate for a specific movie
+    public static synchronized boolean updateMovieGst(int movieId, boolean isGstApplicable, double gstRate) {
+        if (DBConnection.isDriverAvailable()) {
+            String sql = "UPDATE movies SET is_gst_applicable = ?, gst_rate = ? WHERE id = ?";
+            try (Connection conn = DBConnection.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setInt(1, isGstApplicable ? 1 : 0);
+                stmt.setDouble(2, gstRate >= 0 ? gstRate : 18.0);
+                stmt.setInt(3, movieId);
+                int rows = stmt.executeUpdate();
+                if (rows > 0) {
+                    // Update fallback cache
+                    for (int i = 0; i < fallbackMovies.size(); i++) {
+                        Movie m = fallbackMovies.get(i);
+                        if (m.getId() == movieId) {
+                            fallbackMovies.set(i, new Movie(
+                                    m.getId(), m.getTitle(), m.getGenre(), m.getDurationMins(),
+                                    m.getRating(), m.getPosterLabel(), m.getStatus(),
+                                    m.getImagePath(), m.getLanguage(), m.getReleaseDate(),
+                                    isGstApplicable, gstRate
+                            ));
+                            break;
+                        }
+                    }
+                    return true;
+                }
+            } catch (SQLException e) {
+                System.err.println("[MovieDAO] Error updating movie GST: " + e.getMessage());
+            }
+        }
+        return false;
     }
 
     // Deletes movie by ID

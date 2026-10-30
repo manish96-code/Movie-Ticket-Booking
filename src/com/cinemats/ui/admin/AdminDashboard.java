@@ -684,6 +684,10 @@ public class AdminDashboard extends JFrame {
             moviesListPage.loadMoviesFromDatabase();
         } else if ("PAGE_TODAY_SHOWS".equals(targetKey) && todayShowsPage != null) {
             todayShowsPage.refreshShows();
+        } else if ("PAGE_ADD_SHOW".equals(targetKey) && addShowPage != null) {
+            addShowPage.refreshCombos();
+        } else if ("PAGE_ADD_MOVIE".equals(targetKey) && addMoviePage != null) {
+            addMoviePage.refreshCategoryCombo();
         }
     }
 

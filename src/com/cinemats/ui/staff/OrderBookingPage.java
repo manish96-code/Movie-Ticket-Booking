@@ -2001,6 +2001,9 @@ public class OrderBookingPage extends JPanel {
             return;
         }
         selectedShow = show;
+        if (selectedMovie == null || selectedMovie.getId() != show.getMovieId()) {
+            selectedMovie = MovieDAO.getMovieById(show.getMovieId());
+        }
         renderShowsForSelectedDate();
         loadSeatsForSelectedShow();
         updateSummary();
@@ -2441,7 +2444,11 @@ public class OrderBookingPage extends JPanel {
 
         // Itemized breakdown
         summaryItemsPanel.removeAll();
-        BigDecimal total = BigDecimal.ZERO;
+        BigDecimal subtotal = BigDecimal.ZERO;
+
+        if (selectedMovie == null && selectedShow != null) {
+            selectedMovie = MovieDAO.getMovieById(selectedShow.getMovieId());
+        }
 
         if (!selectedSeats.isEmpty()) {
             JLabel breakdownHeader = new JLabel("SEATS BREAKDOWN");
@@ -2454,7 +2461,7 @@ public class OrderBookingPage extends JPanel {
 
         for (ShowSeat ss : selectedSeats.values()) {
             BigDecimal p = ss.getPrice() != null ? ss.getPrice() : BigDecimal.valueOf(150.0);
-            total = total.add(p);
+            subtotal = subtotal.add(p);
 
             JPanel itemRow = new JPanel(new BorderLayout());
             itemRow.setOpaque(false);
@@ -2475,7 +2482,53 @@ public class OrderBookingPage extends JPanel {
             summaryItemsPanel.add(itemRow);
         }
 
+        boolean hasGst = (selectedMovie != null && selectedMovie.isGstApplicable());
+        double gstRate = (selectedMovie != null) ? selectedMovie.getGstRate() : 18.0;
+        BigDecimal tax = hasGst
+                ? subtotal.multiply(BigDecimal.valueOf(gstRate / 100.0)).setScale(2, java.math.RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+        BigDecimal total = subtotal.add(tax);
+
+        if (!selectedSeats.isEmpty()) {
+            summaryItemsPanel.add(Box.createVerticalStrut(6));
+            JSeparator sep = new JSeparator();
+            sep.setForeground(new Color(226, 232, 240));
+            sep.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
+            summaryItemsPanel.add(sep);
+            summaryItemsPanel.add(Box.createVerticalStrut(6));
+
+            // Subtotal row
+            JPanel subRow = new JPanel(new BorderLayout());
+            subRow.setOpaque(false);
+            subRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
+            JLabel subLbl = new JLabel("Subtotal:");
+            subLbl.setFont(Theme.FONT_SMALL);
+            subLbl.setForeground(Theme.TEXT_MUTED);
+            JLabel subVal = new JLabel("₹" + subtotal.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString());
+            subVal.setFont(Theme.FONT_BOLD_SM);
+            subVal.setForeground(Theme.TEXT_DARK);
+            subRow.add(subLbl, BorderLayout.WEST);
+            subRow.add(subVal, BorderLayout.EAST);
+            summaryItemsPanel.add(subRow);
+
+            // GST Row
+            JPanel taxRow = new JPanel(new BorderLayout());
+            taxRow.setOpaque(false);
+            taxRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
+            String taxLabel = hasGst ? String.format("GST (%.0f%%):", gstRate) : "GST (Tax Exempt):";
+            JLabel taxLbl = new JLabel(taxLabel);
+            taxLbl.setFont(Theme.FONT_SMALL);
+            taxLbl.setForeground(hasGst ? new Color(15, 23, 42) : Theme.TEXT_MUTED);
+            JLabel taxVal = new JLabel("₹" + tax.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString());
+            taxVal.setFont(Theme.FONT_BOLD_SM);
+            taxVal.setForeground(hasGst ? new Color(15, 23, 42) : Theme.TEXT_MUTED);
+            taxRow.add(taxLbl, BorderLayout.WEST);
+            taxRow.add(taxVal, BorderLayout.EAST);
+            summaryItemsPanel.add(taxRow);
+        }
+
         summaryAmount.setText(String.format("₹%.2f", total.doubleValue()));
+        summarySeatCountLbl.setText(selectedSeats.size() + " Seats" + (hasGst ? " • Incl. " + (int) gstRate + "% GST" : " • Tax Exempt"));
         confirmBookingBtn.setEnabled(!selectedSeats.isEmpty());
         confirmBookingBtn.repaint();
 
@@ -2487,13 +2540,29 @@ public class OrderBookingPage extends JPanel {
         summaryItemsPanel.repaint();
     }
 
-    private BigDecimal calculateTotal() {
-        BigDecimal total = BigDecimal.ZERO;
+    private BigDecimal calculateSubtotal() {
+        BigDecimal subtotal = BigDecimal.ZERO;
         for (ShowSeat ss : selectedSeats.values()) {
             BigDecimal p = ss.getPrice() != null ? ss.getPrice() : BigDecimal.valueOf(150.0);
-            total = total.add(p);
+            subtotal = subtotal.add(p);
         }
-        return total;
+        return subtotal;
+    }
+
+    private BigDecimal calculateTax() {
+        BigDecimal subtotal = calculateSubtotal();
+        if (selectedMovie == null && selectedShow != null) {
+            selectedMovie = MovieDAO.getMovieById(selectedShow.getMovieId());
+        }
+        if (selectedMovie != null && selectedMovie.isGstApplicable()) {
+            double rate = selectedMovie.getGstRate();
+            return subtotal.multiply(BigDecimal.valueOf(rate / 100.0)).setScale(2, java.math.RoundingMode.HALF_UP);
+        }
+        return BigDecimal.ZERO;
+    }
+
+    private BigDecimal calculateTotal() {
+        return calculateSubtotal().add(calculateTax());
     }
 
     private void executeBooking() {

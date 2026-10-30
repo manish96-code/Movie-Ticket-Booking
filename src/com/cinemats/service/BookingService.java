@@ -34,7 +34,15 @@ public class BookingService {
             throw new IllegalArgumentException("Payment information is required.");
         }
 
-        BigDecimal calculatedTotal = calculateSubtotal(selectedSeats);
+        BigDecimal subtotal = calculateSubtotal(selectedSeats);
+        com.cinemats.model.Movie movie = com.cinemats.dao.MovieDAO.getMovieById(show.getMovieId());
+        boolean isGst = (movie != null) ? movie.isGstApplicable() : true;
+        double rate = (movie != null) ? movie.getGstRate() : 18.0;
+        BigDecimal tax = isGst
+                ? subtotal.multiply(BigDecimal.valueOf(rate / 100.0)).setScale(2, java.math.RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+
+        BigDecimal calculatedTotal = subtotal.add(tax);
         if (discount != null) {
             calculatedTotal = calculatedTotal.subtract(discount);
         }
