@@ -24,6 +24,8 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.event.PopupMenuEvent;
+import javax.swing.event.PopupMenuListener;
 
 // Standalone Add Show / Schedule Show page registered in AdminDashboard CardLayout as PAGE_ADD_SHOW
 public class AddShowPage extends JPanel {
@@ -147,22 +149,69 @@ public class AddShowPage extends JPanel {
         saveBtn = Theme.createPrimaryButton("Save & Schedule Show");
         saveBtn.setBackground(new Color(124, 58, 237));
 
+        // Dynamic auto-refresh whenever user clicks the dropdowns
+        movieCombo.addPopupMenuListener(new PopupMenuListener() {
+            @Override
+            public void popupMenuWillBecomeVisible(PopupMenuEvent e) {
+                refreshCombos();
+            }
+            @Override
+            public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {}
+            @Override
+            public void popupMenuCanceled(PopupMenuEvent e) {}
+        });
+
+        screenCombo.addPopupMenuListener(new PopupMenuListener() {
+            @Override
+            public void popupMenuWillBecomeVisible(PopupMenuEvent e) {
+                refreshCombos();
+            }
+            @Override
+            public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {}
+            @Override
+            public void popupMenuCanceled(PopupMenuEvent e) {}
+        });
+
         refreshCombos();
     }
 
-    private void refreshCombos() {
-        movieCombo.removeAllItems();
+    public synchronized void refreshCombos() {
+        Movie selectedMovie = (Movie) movieCombo.getSelectedItem();
+        int selectedMovieId = (selectedMovie != null) ? selectedMovie.getId() : -1;
+
+        Screen selectedScreen = (Screen) screenCombo.getSelectedItem();
+        int selectedScreenId = (selectedScreen != null) ? selectedScreen.getId() : -1;
+
         List<Movie> movies = MovieDAO.getAllMovies();
+        movieCombo.removeAllItems();
+        Movie toReselectMovie = null;
         for (Movie m : movies) {
             movieCombo.addItem(m);
+            if (m.getId() == selectedMovieId) {
+                toReselectMovie = m;
+            }
+        }
+        if (toReselectMovie != null) {
+            movieCombo.setSelectedItem(toReselectMovie);
+        } else if (!movies.isEmpty()) {
+            movieCombo.setSelectedIndex(0);
         }
 
-        screenCombo.removeAllItems();
         List<Screen> screens = ScreenDAO.getAllScreens();
+        screenCombo.removeAllItems();
+        Screen toReselectScreen = null;
         for (Screen s : screens) {
             if (s.isActive()) {
                 screenCombo.addItem(s);
+                if (s.getId() == selectedScreenId) {
+                    toReselectScreen = s;
+                }
             }
+        }
+        if (toReselectScreen != null) {
+            screenCombo.setSelectedItem(toReselectScreen);
+        } else if (screenCombo.getItemCount() > 0) {
+            screenCombo.setSelectedIndex(0);
         }
     }
 

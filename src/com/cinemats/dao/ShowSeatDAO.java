@@ -40,6 +40,31 @@ public class ShowSeatDAO {
         } catch (SQLException e) {
             System.err.println("[ShowSeatDAO] Failed to initialize show_seats table: " + e.getMessage());
         }
+
+        ensureShowSeatsPopulated();
+    }
+
+    // Automatically populates seat inventories for any shows that lack records in show_seats
+    public static synchronized void ensureShowSeatsPopulated() {
+        if (!DBConnection.isDriverAvailable()) return;
+        String sql = "SELECT s.id, s.screen_id FROM shows s LEFT JOIN show_seats ss ON s.id = ss.show_id GROUP BY s.id, s.screen_id HAVING COUNT(ss.id) = 0";
+        try (Connection conn = DBConnection.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            List<int[]> missing = new ArrayList<>();
+            while (rs.next()) {
+                missing.add(new int[]{rs.getInt("id"), rs.getInt("screen_id")});
+            }
+            if (!missing.isEmpty()) {
+                for (int[] m : missing) {
+                    List<ShowPrice> prices = com.cinemats.data.ScheduleMockData.getPricesForScreen(m[1]);
+                    generateShowSeats(m[0], m[1], prices, conn);
+                }
+                System.out.println("[ShowSeatDAO] Automatically populated runtime seat inventories for " + missing.size() + " shows.");
+            }
+        } catch (SQLException e) {
+            System.err.println("[ShowSeatDAO] Error ensuring show seats populated: " + e.getMessage());
+        }
     }
 
     // Generates show_seats from physical screen seats using provided tiered pricing in a transaction

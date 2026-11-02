@@ -35,6 +35,7 @@ public class AddMoviePage extends JPanel {
     private JButton calendarBtn;
     private JLabel autoStatusBadge;
     private JComboBox<String> certificateCombo;
+    private JCheckBox gstCheckbox;
 
     // Poster Image Picker
     private JTextField imagePathField;
@@ -124,6 +125,14 @@ public class AddMoviePage extends JPanel {
         certificateCombo.setBackground(Color.WHITE);
         certificateCombo.setSelectedItem("UA 13+");
 
+        // GST Checkbox (Default checked = true per business requirement)
+        gstCheckbox = new JCheckBox("Apply GST (18%) on ticket bookings", true);
+        gstCheckbox.setFont(Theme.FONT_BOLD_SM);
+        gstCheckbox.setForeground(Theme.TEXT_DARK);
+        gstCheckbox.setOpaque(false);
+        gstCheckbox.setFocusPainted(false);
+        gstCheckbox.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
         imagePathField = Theme.createTextField("No poster selected (optional)");
         imagePathField.setEditable(false);
         imagePathField.setBackground(new Color(248, 250, 252));
@@ -181,7 +190,7 @@ public class AddMoviePage extends JPanel {
         updateAutoStatusBadge();
     }
 
-    private void refreshCategoryCombo() {
+    public void refreshCategoryCombo() {
         categoryCombo.removeAllItems();
         List<String> cats = CategoryDAO.getCategoryNames();
         for (String c : cats) {
@@ -305,7 +314,13 @@ public class AddMoviePage extends JPanel {
         fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.72;
         formFields.add(certificateCombo, fgbc);
 
-        // 7. Movie Poster Image
+        // 7. GST / Tax (Default selected, uncheckable)
+        fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.28;
+        formFields.add(createFieldLabel("Tax / GST"), fgbc);
+        fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.72;
+        formFields.add(buildGstRow(), fgbc);
+
+        // 8. Movie Poster Image
         fgbc.gridx = 0; fgbc.gridy = row; fgbc.weightx = 0.28;
         formFields.add(createFieldLabel("Movie Poster Image"), fgbc);
         fgbc.gridx = 1; fgbc.gridy = row++; fgbc.weightx = 0.72;
@@ -348,6 +363,25 @@ public class AddMoviePage extends JPanel {
         wrapper.setOpaque(false);
         wrapper.add(row, BorderLayout.CENTER);
         wrapper.add(releaseDateErrorLbl, BorderLayout.SOUTH);
+        return wrapper;
+    }
+
+    private JPanel buildGstRow() {
+        JPanel wrapper = new JPanel();
+        wrapper.setLayout(new BoxLayout(wrapper, BoxLayout.Y_AXIS));
+        wrapper.setOpaque(false);
+
+        JPanel checkRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        checkRow.setOpaque(false);
+        checkRow.add(gstCheckbox);
+
+        JLabel hint = new JLabel("Default checked (18% GST). Unselect if this movie is tax-exempt.");
+        hint.setFont(new Font("Segoe UI", Font.ITALIC, 11));
+        hint.setForeground(new Color(100, 116, 139));
+        hint.setBorder(new EmptyBorder(2, 22, 0, 0));
+
+        wrapper.add(checkRow);
+        wrapper.add(hint);
         return wrapper;
     }
 
@@ -476,6 +510,7 @@ public class AddMoviePage extends JPanel {
         languageCombo.addActionListener(e -> updateLivePreview());
         categoryCombo.addActionListener(e -> updateLivePreview());
         certificateCombo.addActionListener(e -> updateLivePreview());
+        gstCheckbox.addActionListener(e -> updateLivePreview());
 
         calendarBtn.addActionListener(e -> {
             DateTimePicker.showDatePicker(this, releaseDateField, "dd-MM-yyyy");
@@ -554,8 +589,9 @@ public class AddMoviePage extends JPanel {
         String langStr = (lang == null || lang.isEmpty()) ? "Hindi" : lang;
         String catStr = (cat == null || cat.isEmpty()) ? "Action" : cat;
         String certStr = (cert == null || cert.isEmpty()) ? "UA 13+" : cert;
+        String gstStr = (gstCheckbox != null && gstCheckbox.isSelected()) ? "18% GST" : "Tax Exempt";
 
-        previewMetaLbl.setText(langStr + " • " + catStr + " • " + durDisplay + " • " + certStr);
+        previewMetaLbl.setText(langStr + " • " + catStr + " • " + durDisplay + " • " + certStr + " • " + gstStr);
 
         String computed = computeStatusFromReleaseDate(relDate);
         String statusLabel = "UPCOMING".equals(computed) ? "Upcoming" : "Now Showing";
@@ -739,12 +775,17 @@ public class AddMoviePage extends JPanel {
             }
         }
 
+        boolean applyGst = gstCheckbox.isSelected();
+        double gstRateVal = 18.0;
+
         Movie newMovie = new Movie(
                 0, title, selectedCategory, durationMins,
                 certificate != null ? certificate : "UA 13+",
                 title.toUpperCase(), computedStatus, savedImagePath,
                 selectedLanguage != null ? selectedLanguage : "Hindi",
-                releaseDate
+                releaseDate,
+                applyGst,
+                gstRateVal
         );
 
         boolean saved = MovieDAO.addMovie(newMovie);
@@ -752,8 +793,13 @@ public class AddMoviePage extends JPanel {
         if (saved) {
             String statusReadable = "UPCOMING".equals(computedStatus) ? "Upcoming" : "Now Showing";
             showStatus("Movie '" + title + "' added successfully (" + statusReadable + ")!", true);
-            if (dashboard != null && dashboard.getMoviesPage() != null) {
-                dashboard.getMoviesPage().refreshMovieTable();
+            if (dashboard != null) {
+                if (dashboard.getMoviesPage() != null) {
+                    dashboard.getMoviesPage().refreshMovieTable();
+                }
+                if (dashboard.getAddShowPage() != null) {
+                    dashboard.getAddShowPage().refreshCombos();
+                }
             }
             handleReset();
         } else {
@@ -768,6 +814,7 @@ public class AddMoviePage extends JPanel {
         durationField.setText("2 hours 35 minutes");
         releaseDateField.setText(LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")));
         certificateCombo.setSelectedItem("UA 13+");
+        gstCheckbox.setSelected(true);
         handleClearImage();
         clearAllErrors();
         statusBox.setVisible(false);

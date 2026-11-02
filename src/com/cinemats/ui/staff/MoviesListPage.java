@@ -21,7 +21,7 @@ import javax.swing.table.DefaultTableModel;
 // Dynamic, professional movies catalogue page for staff counter terminal
 public class MoviesListPage extends JPanel {
 
-    private final StaffDashboard dashboard;
+    private com.cinemats.ui.admin.AdminDashboard dashboard;
 
     // Filter controls
     private JTextField searchField;
@@ -47,10 +47,10 @@ public class MoviesListPage extends JPanel {
     private JButton bookTicketsBtn;
 
     public MoviesListPage() {
-        this(null);
+        this((com.cinemats.ui.admin.AdminDashboard) null);
     }
 
-    public MoviesListPage(StaffDashboard dashboard) {
+    public MoviesListPage(com.cinemats.ui.admin.AdminDashboard dashboard) {
         this.dashboard = dashboard;
 
         setLayout(new BorderLayout(0, 14));
@@ -668,7 +668,7 @@ public class MoviesListPage extends JPanel {
         return lbl;
     }
 
-    public StaffDashboard getDashboard() {
+    public com.cinemats.ui.admin.AdminDashboard getDashboard() {
         return dashboard;
     }
 }

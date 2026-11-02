@@ -114,6 +114,7 @@ echo "[1/2] Compiling sources..."
 find src -name "*.java" | sed 's/^/"/;s/$/"/' > sources.txt
 "$JAVAC_CMD" -d bin -cp "lib/*${CP_SEP}src" @sources.txt
 rm -f sources.txt
+cp -r assets bin/ 2>/dev/null || true
 
 echo "[2/2] Launching Cinema Express..."
 "$JAVA_CMD" -cp "bin${CP_SEP}lib/*" com.cinemats.Main "$@"

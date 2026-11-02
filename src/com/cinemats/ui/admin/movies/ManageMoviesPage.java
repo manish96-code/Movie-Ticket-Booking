@@ -146,6 +146,10 @@ public class ManageMoviesPage extends JPanel {
         
             }});
 
+        JButton toggleGstBtn = Theme.createSecondaryButton("⚙ Toggle GST");
+        toggleGstBtn.setToolTipText("Toggle 18% GST / Tax-Exempt status for selected movie");
+        toggleGstBtn.addActionListener(e -> toggleSelectedMovieGst());
+
         JButton delBtn = Theme.createSecondaryButton("Remove Selected");
         delBtn.setForeground(Theme.ACCENT_RED);
         delBtn.addActionListener(e -> removeSelectedMovie());
@@ -155,6 +159,7 @@ public class ManageMoviesPage extends JPanel {
 
         btnRow.add(categoriesBtn);
         btnRow.add(addBtn);
+        btnRow.add(toggleGstBtn);
         btnRow.add(delBtn);
         btnRow.add(refreshBtn);
 
@@ -163,7 +168,7 @@ public class ManageMoviesPage extends JPanel {
         card.add(toolbar, BorderLayout.NORTH);
 
         // Movie Table
-        String[] cols = {"Movie ID", "Title", "Language", "Category / Genre", "Duration", "Certificate", "Release Date", "Status"};
+        String[] cols = {"Movie ID", "Title", "Language", "Category / Genre", "Duration", "Certificate", "Release Date", "Status", "GST Status"};
         movieTableModel = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) {
@@ -216,7 +221,8 @@ public class ManageMoviesPage extends JPanel {
                     m.getShortDuration(),
                     m.getCertificate(),
                     m.getReleaseDate().isEmpty() ? "—" : m.getReleaseDate(),
-                    formatStatus(m.getStatus())
+                    formatStatus(m.getStatus()),
+                    m.getGstLabel()
                 });
                 matched++;
             }
@@ -281,8 +287,10 @@ public class ManageMoviesPage extends JPanel {
         JTextField durationField = Theme.createTextField("150");
         JComboBox<String> ratingCombo = new JComboBox<>(new String[]{"U", "UA", "A", "PG", "PG-13", "R"});
         JComboBox<String> statusCombo = new JComboBox<>(new String[]{"Now Showing", "Upcoming"});
+        JCheckBox gstCheck = new JCheckBox("Apply GST (18%) on ticket sales", true);
+        gstCheck.setFont(new Font("Segoe UI", Font.BOLD, 12));
 
-        JPanel form = new JPanel(new GridLayout(5, 2, 10, 12));
+        JPanel form = new JPanel(new GridLayout(6, 2, 10, 12));
         form.setBorder(new EmptyBorder(8, 8, 8, 8));
 
         form.add(new JLabel("Movie Title:"));
@@ -295,6 +303,8 @@ public class ManageMoviesPage extends JPanel {
         form.add(ratingCombo);
         form.add(new JLabel("Release Status:"));
         form.add(statusCombo);
+        form.add(new JLabel("Tax / GST Setting:"));
+        form.add(gstCheck);
 
         int res = JOptionPane.showConfirmDialog(this, form, "Add New Movie Title", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (res == JOptionPane.OK_OPTION) {
@@ -320,15 +330,50 @@ public class ManageMoviesPage extends JPanel {
 
             String rating = (String) ratingCombo.getSelectedItem();
             String status = "Now Showing".equals(statusCombo.getSelectedItem()) ? "NOW_SHOWING" : "UPCOMING";
+            boolean isGst = gstCheck.isSelected();
 
-            Movie newMovie = new Movie(0, title, selectedCategory, duration, rating, title.toUpperCase(), status);
+            Movie newMovie = new Movie(0, title, selectedCategory, duration, rating, title.toUpperCase(), status, "", "Hindi", "", isGst, 18.0);
             boolean saved = MovieDAO.addMovie(newMovie);
 
             if (saved) {
-                JOptionPane.showMessageDialog(this, "Movie '" + title + "' added successfully under category '" + selectedCategory + "'!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Movie '" + title + "' added successfully (" + (isGst ? "18% GST" : "Tax Exempt") + ")!", "Success", JOptionPane.INFORMATION_MESSAGE);
                 refreshMovieTable();
+                if (dashboard != null && dashboard.getAddShowPage() != null) {
+                    dashboard.getAddShowPage().refreshCombos();
+                }
             } else {
                 JOptionPane.showMessageDialog(this, "Failed to save movie.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private void toggleSelectedMovieGst() {
+        int row = movieTable.getSelectedRow();
+        if (row < 0) {
+            JOptionPane.showMessageDialog(this, "Please select a movie from the table first to toggle GST.", "Notice", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        String idStr = (String) movieTableModel.getValueAt(row, 0); // e.g. "MOV-001"
+        int movieId = Integer.parseInt(idStr.replace("MOV-", "").trim());
+        String title = (String) movieTableModel.getValueAt(row, 1);
+        String currentGst = (String) movieTableModel.getValueAt(row, 8); // e.g. "18% GST" or "Exempt"
+
+        boolean willApplyGst = "Exempt".equalsIgnoreCase(currentGst);
+        int choice = JOptionPane.showConfirmDialog(this,
+                "Change Tax/GST setting for '" + title + "'?\n\n"
+                + "• Current Status: " + currentGst + "\n"
+                + "• New Status: " + (willApplyGst ? "18% GST Applied" : "Tax Exempt (0% GST)") + "\n\n"
+                + (willApplyGst ? "Standard 18% GST will be applied when booking tickets for this movie." : "No tax/GST will be charged when booking tickets for this movie."),
+                "Configure Movie GST", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+
+        if (choice == JOptionPane.YES_OPTION) {
+            boolean updated = MovieDAO.updateMovieGst(movieId, willApplyGst, 18.0);
+            if (updated) {
+                refreshMovieTable();
+                JOptionPane.showMessageDialog(this, "Updated GST setting for '" + title + "' to: " + (willApplyGst ? "18% GST" : "Tax Exempt"), "GST Updated", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Failed to update GST setting.", "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -379,6 +424,9 @@ public class ManageMoviesPage extends JPanel {
                 boolean deleted = MovieDAO.deleteMovieByTitle(movieTitle);
                 if (deleted) {
                     refreshMovieTable();
+                    if (dashboard != null && dashboard.getAddShowPage() != null) {
+                        dashboard.getAddShowPage().refreshCombos();
+                    }
                     JOptionPane.showMessageDialog(this, "Movie '" + movieTitle + "' was removed.", "Removed", JOptionPane.INFORMATION_MESSAGE);
                 } else {
                     movieTableModel.removeRow(row);

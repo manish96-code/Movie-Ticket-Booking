@@ -20,7 +20,7 @@ import javax.swing.table.DefaultTableModel;
 // Displays live showtimes and schedule availability for counter staff
 public class TodayShowsPage extends JPanel {
 
-    private final StaffDashboard dashboard;
+    private com.cinemats.ui.admin.AdminDashboard dashboard;
     private JTextField searchField;
     private JComboBox<String> screenFilterCombo;
     private JComboBox<String> statusFilterCombo;
@@ -36,7 +36,7 @@ public class TodayShowsPage extends JPanel {
     private JLabel selectedShowLbl;
     private JButton bookShowBtn;
 
-    public TodayShowsPage(StaffDashboard dashboard) {
+    public TodayShowsPage(com.cinemats.ui.admin.AdminDashboard dashboard) {
         this.dashboard = dashboard;
         setLayout(new BorderLayout(0, 16));
         setBackground(Theme.BG_MAIN);

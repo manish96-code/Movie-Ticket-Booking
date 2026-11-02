@@ -22,6 +22,8 @@ public class Booking implements Serializable {
     private BigDecimal subtotal;
     private BigDecimal discount;
     private BigDecimal totalAmount;
+    private BigDecimal taxAmount;
+    private BigDecimal gstRate;
     private String status;
     private String createdAt;
 
@@ -33,6 +35,8 @@ public class Booking implements Serializable {
         this.status = "CONFIRMED";
         this.subtotal = BigDecimal.ZERO;
         this.discount = BigDecimal.ZERO;
+        this.taxAmount = BigDecimal.ZERO;
+        this.gstRate = BigDecimal.valueOf(18.0);
         this.totalAmount = BigDecimal.ZERO;
     }
 
@@ -146,6 +150,26 @@ public class Booking implements Serializable {
 
     public void setTotalAmount(BigDecimal totalAmount) {
         this.totalAmount = totalAmount;
+    }
+
+    public BigDecimal getTaxAmount() {
+        return taxAmount != null ? taxAmount : BigDecimal.ZERO;
+    }
+
+    public void setTaxAmount(BigDecimal taxAmount) {
+        this.taxAmount = taxAmount;
+    }
+
+    public BigDecimal getGstRate() {
+        return gstRate != null ? gstRate : BigDecimal.valueOf(18.0);
+    }
+
+    public void setGstRate(BigDecimal gstRate) {
+        this.gstRate = gstRate;
+    }
+
+    public boolean isGstApplied() {
+        return taxAmount != null && taxAmount.compareTo(BigDecimal.ZERO) > 0;
     }
 
     public String getStatus() {

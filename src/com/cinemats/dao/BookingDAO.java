@@ -106,6 +106,8 @@ public class BookingDAO {
             addColumnIfNotExists(conn, "bookings", "cashier_name", "TEXT DEFAULT ''");
             addColumnIfNotExists(conn, "bookings", "subtotal", "REAL");
             addColumnIfNotExists(conn, "bookings", "discount", "REAL DEFAULT 0.0");
+            addColumnIfNotExists(conn, "bookings", "tax_amount", "REAL DEFAULT 0.0");
+            addColumnIfNotExists(conn, "bookings", "gst_rate", "REAL DEFAULT 18.0");
             addColumnIfNotExists(conn, "bookings", "total_amount", "REAL");
             addColumnIfNotExists(conn, "bookings", "status", "TEXT DEFAULT 'CONFIRMED'");
             addColumnIfNotExists(conn, "bookings", "created_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
@@ -177,7 +179,7 @@ public class BookingDAO {
                 }
             }
 
-            // 3. Compute itemized prices
+            // 3. Compute itemized prices and GST/tax
             BigDecimal subtotal = BigDecimal.ZERO;
             List<BookingItem> items = new ArrayList<>();
             for (ShowSeat ss : selectedSeats) {
@@ -186,8 +188,16 @@ public class BookingDAO {
                 items.add(new BookingItem(ss.getId(), ss.getSeatLabel(), ss.getSeatType(), price));
             }
 
+            // Determine GST application based on movie configuration
+            Movie movie = MovieDAO.getMovieById(show.getMovieId());
+            boolean isGst = (movie != null) ? movie.isGstApplicable() : true;
+            double gstRateVal = (movie != null) ? movie.getGstRate() : 18.0;
+            BigDecimal taxAmount = isGst
+                    ? subtotal.multiply(BigDecimal.valueOf(gstRateVal / 100.0)).setScale(2, java.math.RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO;
+
             if (discount == null) discount = BigDecimal.ZERO;
-            BigDecimal totalAmount = subtotal.subtract(discount);
+            BigDecimal totalAmount = subtotal.add(taxAmount).subtract(discount);
             if (totalAmount.compareTo(BigDecimal.ZERO) < 0) totalAmount = BigDecimal.ZERO;
 
             String bookingNumber = generateBookingNumber();
@@ -199,8 +209,8 @@ public class BookingDAO {
             String insertBookingSql = "INSERT INTO bookings ("
                     + "booking_number, customer_id, show_id, customer_name, customer_phone, "
                     + "movie_title, screen_name, show_date, start_time, cashier_name, "
-                    + "subtotal, discount, total_amount, status, seat_count, booked_at, payment_mode) "
-                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CONFIRMED', ?, ?, ?)";
+                    + "subtotal, discount, tax_amount, gst_rate, total_amount, status, seat_count, booked_at, payment_mode) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CONFIRMED', ?, ?, ?)";
 
             int bookingId;
             try (PreparedStatement ps = conn.prepareStatement(insertBookingSql, Statement.RETURN_GENERATED_KEYS)) {
@@ -216,10 +226,12 @@ public class BookingDAO {
                 ps.setString(10, cashierName);
                 ps.setDouble(11, subtotal.doubleValue());
                 ps.setDouble(12, discount.doubleValue());
-                ps.setDouble(13, totalAmount.doubleValue());
-                ps.setInt(14, seatCount);
-                ps.setString(15, nowTimestamp);
-                ps.setString(16, payMode);
+                ps.setDouble(13, taxAmount.doubleValue());
+                ps.setDouble(14, gstRateVal);
+                ps.setDouble(15, totalAmount.doubleValue());
+                ps.setInt(16, seatCount);
+                ps.setString(17, nowTimestamp);
+                ps.setString(18, payMode);
                 ps.executeUpdate();
 
                 try (ResultSet rs = ps.getGeneratedKeys()) {
@@ -316,6 +328,8 @@ public class BookingDAO {
             fullBooking.setCashierName(cashierName);
             fullBooking.setSubtotal(subtotal);
             fullBooking.setDiscount(discount);
+            fullBooking.setTaxAmount(taxAmount);
+            fullBooking.setGstRate(BigDecimal.valueOf(gstRateVal));
             fullBooking.setTotalAmount(totalAmount);
             fullBooking.setStatus("CONFIRMED");
             fullBooking.setItems(items);
@@ -461,6 +475,10 @@ public class BookingDAO {
         b.setCashierName(rs.getString("cashier_name"));
         b.setSubtotal(BigDecimal.valueOf(rs.getDouble("subtotal")));
         b.setDiscount(BigDecimal.valueOf(rs.getDouble("discount")));
+        try {
+            b.setTaxAmount(BigDecimal.valueOf(rs.getDouble("tax_amount")));
+            b.setGstRate(BigDecimal.valueOf(rs.getDouble("gst_rate")));
+        } catch (Exception ignored) {}
         b.setTotalAmount(BigDecimal.valueOf(rs.getDouble("total_amount")));
         b.setStatus(rs.getString("status"));
         b.setCreatedAt(rs.getString("created_at"));

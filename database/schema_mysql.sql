@@ -43,6 +43,8 @@ CREATE TABLE IF NOT EXISTS movies (
     status VARCHAR(50) DEFAULT 'NOW_SHOWING',
     language VARCHAR(50) DEFAULT 'Hindi',
     release_date VARCHAR(50) DEFAULT '',
+    is_gst_applicable TINYINT(1) DEFAULT 1,
+    gst_rate DECIMAL(5,2) DEFAULT 18.00,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -138,6 +140,8 @@ CREATE TABLE IF NOT EXISTS bookings (
     cashier_name VARCHAR(100) DEFAULT '',
     subtotal DECIMAL(10,2) NOT NULL,
     discount DECIMAL(10,2) DEFAULT 0.00,
+    tax_amount DECIMAL(10,2) DEFAULT 0.00,
+    gst_rate DECIMAL(5,2) DEFAULT 18.00,
     total_amount DECIMAL(10,2) NOT NULL,
     status VARCHAR(30) DEFAULT 'CONFIRMED',
     seat_count INT DEFAULT 1,

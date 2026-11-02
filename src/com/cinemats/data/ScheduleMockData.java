@@ -246,7 +246,7 @@ public final class ScheduleMockData {
         }
     }
 
-    // Seeds default shows across days (-1 to +10) if shows table is empty
+    // Seeds default shows across days (-1 to +10) if shows table is empty, or ensures current/future shows exist
     public static synchronized void seedShowsIfEmpty() {
         if (!DBConnection.isDriverAvailable()) return;
 
@@ -254,11 +254,20 @@ public final class ScheduleMockData {
              Statement stmt = conn.createStatement()) {
 
             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM shows");
-            if (rs.next() && rs.getInt(1) > 0) {
-                return; // Already populated
+            if (!rs.next() || rs.getInt(1) == 0) {
+                seedShowsForRange(-1, 10);
+                return;
             }
 
-            seedShowsForRange(-1, 10);
+            // If historical shows exist, check if current/upcoming shows are scheduled
+            LocalDate today = LocalDate.now();
+            String todayStr = today.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+            try (ResultSet futureRs = stmt.executeQuery("SELECT COUNT(*) FROM shows WHERE show_date >= '" + todayStr + "'")) {
+                if (futureRs.next() && futureRs.getInt(1) == 0) {
+                    System.out.println("[ScheduleMockData] No active shows found for current date (" + todayStr + "). Seeding latest shows...");
+                    seedShowsForRange(0, 7);
+                }
+            }
 
         } catch (SQLException e) {
             System.err.println("[ScheduleMockData] Error checking shows table: " + e.getMessage());

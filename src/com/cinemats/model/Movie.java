@@ -12,24 +12,31 @@ public class Movie {
     private final String imagePath;
     private final String language;
     private final String releaseDate;
+    private final boolean gstApplicable;
+    private final double gstRate;
 
     // Compact constructor for adding new movies
     public Movie(String title, String genre, int durationMins) {
-        this(0, title, genre, durationMins, "UA 13+", title.toUpperCase(), "NOW_SHOWING", "", "Hindi", "");
+        this(0, title, genre, durationMins, "UA 13+", title.toUpperCase(), "NOW_SHOWING", "", "Hindi", "", true, 18.0);
     }
 
     // Constructor without imagePath (backward compatibility)
     public Movie(int id, String title, String genre, int durationMins, String rating, String posterLabel, String status) {
-        this(id, title, genre, durationMins, rating, posterLabel, status, "", "Hindi", "");
+        this(id, title, genre, durationMins, rating, posterLabel, status, "", "Hindi", "", true, 18.0);
     }
 
     // Constructor with imagePath (backward compatibility)
     public Movie(int id, String title, String genre, int durationMins, String rating, String posterLabel, String status, String imagePath) {
-        this(id, title, genre, durationMins, rating, posterLabel, status, imagePath, "Hindi", "");
+        this(id, title, genre, durationMins, rating, posterLabel, status, imagePath, "Hindi", "", true, 18.0);
     }
 
-    // Full constructor with language and releaseDate
+    // Constructor with language and releaseDate (backward compatibility)
     public Movie(int id, String title, String genre, int durationMins, String rating, String posterLabel, String status, String imagePath, String language, String releaseDate) {
+        this(id, title, genre, durationMins, rating, posterLabel, status, imagePath, language, releaseDate, true, 18.0);
+    }
+
+    // Full constructor with GST configuration
+    public Movie(int id, String title, String genre, int durationMins, String rating, String posterLabel, String status, String imagePath, String language, String releaseDate, boolean gstApplicable, double gstRate) {
         this.id = id;
         this.title = (title == null) ? "" : title.trim();
         this.genre = (genre == null) ? "General" : genre.trim();
@@ -40,6 +47,8 @@ public class Movie {
         this.imagePath = (imagePath == null) ? "" : imagePath.trim();
         this.language = (language == null || language.trim().isEmpty()) ? "Hindi" : language.trim();
         this.releaseDate = (releaseDate == null) ? "" : releaseDate.trim();
+        this.gstApplicable = gstApplicable;
+        this.gstRate = gstRate >= 0 ? gstRate : 18.0;
     }
 
     public int getId() {
@@ -112,6 +121,18 @@ public class Movie {
 
     public boolean hasImage() {
         return imagePath != null && !imagePath.trim().isEmpty();
+    }
+
+    public boolean isGstApplicable() {
+        return gstApplicable;
+    }
+
+    public double getGstRate() {
+        return gstRate;
+    }
+
+    public String getGstLabel() {
+        return gstApplicable ? String.format(java.util.Locale.US, "%.0f%% GST", gstRate) : "Exempt";
     }
 
     // Default base ticket price accessor for counter booking compatibility
