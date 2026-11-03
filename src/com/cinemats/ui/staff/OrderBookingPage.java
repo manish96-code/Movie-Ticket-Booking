@@ -7,10 +7,12 @@ import com.cinemats.model.*;
 import com.cinemats.service.BookingService;
 import com.cinemats.service.CustomerService;
 import com.cinemats.ui.staff.booking.TicketConfirmationDialog;
+import com.cinemats.util.DateTimePicker;
 import com.cinemats.util.QRCodeRenderer;
 import com.cinemats.util.Theme;
 import java.awt.*;
 import java.awt.geom.*;
+import java.awt.event.ActionListener;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
@@ -51,17 +53,42 @@ public class OrderBookingPage extends JPanel {
     private final JLabel step2ShowMeta = new JLabel("-");
 
     // --- Step 1: Select Movie (Search Bar + Movie Cards) ---
-    private final JTextField movieSearchField = Theme.createTextField("🔍 Search movie by title, genre, lang...");
+    private final JTextField movieSearchField = new JTextField() {
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            if (getText().isEmpty() && !isFocusOwner()) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                g2.setColor(new Color(148, 163, 184));
+                g2.setFont(getFont());
+                Insets insets = getInsets();
+                FontMetrics fm = g2.getFontMetrics();
+                int y = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
+                g2.drawString("Search movie by title, genre, language...", insets.left + 2, y);
+                g2.dispose();
+            }
+        }
+    };
+    private final JLabel movieSectionTitleLbl = new JLabel("🎬 Movies Playing Today");
+    private final JLabel movieCountBadge = new JLabel("0 Movies");
+    private JScrollPane cardsScroll;
     private final JPanel movieListPanel = new JPanel();
     private List<Movie> allMoviesList = new ArrayList<>();
+    private List<Movie> dateFilteredMovies = new ArrayList<>();
     private List<Movie> filteredMoviesList = new ArrayList<>();
+    private List<Show> allShowsCache = new ArrayList<>();
     private Movie selectedMovie = null;
     private final Map<Integer, BufferedImage> posterImageCache = new HashMap<>();
+
+    // --- Global Date Filter Toolbar Components ---
+    private final JPanel datePillsContainer = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
+    private final JLabel dateFilterHintLbl = new JLabel();
 
     // --- Step 1: Date & Showtime Selection ---
     private final JLabel movieBannerTitle = new JLabel("Select a Movie");
     private final JLabel movieBannerMeta = new JLabel("Choose a movie from the left to view available screening dates and showtimes");
-    private final JPanel datesBarPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
+    private final JPanel datesBarPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 6));
     private final JPanel showsContainerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
 
     // --- Step 2: Exact Seating Matrix ---
@@ -218,7 +245,13 @@ public class OrderBookingPage extends JPanel {
         titlePanel.add(sub);
         header.add(titlePanel, BorderLayout.WEST);
 
-        view.add(header, BorderLayout.NORTH);
+        // Top Container: Title Header + Global Date Filter Bar
+        JPanel topContainer = new JPanel(new BorderLayout(0, 8));
+        topContainer.setOpaque(false);
+        topContainer.add(header, BorderLayout.NORTH);
+        topContainer.add(buildGlobalDateFilterBar(), BorderLayout.CENTER);
+
+        view.add(topContainer, BorderLayout.NORTH);
 
         // Center Split Workspace: Left = Movies, Right = Showtimes
         JPanel splitWorkspace = new JPanel(new GridBagLayout());
@@ -248,15 +281,51 @@ public class OrderBookingPage extends JPanel {
         return view;
     }
 
+    private JPanel buildGlobalDateFilterBar() {
+        JPanel card = new JPanel(new BorderLayout(10, 0));
+        card.setBackground(Color.WHITE);
+        card.setBorder(new CompoundBorder(
+                new LineBorder(Theme.BORDER_COLOR, 1, true),
+                new EmptyBorder(6, 12, 6, 12)
+        ));
+
+        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
+        left.setOpaque(false);
+
+        JLabel lbl = new JLabel("📅 Filter by Date:");
+        lbl.setFont(Theme.FONT_BOLD_SM);
+        lbl.setForeground(new Color(51, 65, 85));
+        left.add(lbl);
+
+        datePillsContainer.setOpaque(false);
+        left.add(datePillsContainer);
+
+        dateFilterHintLbl.setFont(Theme.FONT_SMALL);
+        dateFilterHintLbl.setForeground(Theme.TEXT_MUTED);
+
+        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 6));
+        right.setOpaque(false);
+        right.add(dateFilterHintLbl);
+
+        card.add(left, BorderLayout.WEST);
+        card.add(right, BorderLayout.EAST);
+
+        return card;
+    }
+
     private JPanel buildStep1ShowtimesPanel() {
-        JPanel panel = createSection("Available Screenings & Showtimes");
-        panel.setLayout(new BorderLayout(0, 10));
+        JPanel panel = new JPanel(new BorderLayout(0, 10));
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(new CompoundBorder(
+                new LineBorder(Theme.BORDER_COLOR, 1, true),
+                new EmptyBorder(12, 14, 12, 14)
+        ));
 
         // Top: Selected Movie Header Banner
         JPanel movieBanner = new JPanel(new BorderLayout(10, 2));
         movieBanner.setBackground(new Color(248, 250, 252));
         movieBanner.setBorder(new CompoundBorder(
-                new LineBorder(Theme.BORDER_COLOR, 1, true),
+                new LineBorder(new Color(226, 232, 240), 1, true),
                 new EmptyBorder(10, 14, 10, 14)
         ));
 
@@ -275,29 +344,13 @@ public class OrderBookingPage extends JPanel {
 
         movieBanner.add(bannerText, BorderLayout.CENTER);
 
-        // Center Container: Dates & Shows
-        JPanel centerContainer = new JPanel(new BorderLayout(0, 10));
-        centerContainer.setOpaque(false);
-
-        // 1. Date Selection (Pills)
-        JPanel dateSection = new JPanel(new BorderLayout(4, 4));
-        dateSection.setOpaque(false);
-        JLabel dateTitle = new JLabel("📅 Select Screening Date");
-        dateTitle.setFont(Theme.FONT_BOLD_SM);
-        dateTitle.setForeground(new Color(51, 65, 85));
-        dateSection.add(dateTitle, BorderLayout.NORTH);
-
-        datesBarPanel.setOpaque(false);
-        dateSection.add(datesBarPanel, BorderLayout.CENTER);
-        centerContainer.add(dateSection, BorderLayout.NORTH);
-
-        // 2. Available Shows & Screens
+        // Center Container: Available Shows & Screens
         JPanel showSection = new JPanel(new BorderLayout(4, 6));
         showSection.setOpaque(false);
 
         JPanel showHeader = new JPanel(new BorderLayout());
         showHeader.setOpaque(false);
-        JLabel showTitle = new JLabel("🎬 Available Shows & Screens");
+        JLabel showTitle = new JLabel("🎬 Available Screenings & Showtimes");
         showTitle.setFont(Theme.FONT_BOLD_SM);
         showTitle.setForeground(new Color(51, 65, 85));
 
@@ -316,10 +369,9 @@ public class OrderBookingPage extends JPanel {
         com.cinemats.util.ModernScrollBarUI.apply(showsScroll, 8);
 
         showSection.add(showsScroll, BorderLayout.CENTER);
-        centerContainer.add(showSection, BorderLayout.CENTER);
 
         panel.add(movieBanner, BorderLayout.NORTH);
-        panel.add(centerContainer, BorderLayout.CENTER);
+        panel.add(showSection, BorderLayout.CENTER);
         return panel;
     }
 
@@ -455,39 +507,108 @@ public class OrderBookingPage extends JPanel {
     // COLUMN 1: SEARCH BAR + MOVIE LIST
     // ==========================================================
     private JPanel buildMoviePanel() {
-        JPanel panel = createSection("Movies");
-        panel.setLayout(new BorderLayout(0, 8));
+        JPanel panel = new JPanel(new BorderLayout(0, 10));
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(new CompoundBorder(
+                new LineBorder(Theme.BORDER_COLOR, 1, true),
+                new EmptyBorder(12, 14, 12, 14)
+        ));
 
-        // Search Bar at Top of Movie Column
-        JPanel searchBox = new JPanel(new BorderLayout(4, 0));
-        searchBox.setOpaque(false);
-        movieSearchField.setPreferredSize(new Dimension(0, 32));
-        movieSearchField.getDocument().addDocumentListener(new DocumentListener() {
-            public void insertUpdate(DocumentEvent e) {
-                filterMovies();
+        // Header: Title + Movie Count Badge
+        JPanel header = new JPanel(new BorderLayout());
+        header.setOpaque(false);
+
+        movieSectionTitleLbl.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        movieSectionTitleLbl.setForeground(Theme.TEXT_DARK);
+
+        movieCountBadge.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        movieCountBadge.setForeground(new Color(71, 85, 105));
+        movieCountBadge.setBackground(new Color(241, 245, 249));
+        movieCountBadge.setOpaque(true);
+        movieCountBadge.setBorder(new CompoundBorder(
+                new LineBorder(new Color(203, 213, 225), 1, true),
+                new EmptyBorder(3, 8, 3, 8)
+        ));
+
+        header.add(movieSectionTitleLbl, BorderLayout.WEST);
+        header.add(movieCountBadge, BorderLayout.EAST);
+
+        // Search Bar with icon and clear button
+        JPanel searchBox = new JPanel(new BorderLayout(6, 0));
+        searchBox.setBackground(Color.WHITE);
+        searchBox.setBorder(new CompoundBorder(
+                new LineBorder(new Color(203, 213, 225), 1, true),
+                new EmptyBorder(2, 8, 2, 8)
+        ));
+        searchBox.setPreferredSize(new Dimension(0, 36));
+
+        JLabel searchIcon = new JLabel("🔍");
+        searchIcon.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        searchIcon.setForeground(Theme.TEXT_MUTED);
+
+        movieSearchField.setBackground(Color.WHITE);
+        movieSearchField.setForeground(Theme.TEXT_DARK);
+        movieSearchField.setCaretColor(Theme.TEXT_DARK);
+        movieSearchField.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        movieSearchField.setBorder(new EmptyBorder(6, 4, 6, 4));
+        movieSearchField.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                movieSearchField.repaint();
             }
 
-            public void removeUpdate(DocumentEvent e) {
-                filterMovies();
-            }
-
-            public void changedUpdate(DocumentEvent e) {
-                filterMovies();
+            @Override
+            public void focusLost(FocusEvent e) {
+                movieSearchField.repaint();
             }
         });
+
+        JButton clearBtn = new JButton("✖");
+        clearBtn.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        clearBtn.setForeground(new Color(148, 163, 184));
+        clearBtn.setBorder(new EmptyBorder(0, 4, 0, 4));
+        clearBtn.setContentAreaFilled(false);
+        clearBtn.setFocusPainted(false);
+        clearBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        clearBtn.setVisible(false);
+        clearBtn.addActionListener(e -> {
+            movieSearchField.setText("");
+            filterMovies();
+        });
+
+        movieSearchField.getDocument().addDocumentListener(new DocumentListener() {
+            private void update() {
+                clearBtn.setVisible(!movieSearchField.getText().trim().isEmpty());
+                filterMovies();
+            }
+
+            public void insertUpdate(DocumentEvent e) { update(); }
+            public void removeUpdate(DocumentEvent e) { update(); }
+            public void changedUpdate(DocumentEvent e) { update(); }
+        });
+
+        searchBox.add(searchIcon, BorderLayout.WEST);
         searchBox.add(movieSearchField, BorderLayout.CENTER);
-        panel.add(searchBox, BorderLayout.NORTH);
+        searchBox.add(clearBtn, BorderLayout.EAST);
+
+        // Top Area (Header + Search Box)
+        JPanel topArea = new JPanel(new BorderLayout(0, 8));
+        topArea.setOpaque(false);
+        topArea.add(header, BorderLayout.NORTH);
+        topArea.add(searchBox, BorderLayout.CENTER);
+
+        panel.add(topArea, BorderLayout.NORTH);
 
         // Scrollable Movie Cards List (Responsive Wrap Grid)
-        movieListPanel.setLayout(new com.cinemats.util.WrapLayout(FlowLayout.LEFT, 10, 10));
+        movieListPanel.setLayout(new com.cinemats.util.WrapLayout(FlowLayout.LEFT, 12, 14));
         movieListPanel.setBackground(new Color(248, 250, 252));
-        movieListPanel.setBorder(new EmptyBorder(8, 8, 8, 8));
+        movieListPanel.setBorder(new EmptyBorder(12, 12, 12, 12));
 
-        JScrollPane cardsScroll = new JScrollPane(movieListPanel);
-        cardsScroll.setBorder(new LineBorder(Theme.BORDER_COLOR, 1));
+        cardsScroll = new JScrollPane(movieListPanel);
+        cardsScroll.setBorder(new LineBorder(new Color(226, 232, 240), 1, true));
         cardsScroll.getViewport().setBackground(new Color(248, 250, 252));
         cardsScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        cardsScroll.getVerticalScrollBar().setUnitIncrement(16);
+        cardsScroll.getVerticalScrollBar().setUnitIncrement(18);
         com.cinemats.util.ModernScrollBarUI.apply(cardsScroll, 6);
 
         panel.add(cardsScroll, BorderLayout.CENTER);
@@ -496,8 +617,28 @@ public class OrderBookingPage extends JPanel {
 
     private void filterMovies() {
         String query = movieSearchField.getText().trim().toLowerCase();
+
+        // 1. Filter movies by selected date
+        dateFilteredMovies.clear();
+        if ("ALL".equalsIgnoreCase(selectedDate)) {
+            dateFilteredMovies.addAll(allMoviesList);
+        } else {
+            Set<Integer> movieIdsOnDate = new HashSet<>();
+            for (Show s : allShowsCache) {
+                if (s.getShowDate() != null && s.getShowDate().equals(selectedDate) && !s.isCancelled()) {
+                    movieIdsOnDate.add(s.getMovieId());
+                }
+            }
+            for (Movie m : allMoviesList) {
+                if (movieIdsOnDate.contains(m.getId())) {
+                    dateFilteredMovies.add(m);
+                }
+            }
+        }
+
+        // 2. Filter by search query
         filteredMoviesList.clear();
-        for (Movie m : allMoviesList) {
+        for (Movie m : dateFilteredMovies) {
             boolean match = query.isEmpty()
                     || m.getTitle().toLowerCase().contains(query)
                     || m.getGenre().toLowerCase().contains(query)
@@ -511,13 +652,79 @@ public class OrderBookingPage extends JPanel {
 
     private void renderMovieList() {
         movieListPanel.removeAll();
+
+        // Update Title & Badge
+        LocalDate today = LocalDate.now();
+        String todayStr = today.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        String tomorrowStr = today.plusDays(1).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+
+        if (movieSectionTitleLbl != null) {
+            if (todayStr.equals(selectedDate)) {
+                movieSectionTitleLbl.setText("🎬 Movies Playing Today");
+            } else if (tomorrowStr.equals(selectedDate)) {
+                movieSectionTitleLbl.setText("🎬 Movies Playing Tomorrow");
+            } else if ("ALL".equalsIgnoreCase(selectedDate)) {
+                movieSectionTitleLbl.setText("🎬 All Movies (Catalogue)");
+            } else {
+                movieSectionTitleLbl.setText("🎬 Movies on " + formatDatePill(selectedDate));
+            }
+        }
+
+        if (movieCountBadge != null) {
+            int count = filteredMoviesList.size();
+            movieCountBadge.setText(count + " Movie" + (count == 1 ? "" : "s"));
+        }
+
         if (filteredMoviesList.isEmpty()) {
-            JPanel empty = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 40));
+            JPanel empty = new JPanel();
+            empty.setLayout(new BoxLayout(empty, BoxLayout.Y_AXIS));
             empty.setOpaque(false);
-            JLabel msg = new JLabel("No matching movies found.");
-            msg.setFont(Theme.FONT_REGULAR);
-            msg.setForeground(Theme.TEXT_MUTED);
+            empty.setBorder(new EmptyBorder(40, 20, 40, 20));
+
+            JLabel icon = new JLabel("🎬", SwingConstants.CENTER);
+            icon.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 36));
+            icon.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+            String query = movieSearchField.getText().trim();
+            String msgText;
+            if (!query.isEmpty()) {
+                msgText = "No matching movies found for \"" + query + "\"";
+            } else if (todayStr.equals(selectedDate)) {
+                msgText = "No movies scheduled for Today (" + today.format(DateTimeFormatter.ofPattern("dd MMM")) + ")";
+            } else {
+                msgText = "No movies scheduled for " + formatDatePill(selectedDate);
+            }
+
+            JLabel msg = new JLabel(msgText, SwingConstants.CENTER);
+            msg.setFont(new Font("Segoe UI", Font.BOLD, 14));
+            msg.setForeground(Theme.TEXT_DARK);
+            msg.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+            JLabel subMsg = new JLabel("Select Tomorrow or choose 'All Movies' above to view available screenings.", SwingConstants.CENTER);
+            subMsg.setFont(Theme.FONT_SMALL);
+            subMsg.setForeground(Theme.TEXT_MUTED);
+            subMsg.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+            empty.add(icon);
+            empty.add(Box.createVerticalStrut(8));
             empty.add(msg);
+            empty.add(Box.createVerticalStrut(4));
+            empty.add(subMsg);
+            empty.add(Box.createVerticalStrut(14));
+
+            JPanel quickBtns = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
+            quickBtns.setOpaque(false);
+            JButton viewTomorrow = Theme.createPrimaryButton("View Tomorrow's Movies (" + today.plusDays(1).format(DateTimeFormatter.ofPattern("dd MMM")) + ") →");
+            viewTomorrow.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            viewTomorrow.addActionListener(e -> selectDateFilter(tomorrowStr));
+            quickBtns.add(viewTomorrow);
+
+            JButton viewAll = Theme.createSecondaryButton("View All Movies (" + allMoviesList.size() + ")");
+            viewAll.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            viewAll.addActionListener(e -> selectDateFilter("ALL"));
+            quickBtns.add(viewAll);
+
+            empty.add(quickBtns);
             movieListPanel.add(empty);
         } else {
             for (Movie movie : filteredMoviesList) {
@@ -526,6 +733,9 @@ public class OrderBookingPage extends JPanel {
         }
         movieListPanel.revalidate();
         movieListPanel.repaint();
+        if (cardsScroll != null) {
+            SwingUtilities.invokeLater(() -> cardsScroll.getVerticalScrollBar().setValue(0));
+        }
     }
 
     private JPanel createMovieGridCard(Movie movie) {
@@ -1697,10 +1907,13 @@ public class OrderBookingPage extends JPanel {
     public void loadMovies() {
         posterImageCache.clear();
         allMoviesList = MovieDAO.getAllMovies();
-        filteredMoviesList = new ArrayList<>(allMoviesList);
-        renderMovieList();
+        selectedDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        refreshDateFilterBar();
+        filterMovies();
 
-        if (!allMoviesList.isEmpty()) {
+        if (!filteredMoviesList.isEmpty()) {
+            selectMovie(filteredMoviesList.get(0));
+        } else if (!allMoviesList.isEmpty()) {
             selectMovie(allMoviesList.get(0));
         } else {
             showSeatMessage("No movies are available in the database.");
@@ -1736,94 +1949,160 @@ public class OrderBookingPage extends JPanel {
         movieBannerMeta.setText(movie.getLanguage() + " • " + movie.getCertificate() + " • " + movie.getGenre() + " • " + movie.getShortDuration());
 
         // Refresh Movie List Highlight
-        renderMovieList();
+        movieListPanel.repaint();
 
         selectedSeats.clear();
         movieShows = ShowDAO.getShowsByMovie(movie.getId());
-        movieShows.removeIf(show -> !show.isBookable());
+        // Keep active/scheduled shows (do not discard shows whose cutoff passed so schedule is visible)
+        movieShows.removeIf(Show::isCancelled);
 
-        renderDatesAndShows();
+        renderShowsForSelectedDate();
         updateSummary();
     }
 
-    private void renderDatesAndShows() {
-        datesBarPanel.removeAll();
-        showsContainerPanel.removeAll();
+    private void selectDateFilter(String dateStr) {
+        this.selectedDate = dateStr;
+        refreshDateFilterBar();
+        filterMovies();
 
-        if (movieShows.isEmpty()) {
-            JLabel noShows = new JLabel("No upcoming screenings available for booking.");
-            noShows.setFont(Theme.FONT_REGULAR);
-            noShows.setForeground(Theme.TEXT_MUTED);
-            datesBarPanel.add(noShows);
+        // If currently selected movie is in the filtered list, keep it; otherwise select first
+        if (selectedMovie == null || !filteredMoviesList.contains(selectedMovie)) {
+            if (!filteredMoviesList.isEmpty()) {
+                selectMovie(filteredMoviesList.get(0));
+            } else {
+                selectedMovie = null;
+                movieBannerTitle.setText("No Movies Available");
+                movieBannerMeta.setText("No screenings scheduled for " + formatDatePill(selectedDate));
+                renderShowsForSelectedDate();
+            }
+        } else {
+            selectMovie(selectedMovie);
+        }
+    }
 
-            selectedDate = null;
-            selectedShow = null;
-            loadSeatsForSelectedShow();
-            datesBarPanel.revalidate();
-            datesBarPanel.repaint();
-            showsContainerPanel.revalidate();
-            showsContainerPanel.repaint();
-            return;
+    private void refreshDateFilterBar() {
+        datePillsContainer.removeAll();
+
+        allShowsCache = ShowDAO.getAllShows();
+
+        LocalDate today = LocalDate.now();
+        String todayStr = today.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        LocalDate tomorrow = today.plusDays(1);
+        String tomorrowStr = tomorrow.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+
+        if (selectedDate == null) {
+            selectedDate = todayStr;
         }
 
-        // Collect unique dates
-        TreeSet<String> dates = new TreeSet<>();
-        for (Show s : movieShows) {
-            if (s.getShowDate() != null && !s.getShowDate().isEmpty()) {
-                dates.add(s.getShowDate());
+        // Collect distinct show dates
+        TreeSet<String> distinctDates = new TreeSet<>();
+        for (Show s : allShowsCache) {
+            if (s.getShowDate() != null && !s.getShowDate().isEmpty() && !s.isCancelled()) {
+                distinctDates.add(s.getShowDate());
             }
         }
 
-        if (selectedDate == null || !dates.contains(selectedDate)) {
-            selectedDate = dates.first();
+        int todayMovieCount = countMoviesForDate(todayStr);
+        int tomorrowMovieCount = countMoviesForDate(tomorrowStr);
+
+        // 1. "Today" Button
+        JButton todayBtn = createDateFilterButton("● Today (" + today.format(DateTimeFormatter.ofPattern("dd MMM")) + ") • " + todayMovieCount + " Movies",
+                todayStr.equals(selectedDate), e -> selectDateFilter(todayStr));
+        datePillsContainer.add(todayBtn);
+
+        // 2. "Tomorrow" Button
+        JButton tomorrowBtn = createDateFilterButton("Tomorrow (" + tomorrow.format(DateTimeFormatter.ofPattern("dd MMM")) + ") • " + tomorrowMovieCount + " Movies",
+                tomorrowStr.equals(selectedDate), e -> selectDateFilter(tomorrowStr));
+        datePillsContainer.add(tomorrowBtn);
+
+        // 3. Other upcoming dates
+        int extra = 0;
+        for (String dStr : distinctDates) {
+            if (!dStr.equals(todayStr) && !dStr.equals(tomorrowStr)) {
+                if (extra < 3) {
+                    int count = countMoviesForDate(dStr);
+                    JButton datePill = createDateFilterButton(formatDatePill(dStr) + " • " + count + " Movies",
+                            dStr.equals(selectedDate), e -> selectDateFilter(dStr));
+                    datePillsContainer.add(datePill);
+                    extra++;
+                }
+            }
         }
 
-        for (String d : dates) {
-            JButton datePill = createDatePill(d);
-            datesBarPanel.add(datePill);
+        // 4. "📅 Pick Date" Button
+        boolean isCustomDate = !selectedDate.equals("ALL") && !selectedDate.equals(todayStr) && !selectedDate.equals(tomorrowStr) && !distinctDates.contains(selectedDate);
+        String pickLabel = isCustomDate ? "📅 " + formatDatePill(selectedDate) : "📅 Pick Date";
+        JButton pickBtn = createDateFilterButton(pickLabel, isCustomDate, e -> {
+            JTextField hidden = new JTextField(selectedDate.equals("ALL") ? todayStr : selectedDate);
+            DateTimePicker.showDatePicker(this, hidden, "yyyy-MM-dd");
+            String picked = hidden.getText().trim();
+            if (!picked.isEmpty()) {
+                selectDateFilter(picked);
+            }
+        });
+        datePillsContainer.add(pickBtn);
+
+        // 5. "All Movies" Button
+        JButton allBtn = createDateFilterButton("All Movies (" + allMoviesList.size() + ")",
+                "ALL".equals(selectedDate), e -> selectDateFilter("ALL"));
+        datePillsContainer.add(allBtn);
+
+        // Hint label on right
+        if (selectedDate.equals(todayStr)) {
+            dateFilterHintLbl.setText("Showing movies playing Today (" + today.format(DateTimeFormatter.ofPattern("dd MMM")) + ")");
+        } else if (selectedDate.equals(tomorrowStr)) {
+            dateFilterHintLbl.setText("Showing movies playing Tomorrow (" + tomorrow.format(DateTimeFormatter.ofPattern("dd MMM")) + ")");
+        } else if ("ALL".equals(selectedDate)) {
+            dateFilterHintLbl.setText("Showing all movies across entire catalogue");
+        } else {
+            dateFilterHintLbl.setText("Showing movies playing on " + formatDatePill(selectedDate));
         }
 
-        renderShowsForSelectedDate();
-        datesBarPanel.revalidate();
-        datesBarPanel.repaint();
+        datePillsContainer.revalidate();
+        datePillsContainer.repaint();
     }
 
-    private JButton createDatePill(String dateStr) {
-        boolean isSelected = dateStr.equals(selectedDate);
-        String labelText = formatDatePill(dateStr);
+    private int countMoviesForDate(String dateStr) {
+        Set<Integer> movieIds = new HashSet<>();
+        for (Show s : allShowsCache) {
+            if (s.getShowDate() != null && s.getShowDate().equals(dateStr) && !s.isCancelled()) {
+                movieIds.add(s.getMovieId());
+            }
+        }
+        return movieIds.size();
+    }
 
-        JButton btn = new JButton(labelText);
-        btn.setFont(Theme.FONT_BOLD_SM);
+    private JButton createDateFilterButton(String text, boolean isSelected, ActionListener action) {
+        JButton btn = new JButton(text);
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 12));
         btn.setFocusPainted(false);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btn.addActionListener(action);
 
         if (isSelected) {
             btn.setBackground(new Color(37, 99, 235));
             btn.setForeground(Color.WHITE);
             btn.setBorder(new CompoundBorder(
                     new LineBorder(new Color(29, 78, 216), 1, true),
-                    new EmptyBorder(5, 12, 5, 12)
+                    new EmptyBorder(6, 12, 6, 12)
             ));
         } else {
             btn.setBackground(Color.WHITE);
-            btn.setForeground(Theme.TEXT_DARK);
+            btn.setForeground(new Color(51, 65, 85));
             btn.setBorder(new CompoundBorder(
                     new LineBorder(new Color(203, 213, 225), 1, true),
-                    new EmptyBorder(5, 12, 5, 12)
+                    new EmptyBorder(6, 12, 6, 12)
             ));
         }
-
-        btn.addActionListener(e -> {
-            selectedDate = dateStr;
-            renderDatesAndShows();
-        });
-
         return btn;
     }
 
     public static String formatDatePill(String dateStr) {
         if (dateStr == null || dateStr.trim().isEmpty()) {
             return "";
+        }
+        if ("ALL".equalsIgnoreCase(dateStr.trim())) {
+            return "All Dates";
         }
         try {
             LocalDate d = LocalDate.parse(dateStr.trim());
@@ -1844,18 +2123,75 @@ public class OrderBookingPage extends JPanel {
     private void renderShowsForSelectedDate() {
         showsContainerPanel.removeAll();
 
+        if (selectedMovie == null) {
+            selectedShow = null;
+            loadSeatsForSelectedShow();
+            showsContainerPanel.revalidate();
+            showsContainerPanel.repaint();
+            return;
+        }
+
+        LocalDate today = LocalDate.now();
+        String todayStr = today.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        String tomorrowStr = today.plusDays(1).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+
         List<Show> matchingShows = new ArrayList<>();
-        for (Show s : movieShows) {
-            if (selectedDate != null && selectedDate.equals(s.getShowDate())) {
-                matchingShows.add(s);
+        if ("ALL".equalsIgnoreCase(selectedDate)) {
+            matchingShows.addAll(movieShows);
+        } else {
+            for (Show s : movieShows) {
+                if (selectedDate != null && selectedDate.equals(s.getShowDate())) {
+                    matchingShows.add(s);
+                }
             }
         }
 
         if (matchingShows.isEmpty()) {
-            JLabel noShows = new JLabel("No screenings scheduled on " + selectedDate);
-            noShows.setFont(Theme.FONT_REGULAR);
-            noShows.setForeground(Theme.TEXT_MUTED);
-            showsContainerPanel.add(noShows);
+            JPanel emptyState = new JPanel();
+            emptyState.setLayout(new BoxLayout(emptyState, BoxLayout.Y_AXIS));
+            emptyState.setOpaque(false);
+            emptyState.setBorder(new EmptyBorder(30, 20, 30, 20));
+
+            JLabel icon = new JLabel("📅", SwingConstants.CENTER);
+            icon.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 36));
+            icon.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+            String titleText = (selectedDate != null && selectedDate.equals(todayStr))
+                    ? "No screenings scheduled for Today (" + today.format(DateTimeFormatter.ofPattern("dd MMM yyyy")) + ")"
+                    : "No screenings scheduled for " + formatDatePill(selectedDate);
+            JLabel titleLbl = new JLabel(titleText, SwingConstants.CENTER);
+            titleLbl.setFont(new Font("Segoe UI", Font.BOLD, 14));
+            titleLbl.setForeground(Theme.TEXT_DARK);
+            titleLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+            JLabel subLbl = new JLabel("Select Tomorrow or choose another date from the filter above to view advance showtimes.", SwingConstants.CENTER);
+            subLbl.setFont(Theme.FONT_SMALL);
+            subLbl.setForeground(Theme.TEXT_MUTED);
+            subLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+            emptyState.add(icon);
+            emptyState.add(Box.createVerticalStrut(10));
+            emptyState.add(titleLbl);
+            emptyState.add(Box.createVerticalStrut(4));
+            emptyState.add(subLbl);
+            emptyState.add(Box.createVerticalStrut(14));
+
+            // Quick shortcut action buttons
+            JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
+            actionRow.setOpaque(false);
+
+            JButton viewTomorrowBtn = Theme.createPrimaryButton("View Tomorrow (" + today.plusDays(1).format(DateTimeFormatter.ofPattern("dd MMM")) + ") →");
+            viewTomorrowBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            viewTomorrowBtn.addActionListener(e -> selectDateFilter(tomorrowStr));
+            actionRow.add(viewTomorrowBtn);
+
+            JButton viewAllBtn = Theme.createSecondaryButton("View All Movies & Shows");
+            viewAllBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            viewAllBtn.addActionListener(e -> selectDateFilter("ALL"));
+            actionRow.add(viewAllBtn);
+
+            emptyState.add(actionRow);
+            showsContainerPanel.add(emptyState);
 
             selectedShow = null;
             loadSeatsForSelectedShow();
@@ -1864,9 +2200,20 @@ public class OrderBookingPage extends JPanel {
             return;
         }
 
-        // Auto select first show if current is invalid
+        // Auto select first bookable show, or first show if none bookable
+        Show defaultShow = null;
+        for (Show s : matchingShows) {
+            if (s.isBookable()) {
+                defaultShow = s;
+                break;
+            }
+        }
+        if (defaultShow == null && !matchingShows.isEmpty()) {
+            defaultShow = matchingShows.get(0);
+        }
+
         if (selectedShow == null || !matchingShows.contains(selectedShow)) {
-            selectedShow = matchingShows.get(0);
+            selectedShow = defaultShow;
         }
 
         for (Show s : matchingShows) {
@@ -1880,6 +2227,7 @@ public class OrderBookingPage extends JPanel {
 
     private JPanel createShowTile(Show show) {
         boolean isSelected = (selectedShow != null && selectedShow.getId() == show.getId());
+        final boolean bookable = show.isBookable();
 
         JPanel tile = new JPanel(new BorderLayout(6, 4)) {
             private boolean isHovered = false;
@@ -1907,14 +2255,14 @@ public class OrderBookingPage extends JPanel {
                 int w = getWidth();
                 int h = getHeight();
 
-                if (isSelected || isHovered) {
+                if (isSelected || (isHovered && bookable)) {
                     g2.setColor(new Color(239, 246, 255));
                     g2.fillRoundRect(2, 2, w - 4, h - 4, 10, 10);
                     g2.setColor(new Color(37, 99, 235));
                     g2.setStroke(new BasicStroke(1.8f));
                     g2.drawRoundRect(2, 2, w - 4, h - 4, 10, 10);
                 } else {
-                    g2.setColor(Color.WHITE);
+                    g2.setColor(bookable ? Color.WHITE : new Color(248, 250, 252));
                     g2.fillRoundRect(2, 2, w - 4, h - 4, 10, 10);
                     g2.setColor(new Color(226, 232, 240));
                     g2.setStroke(new BasicStroke(1.0f));
@@ -1925,7 +2273,7 @@ public class OrderBookingPage extends JPanel {
         };
 
         tile.setPreferredSize(new Dimension(210, 72));
-        tile.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        tile.setCursor(new Cursor(bookable ? Cursor.HAND_CURSOR : Cursor.DEFAULT_CURSOR));
         tile.setBorder(new EmptyBorder(8, 12, 8, 12));
 
         JPanel content = new JPanel();
@@ -1949,38 +2297,62 @@ public class OrderBookingPage extends JPanel {
         screenRow.add(screenLbl, BorderLayout.WEST);
         screenRow.add(typePill, BorderLayout.EAST);
 
-        // Time
+        // Time & Date (when ALL or advance)
+        JPanel timeRow = new JPanel(new BorderLayout(4, 0));
+        timeRow.setOpaque(false);
         JLabel timeLbl = new JLabel("⏰ " + show.getStartTime());
         timeLbl.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        timeLbl.setForeground(new Color(37, 99, 235));
+        timeLbl.setForeground(bookable ? new Color(37, 99, 235) : new Color(100, 116, 139));
+        timeRow.add(timeLbl, BorderLayout.WEST);
+
+        if ("ALL".equalsIgnoreCase(selectedDate)) {
+            JLabel dateLbl = new JLabel("📅 " + formatDatePill(show.getShowDate()));
+            dateLbl.setFont(new Font("Segoe UI", Font.BOLD, 10));
+            dateLbl.setForeground(new Color(100, 116, 139));
+            timeRow.add(dateLbl, BorderLayout.EAST);
+        }
 
         // Seats & Action
         JPanel botRow = new JPanel(new BorderLayout(4, 0));
         botRow.setOpaque(false);
 
         JLabel seatsLbl;
-        if (show.isStarted()) {
+        JLabel actionLbl;
+        if (!bookable) {
+            seatsLbl = new JLabel("● Booking Closed");
+            seatsLbl.setFont(Theme.FONT_SMALL);
+            seatsLbl.setForeground(new Color(225, 29, 72)); // Red
+            seatsLbl.setToolTipText("Show start time passed cutoff (>30 minutes).");
+
+            actionLbl = new JLabel("Closed ✖");
+            actionLbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            actionLbl.setForeground(new Color(148, 163, 184));
+        } else if (show.isStarted()) {
             int minsLeft = show.getMinutesUntilCutoff();
             seatsLbl = new JLabel("● " + show.getAvailableSeats() + " left • " + minsLeft + "m");
             seatsLbl.setFont(Theme.FONT_SMALL);
             seatsLbl.setForeground(new Color(217, 119, 6)); // Amber warning
             seatsLbl.setToolTipText("Show started! Booking window closes in " + minsLeft + " minutes.");
+
+            actionLbl = new JLabel("Book Seats →");
+            actionLbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            actionLbl.setForeground(new Color(37, 99, 235));
         } else {
             seatsLbl = new JLabel("● " + show.getAvailableSeats() + " seats left");
             seatsLbl.setFont(Theme.FONT_SMALL);
             seatsLbl.setForeground(new Color(22, 163, 74));
-        }
 
-        JLabel actionLbl = new JLabel("Book Seats →");
-        actionLbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        actionLbl.setForeground(new Color(37, 99, 235));
+            actionLbl = new JLabel("Book Seats →");
+            actionLbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            actionLbl.setForeground(new Color(37, 99, 235));
+        }
 
         botRow.add(seatsLbl, BorderLayout.WEST);
         botRow.add(actionLbl, BorderLayout.EAST);
 
         content.add(screenRow);
         content.add(Box.createVerticalStrut(2));
-        content.add(timeLbl);
+        content.add(timeRow);
         content.add(Box.createVerticalStrut(2));
         content.add(botRow);
 
@@ -1989,6 +2361,16 @@ public class OrderBookingPage extends JPanel {
         tile.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
+                if (!show.isBookable()) {
+                    JOptionPane.showMessageDialog(OrderBookingPage.this,
+                            "Ticket booking for this screening is closed.\n\n"
+                            + "• Movie: " + show.getMovieTitle() + "\n"
+                            + "• Showtime: " + show.getStartTime() + " (" + formatDatePill(show.getShowDate()) + ")\n"
+                            + "• Reason: Past 30-minute booking cutoff window.\n\n"
+                            + "Please select an upcoming screening.",
+                            "Screening Closed", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
                 selectShow(show);
             }
         });
@@ -2763,11 +3145,10 @@ public class OrderBookingPage extends JPanel {
                     "Show Unavailable", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        selectMovieFromExternal(show.getMovieId());
         if (show.getShowDate() != null) {
-            selectedDate = show.getShowDate();
-            renderDatesAndShows();
+            selectDateFilter(show.getShowDate());
         }
+        selectMovieFromExternal(show.getMovieId());
         selectShow(show);
     }
 

@@ -88,18 +88,21 @@ public final class ScheduleMockData {
         list.add(new ShowTemplate("Interstellar", 1, dayOffset, "02:00 PM", "05:00 PM"));
         list.add(new ShowTemplate("Kalki 2898 AD", 1, dayOffset, "05:45 PM", "08:55 PM"));
         list.add(new ShowTemplate("Deadpool & Wolverine", 1, dayOffset, "09:30 PM", "11:50 PM"));
+        list.add(new ShowTemplate("Interstellar", 1, dayOffset, "11:55 PM", "02:45 AM"));
 
         // Screen 2: Audi 2 (Dolby Atmos 4K - 150 seats)
         list.add(new ShowTemplate("Jawan", 2, dayOffset, "11:00 AM", "02:00 PM"));
         list.add(new ShowTemplate("The Dark Knight", 2, dayOffset, "02:45 PM", "05:30 PM"));
         list.add(new ShowTemplate("Stree 2", 2, dayOffset, "06:15 PM", "08:50 PM"));
         list.add(new ShowTemplate("Inception", 2, dayOffset, "09:30 PM", "12:10 AM"));
+        list.add(new ShowTemplate("Stree 2", 2, dayOffset, "11:55 PM", "02:20 AM"));
 
         // Screen 3: Audi 3 (Cine Royale 3D - 300 seats)
         list.add(new ShowTemplate("Oppenheimer", 3, dayOffset, "11:30 AM", "02:45 PM"));
         list.add(new ShowTemplate("Spider-Man: Across The Spider-Verse", 3, dayOffset, "03:30 PM", "06:00 PM"));
         list.add(new ShowTemplate("Fighter", 3, dayOffset, "06:45 PM", "09:35 PM"));
         list.add(new ShowTemplate("Avatar: The Way of Water", 3, dayOffset, "10:00 PM", "01:15 AM"));
+        list.add(new ShowTemplate("Avatar: The Way of Water", 3, dayOffset, "11:50 PM", "03:05 AM"));
 
         return list;
     }
