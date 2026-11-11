@@ -180,7 +180,7 @@ public class LoginPage extends JPanel {
         userLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
         userLabel.setForeground(new Color(15, 23, 42));
 
-        usernameField = createLightTextField("admin@gmail.com");
+        usernameField = createLightTextField("Enter email or username");
         userPanel.add(userLabel, BorderLayout.NORTH);
         userPanel.add(usernameField, BorderLayout.CENTER);
         card.add(userPanel);
@@ -196,8 +196,7 @@ public class LoginPage extends JPanel {
         passLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
         passLabel.setForeground(new Color(15, 23, 42));
 
-        passwordField = createLightPasswordField();
-        passwordField.setText("admin123");
+        passwordField = createLightPasswordField("Enter password");
         passPanel.add(passLabel, BorderLayout.NORTH);
         passPanel.add(passwordField, BorderLayout.CENTER);
         card.add(passPanel);
@@ -312,19 +311,22 @@ public class LoginPage extends JPanel {
         helperCard.setOpaque(false);
         helperCard.setBorder(new EmptyBorder(8, 12, 8, 12));
         helperCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, 65));
+        helperCard.setPreferredSize(new Dimension(356, 65));
         helperCard.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JLabel helperTitle = new JLabel("Quick Demo Credentials (Click to fill):", SwingConstants.CENTER);
         helperTitle.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         helperTitle.setForeground(new Color(100, 116, 139));
 
-        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
+        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
         btnRow.setOpaque(false);
 
-        JButton adminFillBtn = createQuickFillButton("🛡️ Admin (admin@gmail.com / admin123)");
+        JButton adminFillBtn = createQuickFillButton("🛡️ Admin");
+        adminFillBtn.setToolTipText("admin@gmail.com / admin123");
         adminFillBtn.addActionListener(e -> fillCredentials("admin@gmail.com", "admin123"));
 
-        JButton staffFillBtn = createQuickFillButton("🎫 Staff (staff@gmail.com / staff123)");
+        JButton staffFillBtn = createQuickFillButton("🎫 Staff");
+        staffFillBtn.setToolTipText("staff@gmail.com / staff123");
         staffFillBtn.addActionListener(e -> fillCredentials("staff@gmail.com", "staff123"));
 
         btnRow.add(adminFillBtn);
@@ -349,7 +351,12 @@ public class LoginPage extends JPanel {
     }
 
     public void resetFields() {
-        passwordField.setText("");
+        if (usernameField != null) {
+            usernameField.setText("");
+        }
+        if (passwordField != null) {
+            passwordField.setText("");
+        }
         hideStatus();
         if (loginButton != null) {
             loginButton.setEnabled(true);
@@ -427,16 +434,25 @@ public class LoginPage extends JPanel {
         statusCard.setVisible(false);
     }
 
-    private JTextField createLightTextField(String defaultValue) {
-        JTextField tf = new JTextField(defaultValue) {
+    private JTextField createLightTextField(String placeholder) {
+        JTextField tf = new JTextField() {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setColor(getBackground());
                 g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 8, 8);
+                super.paintComponent(g2);
+
+                if (getText().isEmpty() && !hasFocus() && placeholder != null && !placeholder.isEmpty()) {
+                    g2.setFont(getFont());
+                    g2.setColor(new Color(148, 163, 184));
+                    Insets insets = getInsets();
+                    FontMetrics fm = g2.getFontMetrics();
+                    int y = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
+                    g2.drawString(placeholder, insets.left + 2, y);
+                }
                 g2.dispose();
-                super.paintComponent(g);
             }
         };
         tf.setOpaque(false);
@@ -456,6 +472,7 @@ public class LoginPage extends JPanel {
                         new LineBorder(new Color(37, 99, 235), 2, true),
                         new EmptyBorder(7, 11, 7, 11)
                 ));
+                tf.repaint();
             }
             @Override
             public void focusLost(FocusEvent e) {
@@ -464,12 +481,13 @@ public class LoginPage extends JPanel {
                         new LineBorder(new Color(203, 213, 225), 1, true),
                         new EmptyBorder(8, 12, 8, 12)
                 ));
+                tf.repaint();
             }
         });
         return tf;
     }
 
-    private JPasswordField createLightPasswordField() {
+    private JPasswordField createLightPasswordField(String placeholder) {
         JPasswordField pf = new JPasswordField() {
             @Override
             protected void paintComponent(Graphics g) {
@@ -477,8 +495,17 @@ public class LoginPage extends JPanel {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setColor(getBackground());
                 g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 8, 8);
+                super.paintComponent(g2);
+
+                if (getPassword().length == 0 && !hasFocus() && placeholder != null && !placeholder.isEmpty()) {
+                    g2.setFont(getFont());
+                    g2.setColor(new Color(148, 163, 184));
+                    Insets insets = getInsets();
+                    FontMetrics fm = g2.getFontMetrics();
+                    int y = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
+                    g2.drawString(placeholder, insets.left + 2, y);
+                }
                 g2.dispose();
-                super.paintComponent(g);
             }
         };
         pf.setOpaque(false);
@@ -498,6 +525,7 @@ public class LoginPage extends JPanel {
                         new LineBorder(new Color(37, 99, 235), 2, true),
                         new EmptyBorder(7, 11, 7, 11)
                 ));
+                pf.repaint();
             }
             @Override
             public void focusLost(FocusEvent e) {
@@ -506,6 +534,7 @@ public class LoginPage extends JPanel {
                         new LineBorder(new Color(203, 213, 225), 1, true),
                         new EmptyBorder(8, 12, 8, 12)
                 ));
+                pf.repaint();
             }
         });
         return pf;
