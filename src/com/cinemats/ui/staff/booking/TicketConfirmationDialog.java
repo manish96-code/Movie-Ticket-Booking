@@ -3,6 +3,7 @@ package com.cinemats.ui.staff.booking;
 import com.cinemats.model.Booking;
 import com.cinemats.model.BookingItem;
 import com.cinemats.model.Ticket;
+import com.cinemats.service.WhatsAppService;
 import com.cinemats.util.QRCodeRenderer;
 import com.cinemats.util.Theme;
 
@@ -10,6 +11,7 @@ import java.math.BigDecimal;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
+import javax.swing.border.MatteBorder;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.print.Printable;
@@ -32,6 +34,7 @@ public class TicketConfirmationDialog extends JDialog {
         getContentPane().setBackground(Theme.BG_MAIN);
 
         initUI();
+        dispatchAutomaticWhatsAppSilently();
     }
 
     private void initUI() {
@@ -59,7 +62,7 @@ public class TicketConfirmationDialog extends JDialog {
         Theme.applyModernScrollBars(scrollPane);
         add(scrollPane, BorderLayout.CENTER);
 
-        // Footer Actions
+        // Footer Actions (Clean, standard, original buttons)
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 12));
         footer.setBackground(Color.WHITE);
         footer.setBorder(new LineBorder(Theme.BORDER_COLOR, 1, false));
@@ -80,6 +83,24 @@ public class TicketConfirmationDialog extends JDialog {
         footer.add(printBtn);
         footer.add(newBookingBtn);
         add(footer, BorderLayout.SOUTH);
+    }
+
+    /**
+     * Completely silent background dispatch of WhatsApp ticket.
+     * Invisible to UI, runs asynchronously, and causes no popups or UI changes.
+     */
+    private void dispatchAutomaticWhatsAppSilently() {
+        if (booking == null) return;
+        String phone = booking.getCustomerPhone();
+        if (phone == null || phone.trim().isEmpty()) return;
+
+        WhatsAppService.sendTicketAsync(booking).thenAccept(result -> {
+            if (result.isSuccess()) {
+                System.out.println("[WhatsApp] Auto-sent ticket via Twilio to " + phone + " (SID=" + result.getMessageSid() + ")");
+            } else {
+                System.err.println("[WhatsApp] Background send status for " + phone + ": " + result.getMessage());
+            }
+        });
     }
 
     private JPanel buildTicketReceipt() {
