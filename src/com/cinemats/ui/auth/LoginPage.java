@@ -180,7 +180,7 @@ public class LoginPage extends JPanel {
         userLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
         userLabel.setForeground(new Color(15, 23, 42));
 
-        usernameField = createLightTextField("admin@cinema.com");
+        usernameField = createLightTextField("admin@gmail.com");
         userPanel.add(userLabel, BorderLayout.NORTH);
         userPanel.add(usernameField, BorderLayout.CENTER);
         card.add(userPanel);
@@ -321,11 +321,11 @@ public class LoginPage extends JPanel {
         JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
         btnRow.setOpaque(false);
 
-        JButton adminFillBtn = createQuickFillButton("🛡️ Admin (admin / admin123)");
-        adminFillBtn.addActionListener(e -> fillCredentials("admin", "admin123"));
+        JButton adminFillBtn = createQuickFillButton("🛡️ Admin (admin@gmail.com / admin123)");
+        adminFillBtn.addActionListener(e -> fillCredentials("admin@gmail.com", "admin123"));
 
-        JButton staffFillBtn = createQuickFillButton("🎫 Staff (staff / staff123)");
-        staffFillBtn.addActionListener(e -> fillCredentials("staff", "staff123"));
+        JButton staffFillBtn = createQuickFillButton("🎫 Staff (staff@gmail.com / staff123)");
+        staffFillBtn.addActionListener(e -> fillCredentials("staff@gmail.com", "staff123"));
 
         btnRow.add(adminFillBtn);
         btnRow.add(staffFillBtn);

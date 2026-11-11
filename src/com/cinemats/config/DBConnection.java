@@ -312,6 +312,7 @@ public class DBConnection {
 
     // Fallback in-memory methods
     public static User authenticateFallback(String username, String password) {
+        if (username == null || password == null) return null;
         for (User u : fallbackUsers) {
             if (u.getUsername().equalsIgnoreCase(username)) {
                 if (DEFAULT_ADMIN_USER.equalsIgnoreCase(username) && DEFAULT_ADMIN_PASS.equals(password)) return u;
@@ -323,6 +324,7 @@ public class DBConnection {
     }
 
     public static boolean fallbackUserExists(String username) {
+        if (username == null) return false;
         for (User u : fallbackUsers) {
             if (u.getUsername().equalsIgnoreCase(username)) return true;
         }

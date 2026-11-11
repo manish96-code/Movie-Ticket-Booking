@@ -11,7 +11,7 @@ public final class UserMockData {
     private UserMockData() {}
 
     // Default admin credentials
-    public static final String DEFAULT_ADMIN_USER = "admin";
+    public static final String DEFAULT_ADMIN_USER = "admin@gmail.com";
     public static final String DEFAULT_ADMIN_PASS = "admin123";
     public static final String DEFAULT_ADMIN_NAME = "System Administrator";
     public static final String DEFAULT_ADMIN_COUNTER = "HQ Management Station";
@@ -19,7 +19,7 @@ public final class UserMockData {
     public static final String DEFAULT_ADMIN_PHONE = "+91 98765 00001";
 
     // Default staff credentials
-    public static final String DEFAULT_STAFF_USER = "staff";
+    public static final String DEFAULT_STAFF_USER = "staff@gmail.com";
     public static final String DEFAULT_STAFF_PASS = "staff123";
     public static final String DEFAULT_STAFF_NAME = "Rahul Sharma";
     public static final String DEFAULT_STAFF_COUNTER = "Counter #01 (Main Concourse)";

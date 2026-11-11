@@ -6,6 +6,13 @@
             "name": "Main",
             "request": "launch",
             "mainClass": "com.cinemats.Main",
+            "projectName": "ticket_booking_7220bcc6"
+        },
+        {
+            "type": "java",
+            "name": "Main",
+            "request": "launch",
+            "mainClass": "com.cinemats.Main",
             "projectName": "Movie-Ticket-Booking_800a2b49"
         },
         {

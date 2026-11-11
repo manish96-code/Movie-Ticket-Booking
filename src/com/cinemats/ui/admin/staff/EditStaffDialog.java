@@ -109,7 +109,7 @@ public class EditStaffDialog extends JDialog {
         statusCombo.setSelectedItem(user.getStatus().toUpperCase());
 
         // Protect primary admin from role or status deactivation
-        if ("admin".equalsIgnoreCase(user.getUsername())) {
+        if ("admin".equalsIgnoreCase(user.getUsername()) || "admin@gmail.com".equalsIgnoreCase(user.getUsername())) {
             roleCombo.setEnabled(false);
             statusCombo.setEnabled(false);
         }

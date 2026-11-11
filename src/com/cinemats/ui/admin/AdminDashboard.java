@@ -80,7 +80,7 @@ public class AdminDashboard extends JFrame {
     }
 
     public AdminDashboard(String adminName) {
-        this(new User("admin", "ADMIN", adminName != null ? adminName : "System Administrator"));
+        this(new User(com.cinemats.data.UserMockData.DEFAULT_ADMIN_USER, "ADMIN", adminName != null ? adminName : "System Administrator"));
     }
 
     public AdminDashboard(User user) {

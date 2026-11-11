@@ -115,7 +115,8 @@ public class UserDAO {
     // Deletes user by username
     public static boolean deleteUser(String username) {
         if (username == null) return false;
-        if ("admin".equalsIgnoreCase(username.trim())) {
+        String trimmed = username.trim();
+        if ("admin".equalsIgnoreCase(trimmed) || "admin@gmail.com".equalsIgnoreCase(trimmed)) {
             return false;
         }
 

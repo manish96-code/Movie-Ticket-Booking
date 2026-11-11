@@ -68,7 +68,7 @@ public class AddStaffPage extends JPanel {
     // Instantiates all UI components in one organized place
     private void initComponents() {
         fullNameField = Theme.createTextField("e.g. Rahul Sharma");
-        emailField = Theme.createTextField("e.g. rahul@cinemaexpress.com");
+        emailField = Theme.createTextField("e.g. rahul@gmail.com");
         phoneField = Theme.createTextField("e.g. +91 98765 43210");
 
         passwordField = new JPasswordField();
@@ -128,7 +128,7 @@ public class AddStaffPage extends JPanel {
         previewName.setForeground(Theme.TEXT_DARK);
         previewName.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        previewEmail = new JLabel("staff@cinemaexpress.com");
+        previewEmail = new JLabel("staff@gmail.com");
         previewEmail.setFont(Theme.FONT_SMALL);
         previewEmail.setForeground(Theme.TEXT_MUTED);
         previewEmail.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -424,7 +424,7 @@ public class AddStaffPage extends JPanel {
         previewName.setText(name.isEmpty() ? "Staff Member Name" : name);
 
         String email = emailField.getText().trim();
-        previewEmail.setText(email.isEmpty() ? "staff@cinemaexpress.com" : email);
+        previewEmail.setText(email.isEmpty() ? "staff@gmail.com" : email);
 
         String selectedRole = (String) roleCombo.getSelectedItem();
         if (selectedRole != null && selectedRole.startsWith("ADMIN")) {
@@ -491,49 +491,24 @@ public class AddStaffPage extends JPanel {
 
         if (hasError) return;
 
-        // Persist to MySQL
-        try (Connection conn = DBConnection.getConnection()) {
-            String insertSql = "INSERT INTO users (username, password, full_name, email, role) VALUES (?, ?, ?, ?, ?)";
-            try (PreparedStatement stmt = conn.prepareStatement(insertSql)) {
-                stmt.setString(1, email);
-                stmt.setString(2, password);
-                stmt.setString(3, name);
-                stmt.setString(4, email);
-                stmt.setString(5, role);
-
-                int rowsAffected = stmt.executeUpdate();
-                if (rowsAffected > 0) {
-                    showInlineStatus(statusBox, statusLbl, "Staff member '" + name + "' registered successfully!", true);
-                    if (dashboard != null && dashboard.getStaffAccountsPage() != null) {
-                        dashboard.getStaffAccountsPage().refreshStaffTable();
-                    }
-                    handleResetForm();
-                } else {
-                    showInlineStatus(statusBox, statusLbl, "Database insertion failed. Please retry.", false);
-                }
+        // Persist via DBConnection
+        String counter = (String) counterCombo.getSelectedItem();
+        String shift = (String) shiftCombo.getSelectedItem();
+        boolean ok = DBConnection.addUser(email, password, role, name, counter, shift, phone);
+        if (ok) {
+            showInlineStatus(statusBox, statusLbl, "Staff member '" + name + "' registered successfully!", true);
+            if (dashboard != null && dashboard.getStaffAccountsPage() != null) {
+                dashboard.getStaffAccountsPage().refreshStaffTable();
             }
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            showInlineStatus(statusBox, statusLbl, "System Error: " + ex.getMessage(), false);
+            handleResetForm();
+        } else {
+            showInlineStatus(statusBox, statusLbl, "Database insertion failed. Please retry.", false);
         }
     }
 
     // Checks database whether an email is already assigned
     private boolean emailAlreadyExists(String email) {
-        String query = "SELECT COUNT(*) FROM users WHERE LOWER(email) = LOWER(?) OR LOWER(username) = LOWER(?)";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
-            stmt.setString(1, email);
-            stmt.setString(2, email);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt(1) > 0;
-                }
-            }
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-        return false;
+        return DBConnection.userExists(email);
     }
 
     // Clears all form fields and resets badge preview

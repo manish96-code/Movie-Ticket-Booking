@@ -301,9 +301,9 @@ public class StaffAccountsPage extends JPanel {
         String email = userDisplay.startsWith("@") ? userDisplay.substring(1) : userDisplay;
         String fullName = (String) staffTableModel.getValueAt(row, 1);
 
-        if ("admin".equalsIgnoreCase(email)) {
+        if ("admin".equalsIgnoreCase(email) || "admin@gmail.com".equalsIgnoreCase(email)) {
             JOptionPane.showMessageDialog(this,
-                    "The primary super admin account ('admin') is protected and cannot be deleted.",
+                    "The primary super admin account ('" + email + "') is protected and cannot be deleted.",
                     "Protected Super User", JOptionPane.WARNING_MESSAGE);
             return;
         }
