@@ -73,7 +73,7 @@ public class OrderBookingPage extends JPanel {
     private final JLabel movieSectionTitleLbl = new JLabel("🎬 Movies Playing Today");
     private final JLabel movieCountBadge = new JLabel("0 Movies");
     private JScrollPane cardsScroll;
-    private final JPanel movieListPanel = new JPanel();
+    private final JPanel movieListPanel = new ScrollableWrapPanel(new com.cinemats.util.WrapLayout(FlowLayout.LEFT, 10, 12));
     private List<Movie> allMoviesList = new ArrayList<>();
     private List<Movie> dateFilteredMovies = new ArrayList<>();
     private List<Movie> filteredMoviesList = new ArrayList<>();
@@ -89,7 +89,7 @@ public class OrderBookingPage extends JPanel {
     private final JLabel movieBannerTitle = new JLabel("Select a Movie");
     private final JLabel movieBannerMeta = new JLabel("Choose a movie from the left to view available screening dates and showtimes");
     private final JPanel datesBarPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 6));
-    private final JPanel showsContainerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
+    private final JPanel showsContainerPanel = new ScrollableWrapPanel(new com.cinemats.util.WrapLayout(FlowLayout.LEFT, 8, 8));
 
     // --- Step 2: Exact Seating Matrix ---
     private final JPanel seatHeaderPanel = new JPanel(new BorderLayout());
@@ -261,20 +261,20 @@ public class OrderBookingPage extends JPanel {
         gbc.fill = GridBagConstraints.BOTH;
         gbc.weighty = 1.0;
 
-        // Column 1 (46%): Movie Search & Card Grid
+        // Column 1 (49%): Movie Search & Card Grid (fits 4 movie cards per row)
         gbc.gridx = 0;
-        gbc.weightx = 0.46;
+        gbc.weightx = 0.49;
         gbc.insets = new Insets(0, 0, 0, 10);
         JPanel col1 = buildMoviePanel();
         col1.setMinimumSize(new Dimension(360, 0));
         splitWorkspace.add(col1, gbc);
 
-        // Column 2 (54%): Selected Movie Details, Date Pills & Available Shows
+        // Column 2 (51%): Selected Movie Details, Date Pills & Available Shows (fits 4 show tiles per row)
         gbc.gridx = 1;
-        gbc.weightx = 0.54;
+        gbc.weightx = 0.51;
         gbc.insets = new Insets(0, 0, 0, 0);
         JPanel col2 = buildStep1ShowtimesPanel();
-        col2.setMinimumSize(new Dimension(420, 0));
+        col2.setMinimumSize(new Dimension(400, 0));
         splitWorkspace.add(col2, gbc);
 
         view.add(splitWorkspace, BorderLayout.CENTER);
@@ -363,9 +363,13 @@ public class OrderBookingPage extends JPanel {
         showSection.add(showHeader, BorderLayout.NORTH);
 
         showsContainerPanel.setBackground(Color.WHITE);
+        showsContainerPanel.setBorder(new EmptyBorder(8, 8, 20, 8));
         JScrollPane showsScroll = new JScrollPane(showsContainerPanel);
         showsScroll.setBorder(new LineBorder(Theme.BORDER_COLOR, 1, true));
         showsScroll.getViewport().setBackground(Color.WHITE);
+        showsScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        showsScroll.getVerticalScrollBar().setUnitIncrement(20);
+        showsScroll.getVerticalScrollBar().setBlockIncrement(100);
         com.cinemats.util.ModernScrollBarUI.apply(showsScroll, 8);
 
         showSection.add(showsScroll, BorderLayout.CENTER);
@@ -599,17 +603,18 @@ public class OrderBookingPage extends JPanel {
 
         panel.add(topArea, BorderLayout.NORTH);
 
-        // Scrollable Movie Cards List (Responsive Wrap Grid)
-        movieListPanel.setLayout(new com.cinemats.util.WrapLayout(FlowLayout.LEFT, 12, 14));
+        // Scrollable Movie Cards List (Responsive 4-column Wrap Grid)
+        movieListPanel.setLayout(new com.cinemats.util.WrapLayout(FlowLayout.LEFT, 10, 12));
         movieListPanel.setBackground(new Color(248, 250, 252));
-        movieListPanel.setBorder(new EmptyBorder(12, 12, 12, 12));
+        movieListPanel.setBorder(new EmptyBorder(10, 10, 24, 10));
 
         cardsScroll = new JScrollPane(movieListPanel);
         cardsScroll.setBorder(new LineBorder(new Color(226, 232, 240), 1, true));
         cardsScroll.getViewport().setBackground(new Color(248, 250, 252));
         cardsScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        cardsScroll.getVerticalScrollBar().setUnitIncrement(18);
-        com.cinemats.util.ModernScrollBarUI.apply(cardsScroll, 6);
+        cardsScroll.getVerticalScrollBar().setUnitIncrement(24);
+        cardsScroll.getVerticalScrollBar().setBlockIncrement(120);
+        com.cinemats.util.ModernScrollBarUI.apply(cardsScroll, 8);
 
         panel.add(cardsScroll, BorderLayout.CENTER);
         return panel;
@@ -743,9 +748,9 @@ public class OrderBookingPage extends JPanel {
         final String capitalizedTitle = capitalizeTitle(movie.getTitle());
         final BufferedImage posterImg = getOrLoadPosterImage(movie);
 
-        final int CARD_W = 160;
-        final int CARD_H = 248;
-        final int POSTER_H = 164;
+        final int CARD_W = 144;
+        final int CARD_H = 232;
+        final int POSTER_H = 152;
         final int ARC = 12;
 
         JPanel card = new JPanel() {
@@ -2272,9 +2277,10 @@ public class OrderBookingPage extends JPanel {
             }
         };
 
-        tile.setPreferredSize(new Dimension(210, 72));
+        tile.setPreferredSize(new Dimension(152, 70));
+        tile.setMinimumSize(new Dimension(140, 70));
         tile.setCursor(new Cursor(bookable ? Cursor.HAND_CURSOR : Cursor.DEFAULT_CURSOR));
-        tile.setBorder(new EmptyBorder(8, 12, 8, 12));
+        tile.setBorder(new EmptyBorder(6, 10, 6, 10));
 
         JPanel content = new JPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
@@ -2284,11 +2290,11 @@ public class OrderBookingPage extends JPanel {
         JPanel screenRow = new JPanel(new BorderLayout(4, 0));
         screenRow.setOpaque(false);
         JLabel screenLbl = new JLabel(show.getScreenName());
-        screenLbl.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        screenLbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
         screenLbl.setForeground(new Color(30, 41, 59));
 
         JLabel typePill = new JLabel(" " + show.getScreenType() + " ");
-        typePill.setFont(new Font("Segoe UI", Font.BOLD, 10));
+        typePill.setFont(new Font("Segoe UI", Font.BOLD, 9));
         typePill.setForeground(new Color(79, 70, 229));
         typePill.setBackground(new Color(238, 242, 255));
         typePill.setOpaque(true);
@@ -2301,13 +2307,13 @@ public class OrderBookingPage extends JPanel {
         JPanel timeRow = new JPanel(new BorderLayout(4, 0));
         timeRow.setOpaque(false);
         JLabel timeLbl = new JLabel("⏰ " + show.getStartTime());
-        timeLbl.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        timeLbl.setFont(new Font("Segoe UI", Font.BOLD, 13));
         timeLbl.setForeground(bookable ? new Color(37, 99, 235) : new Color(100, 116, 139));
         timeRow.add(timeLbl, BorderLayout.WEST);
 
         if ("ALL".equalsIgnoreCase(selectedDate)) {
             JLabel dateLbl = new JLabel("📅 " + formatDatePill(show.getShowDate()));
-            dateLbl.setFont(new Font("Segoe UI", Font.BOLD, 10));
+            dateLbl.setFont(new Font("Segoe UI", Font.BOLD, 9));
             dateLbl.setForeground(new Color(100, 116, 139));
             timeRow.add(dateLbl, BorderLayout.EAST);
         }
@@ -2319,31 +2325,31 @@ public class OrderBookingPage extends JPanel {
         JLabel seatsLbl;
         JLabel actionLbl;
         if (!bookable) {
-            seatsLbl = new JLabel("● Booking Closed");
+            seatsLbl = new JLabel("● Closed");
             seatsLbl.setFont(Theme.FONT_SMALL);
             seatsLbl.setForeground(new Color(225, 29, 72)); // Red
             seatsLbl.setToolTipText("Show start time passed cutoff (>30 minutes).");
 
             actionLbl = new JLabel("Closed ✖");
-            actionLbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            actionLbl.setFont(new Font("Segoe UI", Font.BOLD, 10));
             actionLbl.setForeground(new Color(148, 163, 184));
         } else if (show.isStarted()) {
             int minsLeft = show.getMinutesUntilCutoff();
-            seatsLbl = new JLabel("● " + show.getAvailableSeats() + " left • " + minsLeft + "m");
+            seatsLbl = new JLabel("● " + show.getAvailableSeats() + " left (" + minsLeft + "m)");
             seatsLbl.setFont(Theme.FONT_SMALL);
             seatsLbl.setForeground(new Color(217, 119, 6)); // Amber warning
             seatsLbl.setToolTipText("Show started! Booking window closes in " + minsLeft + " minutes.");
 
-            actionLbl = new JLabel("Book Seats →");
-            actionLbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            actionLbl = new JLabel("Book →");
+            actionLbl.setFont(new Font("Segoe UI", Font.BOLD, 10));
             actionLbl.setForeground(new Color(37, 99, 235));
         } else {
-            seatsLbl = new JLabel("● " + show.getAvailableSeats() + " seats left");
+            seatsLbl = new JLabel("● " + show.getAvailableSeats() + " left");
             seatsLbl.setFont(Theme.FONT_SMALL);
             seatsLbl.setForeground(new Color(22, 163, 74));
 
-            actionLbl = new JLabel("Book Seats →");
-            actionLbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            actionLbl = new JLabel("Book →");
+            actionLbl.setFont(new Font("Segoe UI", Font.BOLD, 10));
             actionLbl.setForeground(new Color(37, 99, 235));
         }
 
@@ -3176,5 +3182,41 @@ public class OrderBookingPage extends JPanel {
                 BorderFactory.createTitledBorder(new LineBorder(Theme.BORDER_COLOR), title),
                 new EmptyBorder(8, 10, 10, 10)));
         return panel;
+    }
+
+    /**
+     * Responsive Wrap Panel implementing Scrollable to track viewport width strictly.
+     * Prevents horizontal overflow in JScrollPane and ensures accurate dynamic height
+     * calculation so vertical scrolling never gets cut off or stuck.
+     */
+    private static class ScrollableWrapPanel extends JPanel implements Scrollable {
+        public ScrollableWrapPanel(LayoutManager layout) {
+            super(layout);
+        }
+
+        @Override
+        public Dimension getPreferredScrollableViewportSize() {
+            return getPreferredSize();
+        }
+
+        @Override
+        public int getScrollableUnitIncrement(Rectangle visibleRect, int orientation, int direction) {
+            return 24;
+        }
+
+        @Override
+        public int getScrollableBlockIncrement(Rectangle visibleRect, int orientation, int direction) {
+            return 120;
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportWidth() {
+            return true;
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportHeight() {
+            return false;
+        }
     }
 }
