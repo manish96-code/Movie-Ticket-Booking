@@ -47,9 +47,6 @@ public class ShowDAO {
         // Initialize related pricing and seat inventory tables
         ShowPriceDAO.initShowPricesTable();
         ShowSeatDAO.initShowSeatsTable();
-
-        // Seed default shows and tiered seat inventories if empty
-        com.cinemats.data.ScheduleMockData.seedShowsIfEmpty();
     }
 
     // Creates show, its tiered prices, and physical seat inventory in a single atomic transaction

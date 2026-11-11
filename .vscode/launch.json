@@ -3,6 +3,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "DatabaseSeeder",
+            "request": "launch",
+            "mainClass": "com.cinemats.data.DatabaseSeeder",
+            "projectName": "ticket_booking_7220bcc6"
+        },
+        {
+            "type": "java",
             "name": "Main",
             "request": "launch",
             "mainClass": "com.cinemats.Main",

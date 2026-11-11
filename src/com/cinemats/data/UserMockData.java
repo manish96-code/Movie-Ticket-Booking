@@ -33,6 +33,10 @@ public final class UserMockData {
                 DEFAULT_ADMIN_COUNTER, DEFAULT_ADMIN_SHIFT, DEFAULT_ADMIN_PHONE, "ACTIVE", "2026-09-01 09:00:00"));
         users.add(new User(2, DEFAULT_STAFF_USER, "STAFF", DEFAULT_STAFF_NAME,
                 DEFAULT_STAFF_COUNTER, DEFAULT_STAFF_SHIFT, DEFAULT_STAFF_PHONE, "ACTIVE", "2026-09-05 10:00:00"));
+        users.add(new User(3, "priya@gmail.com", "STAFF", "Priya Verma",
+                "Counter #02 (Fast-Track / Express)", "Evening Shift (03:30 PM - 10:30 PM)", "+91 98765 67890", "ACTIVE", "2026-09-10 14:00:00"));
+        users.add(new User(4, "amit@gmail.com", "STAFF", "Amit Patel",
+                "Counter #03 (VIP / Online Kiosk)", "Night Shift (06:00 PM - 01:00 AM)", "+91 98765 11223", "ACTIVE", "2026-09-15 16:30:00"));
         return users;
     }
 }

@@ -33,8 +33,18 @@ public class CategoryDAO {
             if (!DBConnection.isMySQL()) {
                 stmt.execute(createSQL);
             }
+        } catch (SQLException e) {
+            System.err.println("[CategoryDAO] Failed to initialize categories table: " + e.getMessage());
+        }
+    }
 
-            // Check if categories table is empty
+    // Seeds default categories (called exclusively by DatabaseSeeder)
+    public static synchronized void seedDefaultCategories() {
+        if (!DBConnection.isDriverAvailable()) return;
+
+        try (Connection conn = DBConnection.getConnection();
+             Statement stmt = conn.createStatement()) {
+
             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM categories");
             if (rs.next() && rs.getInt(1) == 0) {
                 String insertSQL = "INSERT INTO categories (name, description, created_at) VALUES (?, ?, ?)";
@@ -49,7 +59,7 @@ public class CategoryDAO {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("[CategoryDAO] Failed to initialize categories table: " + e.getMessage());
+            System.err.println("[CategoryDAO] Failed to seed categories: " + e.getMessage());
         }
     }
 

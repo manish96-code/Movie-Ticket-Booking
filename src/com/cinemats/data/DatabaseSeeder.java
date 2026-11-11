@@ -12,8 +12,11 @@ public class DatabaseSeeder {
     public static void main(String[] args) {
         boolean forceReset = false;
         boolean futureOnly = false;
+        boolean dropOnly = false;
         for (String arg : args) {
-            if ("--reset".equalsIgnoreCase(arg) || "-r".equalsIgnoreCase(arg) || "reset".equalsIgnoreCase(arg)) {
+            if ("--drop".equalsIgnoreCase(arg) || "--drop-only".equalsIgnoreCase(arg) || "drop".equalsIgnoreCase(arg)) {
+                dropOnly = true;
+            } else if ("--reset".equalsIgnoreCase(arg) || "-r".equalsIgnoreCase(arg) || "reset".equalsIgnoreCase(arg)) {
                 forceReset = true;
             } else if ("--future".equalsIgnoreCase(arg) || "-f".equalsIgnoreCase(arg) || "future".equalsIgnoreCase(arg)) {
                 futureOnly = true;
@@ -23,6 +26,16 @@ public class DatabaseSeeder {
         System.out.println("==================================================");
         System.out.println("   Cinema Express - Database Seeder Utility       ");
         System.out.println("==================================================");
+
+        if (dropOnly) {
+            System.out.println("⚡ Drop mode activated: deleting all database tables and records...");
+            resetDatabase();
+            DBConnection.resetInitializedFlag();
+            System.out.println("==================================================");
+            System.out.println("✅ All database tables and data successfully dropped!");
+            System.out.println("==================================================");
+            return;
+        }
 
         if (futureOnly) {
             System.out.println("📅 Seeding future shows (+3 to +10 days)...");
@@ -42,6 +55,13 @@ public class DatabaseSeeder {
 
         System.out.println("🌱 Initializing MySQL schema & seeding mock data...");
         DBConnection.initDatabase();
+
+        // Explicitly seed all domain modules
+        com.cinemats.dao.CategoryDAO.seedDefaultCategories();
+        com.cinemats.dao.MovieDAO.seedDefaultMovies();
+        com.cinemats.dao.ScreenDAO.seedDefaultScreens();
+        com.cinemats.dao.ScreenSeatDAO.seedDefaultScreenSeats();
+        ScheduleMockData.seedShowsForRange(-1, 10);
         BookingMockData.seedWeeklyBookings(6, 1);
 
         if (!DBConnection.isDriverAvailable()) {

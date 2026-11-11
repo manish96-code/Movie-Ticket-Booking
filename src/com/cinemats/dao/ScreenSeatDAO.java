@@ -37,8 +37,18 @@ public class ScreenSeatDAO {
             if (!DBConnection.isMySQL()) {
                 stmt.execute(createSQL);
             }
+        } catch (SQLException e) {
+            System.err.println("[ScreenSeatDAO] Failed to initialize screen_seats table: " + e.getMessage());
+        }
+    }
 
-            // Check if screen_seats table is empty
+    // Seeds default screen seats (called exclusively by DatabaseSeeder)
+    public static synchronized void seedDefaultScreenSeats() {
+        if (!DBConnection.isDriverAvailable()) return;
+
+        try (Connection conn = DBConnection.getConnection();
+             Statement stmt = conn.createStatement()) {
+
             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM screen_seats");
             if (rs.next() && rs.getInt(1) == 0) {
                 String insertSQL = "INSERT INTO screen_seats (screen_id, row_name, seat_number, seat_label, seat_type, status, created_at, updated_at) "
@@ -62,7 +72,7 @@ public class ScreenSeatDAO {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("[ScreenSeatDAO] Failed to initialize screen_seats table: " + e.getMessage());
+            System.err.println("[ScreenSeatDAO] Failed to seed screen_seats: " + e.getMessage());
         }
     }
 

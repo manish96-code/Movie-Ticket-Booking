@@ -73,8 +73,16 @@ public class MovieDAO {
                     stmt.execute("ALTER TABLE movies ADD COLUMN gst_rate DECIMAL(5,2) DEFAULT 18.00");
                 } catch (SQLException ignored) {}
             }
+        } catch (SQLException e) {
+            System.err.println("[MovieDAO] Failed to initialize movies table: " + e.getMessage());
+        }
+    }
 
-            // Synchronize movie catalogue: seed new movies and update posters for existing movies
+    // Seeds default movies catalogue (called exclusively by DatabaseSeeder)
+    public static synchronized void seedDefaultMovies() {
+        if (!DBConnection.isDriverAvailable()) return;
+
+        try (Connection conn = DBConnection.getConnection()) {
             String checkSQL = "SELECT id, image_path FROM movies WHERE LOWER(TRIM(title)) = LOWER(TRIM(?))";
             String updateSQL = "UPDATE movies SET image_path = ?, language = ?, release_date = ?, genre = ?, duration_mins = ?, rating = ? WHERE id = ?";
             String insertSQL = "INSERT INTO movies (title, genre, duration_mins, rating, poster_label, status, image_path, language, release_date) "
@@ -117,7 +125,7 @@ public class MovieDAO {
                 System.out.println("[MovieDAO] Verified and synchronized movie catalogue with poster assets.");
             }
         } catch (SQLException e) {
-            System.err.println("[MovieDAO] Failed to initialize movies table: " + e.getMessage());
+            System.err.println("[MovieDAO] Failed to seed movies: " + e.getMessage());
         }
     }
 

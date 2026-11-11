@@ -35,8 +35,18 @@ public class ScreenDAO {
             if (!DBConnection.isMySQL()) {
                 stmt.execute(createSQL);
             }
+        } catch (SQLException e) {
+            System.err.println("[ScreenDAO] Failed to initialize screens table: " + e.getMessage());
+        }
+    }
 
-            // Check if screens table is empty
+    // Seeds default screens (called exclusively by DatabaseSeeder)
+    public static synchronized void seedDefaultScreens() {
+        if (!DBConnection.isDriverAvailable()) return;
+
+        try (Connection conn = DBConnection.getConnection();
+             Statement stmt = conn.createStatement()) {
+
             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM screens");
             if (rs.next() && rs.getInt(1) == 0) {
                 String insertSQL = "INSERT INTO screens (id, name, screen_number, screen_type, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)";
@@ -55,7 +65,7 @@ public class ScreenDAO {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("[ScreenDAO] Failed to initialize screens table: " + e.getMessage());
+            System.err.println("[ScreenDAO] Failed to seed screens: " + e.getMessage());
         }
     }
 

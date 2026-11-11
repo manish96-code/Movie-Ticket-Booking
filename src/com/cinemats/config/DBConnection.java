@@ -148,11 +148,10 @@ public class DBConnection {
             initMySQLSchema(conn);
 
             // Seed default users in users table if not exists
-            seedUser(conn, UserMockData.DEFAULT_ADMIN_USER, UserMockData.DEFAULT_ADMIN_PASS, "ADMIN", UserMockData.DEFAULT_ADMIN_NAME,
-                    UserMockData.DEFAULT_ADMIN_COUNTER, UserMockData.DEFAULT_ADMIN_SHIFT, UserMockData.DEFAULT_ADMIN_PHONE);
-
-            seedUser(conn, UserMockData.DEFAULT_STAFF_USER, UserMockData.DEFAULT_STAFF_PASS, "STAFF", UserMockData.DEFAULT_STAFF_NAME,
-                    UserMockData.DEFAULT_STAFF_COUNTER, UserMockData.DEFAULT_STAFF_SHIFT, UserMockData.DEFAULT_STAFF_PHONE);
+            for (User u : UserMockData.getInitialUsers()) {
+                seedUser(conn, u.getUsername(), u.isAdmin() ? UserMockData.DEFAULT_ADMIN_PASS : UserMockData.DEFAULT_STAFF_PASS,
+                        u.getRole(), u.getFullName(), u.getCounter(), u.getShift(), u.getPhone());
+            }
 
             initialized = true;
 
