@@ -7,6 +7,10 @@ bin/
 # Local database credentials (DO NOT COMMIT)
 db.properties
 
+# Twilio notification credentials (DO NOT COMMIT)
+whatsapp.properties
+sms.properties
+
 # Temporary / OS files
 .DS_Store
 Thumbs.db

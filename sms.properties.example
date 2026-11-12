@@ -1,0 +1,10 @@
+# Cinema Express - SMS Notification Configuration (Twilio REST API)
+# Copy this file to sms.properties and fill in your Twilio credentials.
+# DO NOT commit sms.properties with real credentials.
+
+twilio.sms.enabled=false
+twilio.account.sid=YOUR_TWILIO_ACCOUNT_SID
+twilio.auth.token=YOUR_TWILIO_AUTH_TOKEN
+twilio.sms.from.number=+17372508034
+twilio.sms.template=sms_order_confirmation
+twilio.default.country.code=+91

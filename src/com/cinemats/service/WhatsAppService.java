@@ -24,15 +24,14 @@ import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Service to dispatch automated free-form WhatsApp movie ticket confirmations
- * to customers
+ * Service to dispatch automated free-form WhatsApp movie ticket confirmations to customers
  * via Twilio WhatsApp Sandbox REST API.
  * Uses native Java HttpClient (zero external JAR dependencies required).
  */
 public class WhatsAppService {
 
-    private static String accountSid = "YOUR_TWILIO_ACCOUNT_SID";
-    private static String authToken = "YOUR_TWILIO_AUTH_TOKEN";
+    private static String accountSid = "";
+    private static String authToken = "";
     // Official Twilio WhatsApp Sandbox sender
     private static String fromNumber = "whatsapp:+14155238886";
     private static String defaultCountryCode = "+91";
@@ -44,8 +43,7 @@ public class WhatsAppService {
     }
 
     public static synchronized void loadConfig() {
-        if (loaded)
-            return;
+        if (loaded) return;
         Properties props = new Properties();
 
         String[] configPaths = {
@@ -63,8 +61,7 @@ public class WhatsAppService {
                     found = true;
                     System.out.println("[WhatsAppService] Loaded config from " + f.getAbsolutePath());
                     break;
-                } catch (Exception ignored) {
-                }
+                } catch (Exception ignored) {}
             }
         }
 
@@ -73,18 +70,28 @@ public class WhatsAppService {
                 if (in != null) {
                     props.load(in);
                 }
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) {}
         }
 
         enabled = Boolean.parseBoolean(props.getProperty("twilio.whatsapp.enabled", "true"));
+
+        // Priority: Environment variables > properties file > empty default
+        String envSid = System.getenv("TWILIO_ACCOUNT_SID");
+        String envToken = System.getenv("TWILIO_AUTH_TOKEN");
+
         String sid = props.getProperty("twilio.account.sid", "").trim();
-        if (!sid.isEmpty())
+        if (envSid != null && !envSid.trim().isEmpty()) {
+            accountSid = envSid.trim();
+        } else if (!sid.isEmpty() && !sid.contains("YOUR_TWILIO")) {
             accountSid = sid;
+        }
 
         String token = props.getProperty("twilio.auth.token", "").trim();
-        if (!token.isEmpty())
+        if (envToken != null && !envToken.trim().isEmpty()) {
+            authToken = envToken.trim();
+        } else if (!token.isEmpty() && !token.contains("YOUR_TWILIO")) {
             authToken = token;
+        }
 
         String from = props.getProperty("twilio.from.number", "whatsapp:+14155238886").trim();
         if (!from.isEmpty()) {
@@ -92,8 +99,7 @@ public class WhatsAppService {
         }
 
         String cc = props.getProperty("twilio.default.country.code", "+91").trim();
-        if (!cc.isEmpty())
-            defaultCountryCode = cc;
+        if (!cc.isEmpty()) defaultCountryCode = cc;
 
         loaded = true;
     }
@@ -135,11 +141,10 @@ public class WhatsAppService {
     }
 
     /**
-     * Persists updated WhatsApp configuration to properties files and updates
-     * runtime memory.
+     * Persists updated WhatsApp configuration to properties files and updates runtime memory.
      */
     public static synchronized boolean saveConfig(boolean newEnabled, String newAccountSid, String newAuthToken,
-            String newFromNumber, String newCountryCode) {
+                                                  String newFromNumber, String newCountryCode) {
         enabled = newEnabled;
         if (newAccountSid != null && !newAccountSid.trim().isEmpty()) {
             accountSid = newAccountSid.trim();
@@ -148,8 +153,7 @@ public class WhatsAppService {
             authToken = newAuthToken.trim();
         }
         if (newFromNumber != null && !newFromNumber.trim().isEmpty()) {
-            fromNumber = newFromNumber.trim().startsWith("whatsapp:") ? newFromNumber.trim()
-                    : "whatsapp:" + newFromNumber.trim();
+            fromNumber = newFromNumber.trim().startsWith("whatsapp:") ? newFromNumber.trim() : "whatsapp:" + newFromNumber.trim();
         }
         if (newCountryCode != null && !newCountryCode.trim().isEmpty()) {
             defaultCountryCode = newCountryCode.trim();
@@ -160,8 +164,7 @@ public class WhatsAppService {
         if (propFile.exists()) {
             try (InputStream in = new FileInputStream(propFile)) {
                 props.load(in);
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) {}
         }
 
         props.setProperty("twilio.whatsapp.enabled", String.valueOf(enabled));
@@ -174,8 +177,7 @@ public class WhatsAppService {
         try (FileOutputStream out = new FileOutputStream(propFile)) {
             props.store(out, "Cinema Express - WhatsApp Notification Configuration (Twilio Sandbox API)");
             ok = true;
-            System.out.println("[WhatsAppService] Successfully saved settings to " + propFile.getAbsolutePath()
-                    + " (enabled=" + enabled + ", from=" + fromNumber + ")");
+            System.out.println("[WhatsAppService] Successfully saved settings to " + propFile.getAbsolutePath() + " (enabled=" + enabled + ", from=" + fromNumber + ")");
         } catch (Exception e) {
             System.err.println("[WhatsAppService] Error saving whatsapp.properties: " + e.getMessage());
         }
@@ -184,8 +186,7 @@ public class WhatsAppService {
         if (binFile.getParentFile() != null && binFile.getParentFile().exists()) {
             try (FileOutputStream out = new FileOutputStream(binFile)) {
                 props.store(out, "Cinema Express - WhatsApp Notification Configuration (Twilio Sandbox API)");
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) {}
         }
 
         return ok;
@@ -195,7 +196,7 @@ public class WhatsAppService {
      * Backward-compatible overload ignoring template IDs.
      */
     public static synchronized boolean saveConfig(boolean newEnabled, String newAccountSid, String newAuthToken,
-            String newFromNumber, String ignoredContentSid, String newCountryCode) {
+                                                  String newFromNumber, String ignoredContentSid, String newCountryCode) {
         return saveConfig(newEnabled, newAccountSid, newAuthToken, newFromNumber, newCountryCode);
     }
 
@@ -207,15 +208,12 @@ public class WhatsAppService {
     }
 
     /**
-     * Cleans and formats phone number with international country code (e.g.
-     * 9876543210 -> +919876543210).
+     * Cleans and formats phone number with international country code (e.g. 9876543210 -> +919876543210).
      */
     public static String formatPhoneNumber(String rawPhone) {
-        if (rawPhone == null)
-            return null;
+        if (rawPhone == null) return null;
         String digits = rawPhone.replaceAll("[^0-9+]", "");
-        if (digits.isEmpty())
-            return null;
+        if (digits.isEmpty()) return null;
 
         if (digits.startsWith("+")) {
             return digits;
@@ -233,8 +231,7 @@ public class WhatsAppService {
     }
 
     /**
-     * Formats customer ticket receipt for WhatsApp matching the exact expected
-     * custom layout:
+     * Formats customer ticket receipt for WhatsApp matching the exact expected custom layout:
      *
      * 🎬 MOVIE TICKET CONFIRMED!
      *
@@ -269,35 +266,30 @@ public class WhatsAppService {
         sb.append("🎬 MOVIE TICKET CONFIRMED!\n\n");
 
         String customer = (booking.getCustomerName() != null && !booking.getCustomerName().trim().isEmpty())
-                ? booking.getCustomerName().trim()
-                : "Valued Guest";
+                ? booking.getCustomerName().trim() : "Valued Guest";
         sb.append("Hello ").append(customer).append(",\n\n");
         sb.append("Your movie ticket has been successfully booked.\n\n");
         sb.append("━━━━━━━━━━━━━━━━\n\n");
 
         String movie = (booking.getMovieTitle() != null && !booking.getMovieTitle().trim().isEmpty())
-                ? booking.getMovieTitle().trim()
-                : "Cinema Screening";
+                ? booking.getMovieTitle().trim() : "Cinema Screening";
         sb.append("🎥 Movie: ").append(movie).append("\n\n");
 
         sb.append("📅 Date: ").append(formatShowDate(booking.getShowDate())).append("\n\n");
 
         String time = (booking.getStartTime() != null && !booking.getStartTime().trim().isEmpty())
-                ? booking.getStartTime().trim()
-                : "Showtime";
+                ? booking.getStartTime().trim() : "Showtime";
         sb.append("🕒 Time: ").append(time).append("\n\n");
 
         String screen = (booking.getScreenName() != null && !booking.getScreenName().trim().isEmpty())
-                ? booking.getScreenName().trim()
-                : "Audi 1";
+                ? booking.getScreenName().trim() : "Audi 1";
         sb.append("🏢 Screen: ").append(screen).append("\n\n");
 
         String seats = booking.getFormattedSeats();
         sb.append("💺 Seats: ").append(seats != null && !seats.isEmpty() ? seats : "Standard").append("\n\n");
 
         String bookingId = (booking.getBookingNumber() != null && !booking.getBookingNumber().trim().isEmpty())
-                ? booking.getBookingNumber().trim()
-                : "BK";
+                ? booking.getBookingNumber().trim() : "BK";
         sb.append("🎟️ Booking ID: ").append(bookingId).append("\n\n");
 
         String amount = (booking.getTotalAmount() != null)
@@ -313,8 +305,7 @@ public class WhatsAppService {
     }
 
     private static String formatShowDate(String dateStr) {
-        if (dateStr == null || dateStr.trim().isEmpty())
-            return "Today";
+        if (dateStr == null || dateStr.trim().isEmpty()) return "Today";
         try {
             LocalDate d = LocalDate.parse(dateStr.trim());
             return d.format(DateTimeFormatter.ofPattern("d MMMM yyyy"));
@@ -337,8 +328,7 @@ public class WhatsAppService {
             this(success, message, messageSid, twilioConfigured, success ? "accepted" : "failed");
         }
 
-        public DeliveryResult(boolean success, String message, String messageSid, boolean twilioConfigured,
-                String status) {
+        public DeliveryResult(boolean success, String message, String messageSid, boolean twilioConfigured, String status) {
             this.success = success;
             this.message = message;
             this.messageSid = messageSid;
@@ -369,25 +359,21 @@ public class WhatsAppService {
 
     /**
      * Asynchronously sends the ticket confirmation via Twilio WhatsApp REST API.
-     * Checks if WhatsApp notifications are enabled by Admin before attempting
-     * dispatch.
-     * Runs in a background thread and does not block the UI or fail the booking
-     * transaction.
+     * Checks if WhatsApp notifications are enabled by Admin before attempting dispatch.
+     * Runs in a background thread and does not block the UI or fail the booking transaction.
      */
     public static CompletableFuture<DeliveryResult> sendTicketAsync(Booking booking) {
         if (!enabled) {
-            System.out
-                    .println("[WhatsAppService] WhatsApp notifications disabled by Admin setting. Skipping dispatch.");
+            System.out.println("[WhatsAppService] WhatsApp notifications disabled by Admin setting. Skipping dispatch.");
             return CompletableFuture.completedFuture(
-                    new DeliveryResult(false, "WhatsApp notifications are turned OFF in System Settings", null,
-                            isTwilioConfigured(), "disabled"));
+                    new DeliveryResult(false, "WhatsApp notifications are turned OFF in System Settings", null, isTwilioConfigured(), "disabled")
+            );
         }
         return dispatchToTwilio(booking);
     }
 
     /**
-     * Sends a test WhatsApp ticket confirmation to the specified phone number to
-     * verify connection.
+     * Sends a test WhatsApp ticket confirmation to the specified phone number to verify connection.
      */
     public static CompletableFuture<DeliveryResult> sendTestMessage(String targetPhone) {
         Booking testBooking = new Booking();
@@ -411,8 +397,7 @@ public class WhatsAppService {
 
     /**
      * Internal worker to dispatch booking confirmation to Twilio WhatsApp REST API.
-     * Strictly uses free-form 'Body' payload. Never falls back to default
-     * appointment or order templates.
+     * Strictly uses free-form 'Body' payload. Never falls back to default appointment or order templates.
      */
     private static CompletableFuture<DeliveryResult> dispatchToTwilio(Booking booking) {
         return CompletableFuture.supplyAsync(() -> {
@@ -423,8 +408,7 @@ public class WhatsAppService {
 
                 String formattedPhone = formatPhoneNumber(booking.getCustomerPhone());
                 if (formattedPhone == null || formattedPhone.length() < 10) {
-                    return new DeliveryResult(false, "Customer phone number is missing or invalid", null,
-                            isTwilioConfigured(), "failed");
+                    return new DeliveryResult(false, "Customer phone number is missing or invalid", null, isTwilioConfigured(), "failed");
                 }
 
                 if (!isTwilioConfigured()) {
@@ -439,14 +423,14 @@ public class WhatsAppService {
                 String bodyText = buildTicketMessage(booking);
 
                 String authHeader = "Basic " + Base64.getEncoder().encodeToString(
-                        (accountSid + ":" + authToken).getBytes(StandardCharsets.UTF_8));
+                        (accountSid + ":" + authToken).getBytes(StandardCharsets.UTF_8)
+                );
 
                 HttpClient client = HttpClient.newBuilder()
                         .connectTimeout(Duration.ofSeconds(8))
                         .build();
 
-                // Send purely free-form WhatsApp message using Body only (no ContentSid, no
-                // ContentVariables)
+                // Send purely free-form WhatsApp message using Body only (no ContentSid, no ContentVariables)
                 String customPostData = "From=" + URLEncoder.encode(fromNumber, StandardCharsets.UTF_8)
                         + "&To=" + URLEncoder.encode(toWhatsApp, StandardCharsets.UTF_8)
                         + "&Body=" + URLEncoder.encode(bodyText, StandardCharsets.UTF_8);
@@ -459,8 +443,7 @@ public class WhatsAppService {
                         .POST(HttpRequest.BodyPublishers.ofString(customPostData))
                         .build();
 
-                System.out.println("[WhatsAppService] Dispatching actual movie ticket message to " + toWhatsApp
-                        + " via " + fromNumber + "...");
+                System.out.println("[WhatsAppService] Dispatching actual movie ticket message to " + toWhatsApp + " via " + fromNumber + "...");
                 HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
                 int code = response.statusCode();
@@ -469,43 +452,33 @@ public class WhatsAppService {
                 if (code == 201 || code == 200) {
                     String sid = extractJsonField(respBody, "sid");
                     String status = extractJsonField(respBody, "status");
-                    if (status == null || status.isEmpty())
-                        status = "accepted";
-                    System.out.println("[WhatsAppService] Successfully dispatched WhatsApp ticket! Message SID=" + sid
-                            + " (Status: " + status + ")");
-                    return new DeliveryResult(true,
-                            "Sent to " + formattedPhone + " via Twilio WhatsApp Sandbox (" + status + ")", sid, true,
-                            status);
+                    if (status == null || status.isEmpty()) status = "accepted";
+                    System.out.println("[WhatsAppService] Successfully dispatched WhatsApp ticket! Message SID=" + sid + " (Status: " + status + ")");
+                    return new DeliveryResult(true, "Sent to " + formattedPhone + " via Twilio WhatsApp Sandbox (" + status + ")", sid, true, status);
                 } else {
                     int twilioCode = extractIntField(respBody, "code");
                     String rawMsg = extractJsonField(respBody, "message");
                     String friendlyError = formatFriendlyError(twilioCode, rawMsg, fromNumber);
-                    System.err.println("[WhatsAppService] WhatsApp delivery rejected by Twilio (HTTP " + code
-                            + ", Error " + twilioCode + "): " + friendlyError);
+                    System.err.println("[WhatsAppService] WhatsApp delivery rejected by Twilio (HTTP " + code + ", Error " + twilioCode + "): " + friendlyError);
                     return new DeliveryResult(false, friendlyError, null, true, "failed");
                 }
             } catch (Exception e) {
-                System.err.println(
-                        "[WhatsAppService] Network exception while sending WhatsApp ticket: " + e.getMessage());
-                return new DeliveryResult(false, "Network error: " + e.getMessage(), null, isTwilioConfigured(),
-                        "failed");
+                System.err.println("[WhatsAppService] Network exception while sending WhatsApp ticket: " + e.getMessage());
+                return new DeliveryResult(false, "Network error: " + e.getMessage(), null, isTwilioConfigured(), "failed");
             }
         });
     }
 
     /**
-     * Translates Twilio WhatsApp error codes into actionable, clear diagnostic
-     * messages.
+     * Translates Twilio WhatsApp error codes into actionable, clear diagnostic messages.
      */
     private static String formatFriendlyError(int twilioCode, String rawMsg, String fromSender) {
         switch (twilioCode) {
             case 21654:
             case 63016:
-                return "24-hour customer messaging window is closed. To receive free-form WhatsApp ticket details, recipient must first send 'join <sandbox-code>' or a message to "
-                        + fromSender + " on WhatsApp.";
+                return "24-hour customer messaging window is closed. To receive free-form WhatsApp ticket details, recipient must first send 'join <sandbox-code>' or a message to " + fromSender + " on WhatsApp.";
             case 63015:
-                return "Recipient has not joined the Twilio WhatsApp Sandbox (" + fromSender
-                        + "). Please send sandbox join code from the recipient phone.";
+                return "Recipient has not joined the Twilio WhatsApp Sandbox (" + fromSender + "). Please send sandbox join code from the recipient phone.";
             case 21211:
             case 21614:
                 return "Invalid recipient phone number format. Please ensure country code is included.";
@@ -556,8 +529,7 @@ public class WhatsAppService {
     }
 
     private static String extractJsonField(String json, String field) {
-        if (json == null)
-            return "";
+        if (json == null) return "";
         String target = "\"" + field + "\":";
         int idx = json.indexOf(target);
         if (idx != -1) {
@@ -571,8 +543,7 @@ public class WhatsAppService {
     }
 
     private static int extractIntField(String json, String field) {
-        if (json == null)
-            return 0;
+        if (json == null) return 0;
         String target = "\"" + field + "\":";
         int idx = json.indexOf(target);
         if (idx != -1) {
@@ -587,8 +558,7 @@ public class WhatsAppService {
             if (start < end) {
                 try {
                     return Integer.parseInt(json.substring(start, end));
-                } catch (NumberFormatException ignored) {
-                }
+                } catch (NumberFormatException ignored) {}
             }
         }
         return 0;
