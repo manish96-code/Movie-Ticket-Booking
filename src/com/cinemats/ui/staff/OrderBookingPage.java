@@ -1219,6 +1219,38 @@ public class OrderBookingPage extends JPanel {
         content.add(custHeader);
         content.add(Box.createVerticalStrut(6));
 
+        JLabel phoneLbl = new JLabel("Mobile Number (10 digits) *");
+        phoneLbl.setFont(Theme.FONT_BOLD_SM);
+        phoneLbl.setForeground(Theme.TEXT_DARK);
+        phoneLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        content.add(phoneLbl);
+        content.add(Box.createVerticalStrut(4));
+
+        customerPhoneField = createStyledInputField("Enter 10-digit mobile number");
+        customerPhoneField.setAlignmentX(Component.LEFT_ALIGNMENT);
+        customerPhoneField.getDocument().addDocumentListener(new DocumentListener() {
+            public void insertUpdate(DocumentEvent e) {
+                handlePhoneLookup();
+            }
+
+            public void removeUpdate(DocumentEvent e) {
+                handlePhoneLookup();
+            }
+
+            public void changedUpdate(DocumentEvent e) {
+                handlePhoneLookup();
+            }
+        });
+        content.add(customerPhoneField);
+        content.add(Box.createVerticalStrut(4));
+
+        customerBadge = new JLabel("● Enter 10-digit mobile number");
+        customerBadge.setFont(Theme.FONT_SMALL);
+        customerBadge.setForeground(Theme.TEXT_MUTED);
+        customerBadge.setAlignmentX(Component.LEFT_ALIGNMENT);
+        content.add(customerBadge);
+        content.add(Box.createVerticalStrut(10));
+
         JLabel nameLbl = new JLabel("Customer Name *");
         nameLbl.setFont(Theme.FONT_BOLD_SM);
         nameLbl.setForeground(Theme.TEXT_DARK);
@@ -1251,38 +1283,6 @@ public class OrderBookingPage extends JPanel {
             }
         });
         content.add(customerNameField);
-        content.add(Box.createVerticalStrut(10));
-
-        JLabel phoneLbl = new JLabel("Mobile Number (10 digits) *");
-        phoneLbl.setFont(Theme.FONT_BOLD_SM);
-        phoneLbl.setForeground(Theme.TEXT_DARK);
-        phoneLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
-        content.add(phoneLbl);
-        content.add(Box.createVerticalStrut(4));
-
-        customerPhoneField = createStyledInputField("Enter 10-digit mobile number");
-        customerPhoneField.setAlignmentX(Component.LEFT_ALIGNMENT);
-        customerPhoneField.getDocument().addDocumentListener(new DocumentListener() {
-            public void insertUpdate(DocumentEvent e) {
-                handlePhoneLookup();
-            }
-
-            public void removeUpdate(DocumentEvent e) {
-                handlePhoneLookup();
-            }
-
-            public void changedUpdate(DocumentEvent e) {
-                handlePhoneLookup();
-            }
-        });
-        content.add(customerPhoneField);
-        content.add(Box.createVerticalStrut(4));
-
-        customerBadge = new JLabel("● Enter 10-digit mobile number");
-        customerBadge.setFont(Theme.FONT_SMALL);
-        customerBadge.setForeground(Theme.TEXT_MUTED);
-        customerBadge.setAlignmentX(Component.LEFT_ALIGNMENT);
-        content.add(customerBadge);
         content.add(Box.createVerticalStrut(16));
 
         // 4. Payment Method Section
