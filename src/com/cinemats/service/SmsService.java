@@ -23,7 +23,8 @@ import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Service to dispatch automated SMS booking confirmations to customers via Twilio REST API.
+ * Service to dispatch automated SMS booking confirmations to customers via
+ * Twilio REST API.
  * Uses native Java HttpClient (zero external JAR dependencies required).
  */
 public class SmsService {
@@ -41,7 +42,8 @@ public class SmsService {
     }
 
     public static synchronized void loadConfig() {
-        if (loaded) return;
+        if (loaded)
+            return;
         Properties props = new Properties();
 
         String[] configPaths = {
@@ -61,7 +63,8 @@ public class SmsService {
                     found = true;
                     System.out.println("[SmsService] Loaded config from " + f.getAbsolutePath());
                     break;
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                }
             }
         }
 
@@ -70,17 +73,20 @@ public class SmsService {
                 if (in != null) {
                     props.load(in);
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
 
         enabled = Boolean.parseBoolean(props.getProperty("twilio.sms.enabled",
                 props.getProperty("twilio.enabled", "true")));
 
         String sid = props.getProperty("twilio.account.sid", "").trim();
-        if (!sid.isEmpty()) accountSid = sid;
+        if (!sid.isEmpty())
+            accountSid = sid;
 
         String token = props.getProperty("twilio.auth.token", "").trim();
-        if (!token.isEmpty()) authToken = token;
+        if (!token.isEmpty())
+            authToken = token;
 
         String from = props.getProperty("twilio.sms.from.number",
                 props.getProperty("twilio.from.number", "")).trim();
@@ -89,10 +95,12 @@ public class SmsService {
         }
 
         String tmpl = props.getProperty("twilio.sms.template", "").trim();
-        if (!tmpl.isEmpty()) smsTemplate = tmpl;
+        if (!tmpl.isEmpty())
+            smsTemplate = tmpl;
 
         String cc = props.getProperty("twilio.default.country.code", "").trim();
-        if (!cc.isEmpty()) defaultCountryCode = cc;
+        if (!cc.isEmpty())
+            defaultCountryCode = cc;
 
         loaded = true;
     }
@@ -141,7 +149,7 @@ public class SmsService {
      * Persists updated SMS configuration to properties files and runtime memory.
      */
     public static synchronized boolean saveConfig(boolean newEnabled, String newAccountSid, String newAuthToken,
-                                                  String newFromNumber, String newTemplate, String newCountryCode) {
+            String newFromNumber, String newTemplate, String newCountryCode) {
         enabled = newEnabled;
         if (newAccountSid != null && !newAccountSid.trim().isEmpty()) {
             accountSid = newAccountSid.trim();
@@ -164,7 +172,8 @@ public class SmsService {
         if (propFile.exists()) {
             try (InputStream in = new FileInputStream(propFile)) {
                 props.load(in);
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
 
         props.setProperty("twilio.sms.enabled", String.valueOf(enabled));
@@ -178,7 +187,8 @@ public class SmsService {
         try (FileOutputStream out = new FileOutputStream(propFile)) {
             props.store(out, "Cinema Express - SMS Notification Configuration (Twilio REST API)");
             ok = true;
-            System.out.println("[SmsService] Successfully saved settings to " + propFile.getAbsolutePath() + " (enabled=" + enabled + ")");
+            System.out.println("[SmsService] Successfully saved settings to " + propFile.getAbsolutePath()
+                    + " (enabled=" + enabled + ")");
         } catch (Exception e) {
             System.err.println("[SmsService] Error saving sms.properties: " + e.getMessage());
         }
@@ -187,7 +197,8 @@ public class SmsService {
         if (binFile.getParentFile() != null && binFile.getParentFile().exists()) {
             try (FileOutputStream out = new FileOutputStream(binFile)) {
                 props.store(out, "Cinema Express - SMS Notification Configuration (Twilio REST API)");
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
 
         return ok;
@@ -201,12 +212,15 @@ public class SmsService {
     }
 
     /**
-     * Formats phone number with international country code (e.g. 9876543210 -> +919876543210).
+     * Formats phone number with international country code (e.g. 9876543210 ->
+     * +919876543210).
      */
     public static String formatPhoneNumber(String rawPhone) {
-        if (rawPhone == null) return null;
+        if (rawPhone == null)
+            return null;
         String digits = rawPhone.replaceAll("[^0-9+]", "");
-        if (digits.isEmpty()) return null;
+        if (digits.isEmpty())
+            return null;
 
         if (digits.startsWith("+")) {
             return digits;
@@ -231,11 +245,13 @@ public class SmsService {
         sb.append("🎬 Movie Ticket Confirmed!\n\n");
 
         String customer = (booking.getCustomerName() != null && !booking.getCustomerName().trim().isEmpty())
-                ? booking.getCustomerName() : "Valued Guest";
+                ? booking.getCustomerName()
+                : "Valued Guest";
         sb.append("Customer: ").append(customer).append("\n");
 
         String movie = (booking.getMovieTitle() != null && !booking.getMovieTitle().trim().isEmpty())
-                ? booking.getMovieTitle() : "Movie";
+                ? booking.getMovieTitle()
+                : "Movie";
         sb.append("Movie: ").append(movie).append("\n");
 
         sb.append("Date: ").append(formatShowDate(booking.getShowDate())).append("\n");
@@ -247,7 +263,8 @@ public class SmsService {
         String seats = booking.getFormattedSeats();
         sb.append("Seats: ").append(seats != null && !seats.isEmpty() ? seats : "Standard").append("\n");
 
-        sb.append("Booking ID: ").append(booking.getBookingNumber() != null ? booking.getBookingNumber() : "BK").append("\n");
+        sb.append("Booking ID: ").append(booking.getBookingNumber() != null ? booking.getBookingNumber() : "BK")
+                .append("\n");
 
         String amount = (booking.getTotalAmount() != null) ? booking.getTotalAmount().toPlainString() : "0";
         sb.append("Amount: ₹").append(amount).append("\n\n");
@@ -257,7 +274,8 @@ public class SmsService {
     }
 
     private static String formatShowDate(String dateStr) {
-        if (dateStr == null || dateStr.trim().isEmpty()) return "Today";
+        if (dateStr == null || dateStr.trim().isEmpty())
+            return "Today";
         try {
             LocalDate d = LocalDate.parse(dateStr.trim());
             return d.format(DateTimeFormatter.ofPattern("d MMMM yyyy"));
@@ -308,14 +326,15 @@ public class SmsService {
         if (!enabled) {
             System.out.println("[SmsService] SMS notifications disabled by Admin setting. Skipping dispatch.");
             return CompletableFuture.completedFuture(
-                    new DeliveryResult(false, "SMS notifications are turned OFF in System Settings", null, isTwilioConfigured())
-            );
+                    new DeliveryResult(false, "SMS notifications are turned OFF in System Settings", null,
+                            isTwilioConfigured()));
         }
         return dispatchToTwilio(booking);
     }
 
     /**
-     * Sends a test SMS confirmation to the specified phone number to verify connection.
+     * Sends a test SMS confirmation to the specified phone number to verify
+     * connection.
      */
     public static CompletableFuture<DeliveryResult> sendTestMessage(String targetPhone) {
         Booking testBooking = new Booking();
@@ -352,7 +371,8 @@ public class SmsService {
 
                 String formattedPhone = formatPhoneNumber(booking.getCustomerPhone());
                 if (formattedPhone == null || formattedPhone.length() < 10) {
-                    return new DeliveryResult(false, "Customer phone number is missing or invalid", null, isTwilioConfigured());
+                    return new DeliveryResult(false, "Customer phone number is missing or invalid", null,
+                            isTwilioConfigured());
                 }
 
                 if (!isTwilioConfigured()) {
@@ -366,8 +386,7 @@ public class SmsService {
                 String bodyText = buildTicketMessage(booking);
 
                 String authHeader = "Basic " + Base64.getEncoder().encodeToString(
-                        (accountSid + ":" + authToken).getBytes(StandardCharsets.UTF_8)
-                );
+                        (accountSid + ":" + authToken).getBytes(StandardCharsets.UTF_8));
 
                 HttpClient client = HttpClient.newBuilder()
                         .connectTimeout(Duration.ofSeconds(8))
@@ -392,33 +411,15 @@ public class SmsService {
                 int code = response.statusCode();
                 String respBody = response.body();
 
-                // 2. Fallback to predefined template if trial account restricts custom body (Error 572006)
-                if (code == 400 && (respBody.contains("572006") || respBody.contains("template"))
-                        && smsTemplate != null && !smsTemplate.isEmpty()) {
-                    System.out.println("[SmsService] Trial account restricted, falling back to predefined template: " + smsTemplate);
-                    String templatePostData = "From=" + URLEncoder.encode(fromNumber, StandardCharsets.UTF_8)
-                            + "&To=" + URLEncoder.encode(formattedPhone, StandardCharsets.UTF_8)
-                            + "&Body=" + URLEncoder.encode(smsTemplate, StandardCharsets.UTF_8);
-
-                    HttpRequest templateReq = HttpRequest.newBuilder()
-                            .uri(URI.create(apiUrl))
-                            .timeout(Duration.ofSeconds(12))
-                            .header("Authorization", authHeader)
-                            .header("Content-Type", "application/x-www-form-urlencoded")
-                            .POST(HttpRequest.BodyPublishers.ofString(templatePostData))
-                            .build();
-
-                    response = client.send(templateReq, HttpResponse.BodyHandlers.ofString());
-                    code = response.statusCode();
-                    respBody = response.body();
-                }
-
                 if (code == 201 || code == 200) {
                     String sid = extractSid(respBody);
                     System.out.println("[SmsService] Successfully dispatched SMS! SID=" + sid);
                     return new DeliveryResult(true, "Sent to " + formattedPhone + " via Twilio SMS", sid, true);
                 } else {
                     String err = parseErrorMessage(respBody, code);
+                    if (code == 400 && respBody.contains("572006")) {
+                        err = "Twilio Trial limitation: Custom SMS body is restricted by Twilio Trial accounts. Upgrade account to enable custom SMS.";
+                    }
                     System.err.println("[SmsService] Twilio SMS API Error (" + code + "): " + err);
                     return new DeliveryResult(false, err, null, true);
                 }
@@ -430,7 +431,8 @@ public class SmsService {
     }
 
     private static String extractSid(String json) {
-        if (json == null) return "";
+        if (json == null)
+            return "";
         int idx = json.indexOf("\"sid\":");
         if (idx != -1) {
             int start = json.indexOf("\"", idx + 6);
@@ -443,7 +445,8 @@ public class SmsService {
     }
 
     private static String parseErrorMessage(String json, int statusCode) {
-        if (json == null || json.isEmpty()) return "HTTP " + statusCode;
+        if (json == null || json.isEmpty())
+            return "HTTP " + statusCode;
         int idx = json.indexOf("\"message\":");
         if (idx != -1) {
             int start = json.indexOf("\"", idx + 10);
@@ -455,4 +458,3 @@ public class SmsService {
         return "Twilio Error (" + statusCode + ")";
     }
 }
-
