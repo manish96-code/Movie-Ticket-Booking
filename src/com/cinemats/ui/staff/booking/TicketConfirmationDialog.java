@@ -3,6 +3,7 @@ package com.cinemats.ui.staff.booking;
 import com.cinemats.model.Booking;
 import com.cinemats.model.BookingItem;
 import com.cinemats.model.Ticket;
+import com.cinemats.service.NotificationAuditLog;
 import com.cinemats.service.SmsService;
 import com.cinemats.service.WhatsAppService;
 import com.cinemats.util.QRCodeRenderer;
@@ -91,9 +92,15 @@ public class TicketConfirmationDialog extends JDialog {
      * Invisible to UI, runs asynchronously, and causes no popups or UI interruptions.
      */
     private void dispatchAutomaticNotificationsSilently() {
-        if (booking == null) return;
+        if (booking == null) {
+            NotificationAuditLog.record("ALL", "-", "-", "SKIPPED", "Booking data unavailable for notification dispatch");
+            return;
+        }
         String phone = booking.getCustomerPhone();
-        if (phone == null || phone.trim().isEmpty()) return;
+        if (phone == null || phone.trim().isEmpty()) {
+            NotificationAuditLog.record("ALL", booking.getBookingNumber(), "-", "SKIPPED", "Customer mobile number is empty");
+            return;
+        }
 
         // 1. WhatsApp Dispatch (if enabled in settings)
         WhatsAppService.sendTicketAsync(booking).thenAccept(result -> {

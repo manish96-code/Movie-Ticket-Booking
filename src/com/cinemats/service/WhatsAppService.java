@@ -30,15 +30,23 @@ import java.util.concurrent.CompletableFuture;
  */
 public class WhatsAppService {
 
+    public static final String SANDBOX_SENDER = "whatsapp:+14155238886";
+
     private static String accountSid = "";
     private static String authToken = "";
     // Official Twilio WhatsApp Sandbox sender
-    private static String fromNumber = "whatsapp:+14155238886";
+    private static String fromNumber = SANDBOX_SENDER;
     private static String defaultCountryCode = "+91";
     private static boolean enabled = true;
+    private static boolean sandboxMode = true;
     private static boolean loaded = false;
 
     static {
+        loadConfig();
+    }
+
+    public static synchronized void reloadConfig() {
+        loaded = false;
         loadConfig();
     }
 
@@ -74,28 +82,35 @@ public class WhatsAppService {
         }
 
         enabled = Boolean.parseBoolean(props.getProperty("twilio.whatsapp.enabled", "true"));
+        sandboxMode = Boolean.parseBoolean(props.getProperty("twilio.sandbox.enabled", "true"));
 
-        // Priority: Environment variables > properties file > empty default
+        // Priority: Saved System Settings (non-placeholder properties) > Environment variables > empty default
         String envSid = System.getenv("TWILIO_ACCOUNT_SID");
         String envToken = System.getenv("TWILIO_AUTH_TOKEN");
 
         String sid = props.getProperty("twilio.account.sid", "").trim();
-        if (envSid != null && !envSid.trim().isEmpty()) {
-            accountSid = envSid.trim();
-        } else if (!sid.isEmpty() && !sid.contains("YOUR_TWILIO")) {
+        if (!sid.isEmpty() && !sid.contains("YOUR_TWILIO")) {
             accountSid = sid;
+        } else if (envSid != null && !envSid.trim().isEmpty()) {
+            accountSid = envSid.trim();
+        } else {
+            accountSid = "";
         }
 
         String token = props.getProperty("twilio.auth.token", "").trim();
-        if (envToken != null && !envToken.trim().isEmpty()) {
-            authToken = envToken.trim();
-        } else if (!token.isEmpty() && !token.contains("YOUR_TWILIO")) {
+        if (!token.isEmpty() && !token.contains("YOUR_TWILIO")) {
             authToken = token;
+        } else if (envToken != null && !envToken.trim().isEmpty()) {
+            authToken = envToken.trim();
+        } else {
+            authToken = "";
         }
 
-        String from = props.getProperty("twilio.from.number", "whatsapp:+14155238886").trim();
+        String from = props.getProperty("twilio.from.number", SANDBOX_SENDER).trim();
         if (!from.isEmpty()) {
             fromNumber = from.startsWith("whatsapp:") ? from : "whatsapp:" + from;
+        } else {
+            fromNumber = SANDBOX_SENDER;
         }
 
         String cc = props.getProperty("twilio.default.country.code", "+91").trim();
@@ -108,11 +123,18 @@ public class WhatsAppService {
      * Checks if real Twilio credentials are configured.
      */
     public static boolean isTwilioConfigured() {
+        return isAccountSidConfigured() && isAuthTokenConfigured();
+    }
+
+    public static boolean isAccountSidConfigured() {
         return accountSid != null
-                && !accountSid.isEmpty()
-                && !accountSid.contains("YOUR_TWILIO")
-                && authToken != null
-                && !authToken.isEmpty()
+                && !accountSid.trim().isEmpty()
+                && !accountSid.contains("YOUR_TWILIO");
+    }
+
+    public static boolean isAuthTokenConfigured() {
+        return authToken != null
+                && !authToken.trim().isEmpty()
                 && !authToken.contains("YOUR_TWILIO");
     }
 
@@ -124,8 +146,20 @@ public class WhatsAppService {
         enabled = value;
     }
 
+    public static boolean isSandboxMode() {
+        return sandboxMode;
+    }
+
+    public static void setSandboxMode(boolean value) {
+        sandboxMode = value;
+    }
+
     public static String getAccountSid() {
         return accountSid != null ? accountSid : "";
+    }
+
+    public static String getMaskedAccountSid() {
+        return NotificationAuditLog.maskIdentifier(accountSid);
     }
 
     public static String getAuthToken() {
@@ -133,7 +167,15 @@ public class WhatsAppService {
     }
 
     public static String getFromNumber() {
-        return fromNumber != null ? fromNumber : "whatsapp:+14155238886";
+        return fromNumber != null && !fromNumber.isEmpty() ? fromNumber : SANDBOX_SENDER;
+    }
+
+    /**
+     * Returns the active WhatsApp sender number. Always uses Twilio WhatsApp Sandbox sender
+     * when Sandbox mode is enabled.
+     */
+    public static String getEffectiveFromNumber() {
+        return sandboxMode ? SANDBOX_SENDER : getFromNumber();
     }
 
     public static String getDefaultCountryCode() {
@@ -141,19 +183,100 @@ public class WhatsAppService {
     }
 
     /**
+     * Result of validating Twilio WhatsApp configuration fields.
+     */
+    public static class ValidationResult {
+        private final boolean valid;
+        private final String errorMessage;
+
+        public ValidationResult(boolean valid, String errorMessage) {
+            this.valid = valid;
+            this.errorMessage = errorMessage;
+        }
+
+        public boolean isValid() {
+            return valid;
+        }
+
+        public String getErrorMessage() {
+            return errorMessage;
+        }
+    }
+
+    /**
+     * Validates candidate configuration values before saving or dispatching.
+     */
+    public static ValidationResult validateConfig(String sid, String tokenInput, boolean allowExistingTokenIfBlank,
+                                                  boolean useSandbox, String senderInput, String countryCodeInput) {
+        String cleanSid = sid != null ? sid.trim() : "";
+        if (cleanSid.isEmpty() || cleanSid.contains("YOUR_TWILIO")) {
+            return new ValidationResult(false, "Twilio Account SID is required (starts with 'AC', 34 characters).");
+        }
+        if (!cleanSid.matches("^AC[0-9a-fA-F]{32}$")) {
+            return new ValidationResult(false, "Invalid Twilio Account SID format. It must start with 'AC' followed by 32 hex characters.");
+        }
+
+        String cleanToken = tokenInput != null ? tokenInput.trim() : "";
+        if (cleanToken.isEmpty()) {
+            if (!allowExistingTokenIfBlank || !isAuthTokenConfigured()) {
+                return new ValidationResult(false, "Twilio Auth Token is required.");
+            }
+        } else {
+            if (cleanToken.contains("YOUR_TWILIO") || cleanToken.contains("*") || cleanToken.contains("•")) {
+                return new ValidationResult(false, "Enter a valid Twilio Auth Token (placeholder or masked characters are not allowed).");
+            }
+            if (cleanToken.length() < 16 || cleanToken.matches(".*\\s+.*")) {
+                return new ValidationResult(false, "Invalid Twilio Auth Token format (must be at least 16 characters with no spaces).");
+            }
+        }
+
+        if (!useSandbox) {
+            String cleanSender = senderInput != null ? senderInput.trim() : "";
+            if (cleanSender.isEmpty()) {
+                return new ValidationResult(false, "WhatsApp Sender Number is required when Sandbox Mode is disabled.");
+            }
+            String normalizedSender = cleanSender.startsWith("whatsapp:") ? cleanSender.substring("whatsapp:".length()) : cleanSender;
+            if (!normalizedSender.matches("^\\+[1-9][0-9]{7,14}$")) {
+                return new ValidationResult(false, "Invalid WhatsApp Sender Number. Use E.164 format, e.g., whatsapp:+14155238886.");
+            }
+        }
+
+        if (countryCodeInput != null && !countryCodeInput.trim().isEmpty()) {
+            if (!countryCodeInput.trim().matches("^\\+[1-9][0-9]{0,3}$")) {
+                return new ValidationResult(false, "Invalid Default Country Code. Example: +91 or +1.");
+            }
+        }
+
+        return new ValidationResult(true, "Configuration is valid.");
+    }
+
+    /**
+     * Validates currently loaded runtime configuration.
+     */
+    public static ValidationResult validateCurrentConfig() {
+        return validateConfig(accountSid, authToken, false, sandboxMode, fromNumber, defaultCountryCode);
+    }
+
+    /**
      * Persists updated WhatsApp configuration to properties files and updates runtime memory.
      */
-    public static synchronized boolean saveConfig(boolean newEnabled, String newAccountSid, String newAuthToken,
-                                                  String newFromNumber, String newCountryCode) {
+    public static synchronized boolean saveConfig(boolean newEnabled, boolean newSandboxMode, String newAccountSid,
+                                                  String newAuthToken, String newFromNumber, String newCountryCode) {
         enabled = newEnabled;
+        sandboxMode = newSandboxMode;
+
         if (newAccountSid != null && !newAccountSid.trim().isEmpty()) {
             accountSid = newAccountSid.trim();
         }
-        if (newAuthToken != null && !newAuthToken.trim().isEmpty() && !newAuthToken.contains("*")) {
+        if (newAuthToken != null && !newAuthToken.trim().isEmpty()
+                && !newAuthToken.contains("*") && !newAuthToken.contains("•")) {
             authToken = newAuthToken.trim();
         }
-        if (newFromNumber != null && !newFromNumber.trim().isEmpty()) {
-            fromNumber = newFromNumber.trim().startsWith("whatsapp:") ? newFromNumber.trim() : "whatsapp:" + newFromNumber.trim();
+        if (newSandboxMode) {
+            fromNumber = SANDBOX_SENDER;
+        } else if (newFromNumber != null && !newFromNumber.trim().isEmpty()) {
+            String trimmed = newFromNumber.trim();
+            fromNumber = trimmed.startsWith("whatsapp:") ? trimmed : "whatsapp:" + trimmed;
         }
         if (newCountryCode != null && !newCountryCode.trim().isEmpty()) {
             defaultCountryCode = newCountryCode.trim();
@@ -168,16 +291,19 @@ public class WhatsAppService {
         }
 
         props.setProperty("twilio.whatsapp.enabled", String.valueOf(enabled));
+        props.setProperty("twilio.sandbox.enabled", String.valueOf(sandboxMode));
         props.setProperty("twilio.account.sid", accountSid != null ? accountSid : "");
         props.setProperty("twilio.auth.token", authToken != null ? authToken : "");
-        props.setProperty("twilio.from.number", fromNumber != null ? fromNumber : "whatsapp:+14155238886");
+        props.setProperty("twilio.from.number", getEffectiveFromNumber());
         props.setProperty("twilio.default.country.code", defaultCountryCode != null ? defaultCountryCode : "+91");
 
         boolean ok = false;
         try (FileOutputStream out = new FileOutputStream(propFile)) {
             props.store(out, "Cinema Express - WhatsApp Notification Configuration (Twilio Sandbox API)");
             ok = true;
-            System.out.println("[WhatsAppService] Successfully saved settings to " + propFile.getAbsolutePath() + " (enabled=" + enabled + ", from=" + fromNumber + ")");
+            System.out.println("[WhatsAppService] Saved settings to " + propFile.getAbsolutePath()
+                    + " (enabled=" + enabled + ", sandbox=" + sandboxMode
+                    + ", sid=" + getMaskedAccountSid() + ", from=" + getEffectiveFromNumber() + ")");
         } catch (Exception e) {
             System.err.println("[WhatsAppService] Error saving whatsapp.properties: " + e.getMessage());
         }
@@ -189,7 +315,18 @@ public class WhatsAppService {
             } catch (Exception ignored) {}
         }
 
+        // Keep shared Twilio credentials synchronized with SmsService
+        SmsService.syncTwilioCredentials(accountSid, authToken, defaultCountryCode);
+        NotificationAuditLog.record("CONFIG", "-", getEffectiveFromNumber(), ok ? "SAVED" : "FAILED",
+                ok ? "WhatsApp/Twilio settings updated (enabled=" + enabled + ", sandbox=" + sandboxMode + ")"
+                        : "Failed to write whatsapp.properties");
+
         return ok;
+    }
+
+    public static synchronized boolean saveConfig(boolean newEnabled, String newAccountSid, String newAuthToken,
+                                                  String newFromNumber, String newCountryCode) {
+        return saveConfig(newEnabled, sandboxMode, newAccountSid, newAuthToken, newFromNumber, newCountryCode);
     }
 
     /**
@@ -197,14 +334,14 @@ public class WhatsAppService {
      */
     public static synchronized boolean saveConfig(boolean newEnabled, String newAccountSid, String newAuthToken,
                                                   String newFromNumber, String ignoredContentSid, String newCountryCode) {
-        return saveConfig(newEnabled, newAccountSid, newAuthToken, newFromNumber, newCountryCode);
+        return saveConfig(newEnabled, sandboxMode, newAccountSid, newAuthToken, newFromNumber, newCountryCode);
     }
 
     /**
      * Convenience method to update and persist the enabled status switch.
      */
     public static synchronized boolean setEnabledAndSave(boolean newEnabled) {
-        return saveConfig(newEnabled, accountSid, authToken, fromNumber, defaultCountryCode);
+        return saveConfig(newEnabled, sandboxMode, accountSid, authToken, fromNumber, defaultCountryCode);
     }
 
     /**
@@ -363,13 +500,99 @@ public class WhatsAppService {
      * Runs in a background thread and does not block the UI or fail the booking transaction.
      */
     public static CompletableFuture<DeliveryResult> sendTicketAsync(Booking booking) {
+        String bookingNum = (booking != null) ? booking.getBookingNumber() : "-";
+        String phone = (booking != null) ? booking.getCustomerPhone() : "-";
+
         if (!enabled) {
-            System.out.println("[WhatsAppService] WhatsApp notifications disabled by Admin setting. Skipping dispatch.");
+            String reason = "WhatsApp notifications are turned OFF in System Settings";
+            System.out.println("[WhatsAppService] " + reason + ". Skipping dispatch.");
+            NotificationAuditLog.record("WHATSAPP", bookingNum, phone, "SKIPPED", reason);
             return CompletableFuture.completedFuture(
-                    new DeliveryResult(false, "WhatsApp notifications are turned OFF in System Settings", null, isTwilioConfigured(), "disabled")
+                    new DeliveryResult(false, reason, null, isTwilioConfigured(), "disabled")
             );
         }
         return dispatchToTwilio(booking);
+    }
+
+    /**
+     * Connection test result.
+     */
+    public static class ConnectionTestResult {
+        private final boolean success;
+        private final int httpStatus;
+        private final String message;
+        private final String details;
+
+        public ConnectionTestResult(boolean success, int httpStatus, String message, String details) {
+            this.success = success;
+            this.httpStatus = httpStatus;
+            this.message = message;
+            this.details = details;
+        }
+
+        public boolean isSuccess() { return success; }
+        public int getHttpStatus() { return httpStatus; }
+        public String getMessage() { return message; }
+        public String getDetails() { return details; }
+    }
+
+    /**
+     * Validates live Twilio API credentials against Twilio's Account verification endpoint.
+     */
+    public static CompletableFuture<ConnectionTestResult> testTwilioConnection() {
+        return CompletableFuture.supplyAsync(() -> {
+            if (!isTwilioConfigured()) {
+                return new ConnectionTestResult(false, 0,
+                        "Twilio credentials not configured. Please fill Account SID and Auth Token.",
+                        "Status: Unconfigured");
+            }
+
+            try {
+                String apiUrl = "https://api.twilio.com/2010-04-01/Accounts/" + accountSid + ".json";
+                String authHeader = "Basic " + Base64.getEncoder().encodeToString(
+                        (accountSid + ":" + authToken).getBytes(StandardCharsets.UTF_8)
+                );
+
+                HttpClient client = HttpClient.newBuilder()
+                        .connectTimeout(Duration.ofSeconds(8))
+                        .build();
+
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(apiUrl))
+                        .timeout(Duration.ofSeconds(10))
+                        .header("Authorization", authHeader)
+                        .GET()
+                        .build();
+
+                HttpResponse<String> resp = client.send(request, HttpResponse.BodyHandlers.ofString());
+                int code = resp.statusCode();
+                String body = resp.body();
+
+                if (code == 200) {
+                    String friendlyName = extractJsonField(body, "friendly_name");
+                    String acctStatus = extractJsonField(body, "status");
+                    String type = extractJsonField(body, "type");
+                    String info = "Account: " + (friendlyName.isEmpty() ? getMaskedAccountSid() : friendlyName)
+                            + " | Status: " + acctStatus
+                            + (type.isEmpty() ? "" : " (" + type + ")");
+                    NotificationAuditLog.record("WHATSAPP", "-", getEffectiveFromNumber(), "TEST_SUCCESS", info);
+                    return new ConnectionTestResult(true, code, "Twilio credentials verified successfully!", info);
+                } else if (code == 401) {
+                    String err = "Authentication failed (HTTP 401). Account SID or Auth Token is incorrect.";
+                    NotificationAuditLog.record("WHATSAPP", "-", getEffectiveFromNumber(), "TEST_FAILED", err);
+                    return new ConnectionTestResult(false, code, err, "Twilio error: " + extractJsonField(body, "message"));
+                } else {
+                    String rawMsg = extractJsonField(body, "message");
+                    String err = "Twilio returned HTTP " + code + (rawMsg.isEmpty() ? "" : ": " + rawMsg);
+                    NotificationAuditLog.record("WHATSAPP", "-", getEffectiveFromNumber(), "TEST_FAILED", err);
+                    return new ConnectionTestResult(false, code, err, body);
+                }
+            } catch (Exception ex) {
+                String err = "Connection error: " + ex.getMessage();
+                NotificationAuditLog.record("WHATSAPP", "-", getEffectiveFromNumber(), "TEST_FAILED", err);
+                return new ConnectionTestResult(false, 0, err, ex.toString());
+            }
+        });
     }
 
     /**
@@ -401,23 +624,29 @@ public class WhatsAppService {
      */
     private static CompletableFuture<DeliveryResult> dispatchToTwilio(Booking booking) {
         return CompletableFuture.supplyAsync(() -> {
+            String bookingNum = (booking != null) ? booking.getBookingNumber() : "-";
             try {
                 if (booking == null) {
+                    NotificationAuditLog.record("WHATSAPP", "-", "-", "SKIPPED", "No booking provided");
                     return new DeliveryResult(false, "No booking provided", null, isTwilioConfigured(), "failed");
                 }
 
-                String formattedPhone = formatPhoneNumber(booking.getCustomerPhone());
+                String rawPhone = booking.getCustomerPhone();
+                String formattedPhone = formatPhoneNumber(rawPhone);
                 if (formattedPhone == null || formattedPhone.length() < 10) {
-                    return new DeliveryResult(false, "Customer phone number is missing or invalid", null, isTwilioConfigured(), "failed");
+                    String reason = "Customer phone number is missing or invalid: " + rawPhone;
+                    NotificationAuditLog.record("WHATSAPP", bookingNum, rawPhone, "SKIPPED", reason);
+                    return new DeliveryResult(false, reason, null, isTwilioConfigured(), "failed");
                 }
 
                 if (!isTwilioConfigured()) {
-                    System.out.println("[WhatsAppService] Twilio credentials not configured in System Settings.");
-                    return new DeliveryResult(false,
-                            "Twilio credentials not configured in System Settings",
-                            null, false, "unconfigured");
+                    String reason = "Twilio credentials not configured in System Settings (Account SID or Auth Token missing).";
+                    System.out.println("[WhatsAppService] " + reason);
+                    NotificationAuditLog.record("WHATSAPP", bookingNum, formattedPhone, "SKIPPED", reason);
+                    return new DeliveryResult(false, reason, null, false, "unconfigured");
                 }
 
+                String activeSender = getEffectiveFromNumber();
                 String toWhatsApp = "whatsapp:" + formattedPhone;
                 String apiUrl = "https://api.twilio.com/2010-04-01/Accounts/" + accountSid + "/Messages.json";
                 String bodyText = buildTicketMessage(booking);
@@ -431,7 +660,7 @@ public class WhatsAppService {
                         .build();
 
                 // Send purely free-form WhatsApp message using Body only (no ContentSid, no ContentVariables)
-                String customPostData = "From=" + URLEncoder.encode(fromNumber, StandardCharsets.UTF_8)
+                String customPostData = "From=" + URLEncoder.encode(activeSender, StandardCharsets.UTF_8)
                         + "&To=" + URLEncoder.encode(toWhatsApp, StandardCharsets.UTF_8)
                         + "&Body=" + URLEncoder.encode(bodyText, StandardCharsets.UTF_8);
 
@@ -443,7 +672,7 @@ public class WhatsAppService {
                         .POST(HttpRequest.BodyPublishers.ofString(customPostData))
                         .build();
 
-                System.out.println("[WhatsAppService] Dispatching actual movie ticket message to " + toWhatsApp + " via " + fromNumber + "...");
+                System.out.println("[WhatsAppService] Dispatching actual movie ticket message to " + toWhatsApp + " via " + activeSender + "...");
                 HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
                 int code = response.statusCode();
@@ -454,16 +683,19 @@ public class WhatsAppService {
                     String status = extractJsonField(respBody, "status");
                     if (status == null || status.isEmpty()) status = "accepted";
                     System.out.println("[WhatsAppService] Successfully dispatched WhatsApp ticket! Message SID=" + sid + " (Status: " + status + ")");
-                    return new DeliveryResult(true, "Sent to " + formattedPhone + " via Twilio WhatsApp Sandbox (" + status + ")", sid, true, status);
+                    NotificationAuditLog.record("WHATSAPP", bookingNum, formattedPhone, "SENT", "SID=" + sid + " status=" + status);
+                    return new DeliveryResult(true, "Sent to " + formattedPhone + " via Twilio WhatsApp (" + status + ")", sid, true, status);
                 } else {
                     int twilioCode = extractIntField(respBody, "code");
                     String rawMsg = extractJsonField(respBody, "message");
-                    String friendlyError = formatFriendlyError(twilioCode, rawMsg, fromNumber);
+                    String friendlyError = formatFriendlyError(twilioCode, rawMsg, activeSender);
                     System.err.println("[WhatsAppService] WhatsApp delivery rejected by Twilio (HTTP " + code + ", Error " + twilioCode + "): " + friendlyError);
+                    NotificationAuditLog.record("WHATSAPP", bookingNum, formattedPhone, "FAILED", "Twilio code " + twilioCode + ": " + friendlyError);
                     return new DeliveryResult(false, friendlyError, null, true, "failed");
                 }
             } catch (Exception e) {
                 System.err.println("[WhatsAppService] Network exception while sending WhatsApp ticket: " + e.getMessage());
+                NotificationAuditLog.record("WHATSAPP", bookingNum, "-", "FAILED", "Network error: " + e.getMessage());
                 return new DeliveryResult(false, "Network error: " + e.getMessage(), null, isTwilioConfigured(), "failed");
             }
         });

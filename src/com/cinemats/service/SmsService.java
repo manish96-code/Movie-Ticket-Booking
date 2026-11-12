@@ -40,16 +40,19 @@ public class SmsService {
         loadConfig();
     }
 
+    public static synchronized void reloadConfig() {
+        loaded = false;
+        loadConfig();
+    }
+
     public static synchronized void loadConfig() {
         if (loaded) return;
         Properties props = new Properties();
 
         String[] configPaths = {
                 "sms.properties",
-                "whatsapp.properties",
                 "config/sms.properties",
-                System.getProperty("user.dir") + "/sms.properties",
-                System.getProperty("user.dir") + "/whatsapp.properties"
+                System.getProperty("user.dir") + "/sms.properties"
         };
 
         boolean found = false;
@@ -74,28 +77,45 @@ public class SmsService {
         }
 
         enabled = Boolean.parseBoolean(props.getProperty("twilio.sms.enabled",
-                props.getProperty("twilio.enabled", "true")));
+                props.getProperty("twilio.enabled", "false")));
 
-        // Priority: Environment variables > properties file > empty default
+        // Priority: Saved sms.properties > shared whatsapp.properties > Environment variables > empty default
+        Properties waProps = new Properties();
+        File waFile = new File("whatsapp.properties");
+        if (waFile.exists() && waFile.isFile()) {
+            try (InputStream in = new FileInputStream(waFile)) {
+                waProps.load(in);
+            } catch (Exception ignored) {}
+        }
+
         String envSid = System.getenv("TWILIO_ACCOUNT_SID");
         String envToken = System.getenv("TWILIO_AUTH_TOKEN");
 
         String sid = props.getProperty("twilio.account.sid", "").trim();
-        if (envSid != null && !envSid.trim().isEmpty()) {
-            accountSid = envSid.trim();
-        } else if (!sid.isEmpty() && !sid.contains("YOUR_TWILIO")) {
+        String waSid = waProps.getProperty("twilio.account.sid", "").trim();
+        if (!sid.isEmpty() && !sid.contains("YOUR_TWILIO")) {
             accountSid = sid;
+        } else if (!waSid.isEmpty() && !waSid.contains("YOUR_TWILIO")) {
+            accountSid = waSid;
+        } else if (envSid != null && !envSid.trim().isEmpty()) {
+            accountSid = envSid.trim();
+        } else {
+            accountSid = "";
         }
 
         String token = props.getProperty("twilio.auth.token", "").trim();
-        if (envToken != null && !envToken.trim().isEmpty()) {
-            authToken = envToken.trim();
-        } else if (!token.isEmpty() && !token.contains("YOUR_TWILIO")) {
+        String waToken = waProps.getProperty("twilio.auth.token", "").trim();
+        if (!token.isEmpty() && !token.contains("YOUR_TWILIO")) {
             authToken = token;
+        } else if (!waToken.isEmpty() && !waToken.contains("YOUR_TWILIO")) {
+            authToken = waToken;
+        } else if (envToken != null && !envToken.trim().isEmpty()) {
+            authToken = envToken.trim();
+        } else {
+            authToken = "";
         }
 
-        String from = props.getProperty("twilio.sms.from.number",
-                props.getProperty("twilio.from.number", "")).trim();
+        String from = props.getProperty("twilio.sms.from.number", "").trim();
         if (!from.isEmpty()) {
             fromNumber = from.replace("whatsapp:", "");
         }
@@ -107,6 +127,24 @@ public class SmsService {
         if (!cc.isEmpty()) defaultCountryCode = cc;
 
         loaded = true;
+    }
+
+    /**
+     * Synchronizes shared Twilio Account SID, Auth Token, and Country Code from System Settings.
+     */
+    public static synchronized void syncTwilioCredentials(String newAccountSid, String newAuthToken, String newCountryCode) {
+        if (newAccountSid != null && !newAccountSid.trim().isEmpty() && !newAccountSid.contains("YOUR_TWILIO")) {
+            accountSid = newAccountSid.trim();
+        }
+        if (newAuthToken != null && !newAuthToken.trim().isEmpty()
+                && !newAuthToken.contains("YOUR_TWILIO")
+                && !newAuthToken.contains("*") && !newAuthToken.contains("•")) {
+            authToken = newAuthToken.trim();
+        }
+        if (newCountryCode != null && !newCountryCode.trim().isEmpty()) {
+            defaultCountryCode = newCountryCode.trim();
+        }
+        saveConfig(enabled, accountSid, authToken, fromNumber, smsTemplate, defaultCountryCode);
     }
 
     /**
@@ -317,10 +355,15 @@ public class SmsService {
      * Runs in a background thread and does not block the UI.
      */
     public static CompletableFuture<DeliveryResult> sendTicketAsync(Booking booking) {
+        String bookingNum = (booking != null) ? booking.getBookingNumber() : "-";
+        String phone = (booking != null) ? booking.getCustomerPhone() : "-";
+
         if (!enabled) {
-            System.out.println("[SmsService] SMS notifications disabled by Admin setting. Skipping dispatch.");
+            String reason = "SMS notifications are turned OFF in System Settings";
+            System.out.println("[SmsService] " + reason + ". Skipping dispatch.");
+            NotificationAuditLog.record("SMS", bookingNum, phone, "SKIPPED", reason);
             return CompletableFuture.completedFuture(
-                    new DeliveryResult(false, "SMS notifications are turned OFF in System Settings", null, isTwilioConfigured())
+                    new DeliveryResult(false, reason, null, isTwilioConfigured())
             );
         }
         return dispatchToTwilio(booking);
@@ -357,21 +400,33 @@ public class SmsService {
      */
     private static CompletableFuture<DeliveryResult> dispatchToTwilio(Booking booking) {
         return CompletableFuture.supplyAsync(() -> {
+            String bookingNum = (booking != null) ? booking.getBookingNumber() : "-";
             try {
                 if (booking == null) {
+                    NotificationAuditLog.record("SMS", "-", "-", "SKIPPED", "No booking provided");
                     return new DeliveryResult(false, "No booking provided", null, isTwilioConfigured());
                 }
 
-                String formattedPhone = formatPhoneNumber(booking.getCustomerPhone());
+                String rawPhone = booking.getCustomerPhone();
+                String formattedPhone = formatPhoneNumber(rawPhone);
                 if (formattedPhone == null || formattedPhone.length() < 10) {
-                    return new DeliveryResult(false, "Customer phone number is missing or invalid", null, isTwilioConfigured());
+                    String reason = "Customer phone number is missing or invalid: " + rawPhone;
+                    NotificationAuditLog.record("SMS", bookingNum, rawPhone, "SKIPPED", reason);
+                    return new DeliveryResult(false, reason, null, isTwilioConfigured());
                 }
 
                 if (!isTwilioConfigured()) {
-                    System.out.println("[SmsService] Twilio credentials not configured.");
-                    return new DeliveryResult(false,
-                            "Twilio credentials not configured in sms.properties",
-                            null, false);
+                    String reason = "Twilio credentials not configured in sms.properties / System Settings.";
+                    System.out.println("[SmsService] " + reason);
+                    NotificationAuditLog.record("SMS", bookingNum, formattedPhone, "SKIPPED", reason);
+                    return new DeliveryResult(false, reason, null, false);
+                }
+
+                if (fromNumber == null || fromNumber.trim().isEmpty()) {
+                    String reason = "SMS sender number is not configured in sms.properties.";
+                    System.err.println("[SmsService] " + reason);
+                    NotificationAuditLog.record("SMS", bookingNum, formattedPhone, "SKIPPED", reason);
+                    return new DeliveryResult(false, reason, null, true);
                 }
 
                 String apiUrl = "https://api.twilio.com/2010-04-01/Accounts/" + accountSid + "/Messages.json";
@@ -407,6 +462,7 @@ public class SmsService {
                 if (code == 201 || code == 200) {
                     String sid = extractSid(respBody);
                     System.out.println("[SmsService] Successfully dispatched SMS! SID=" + sid);
+                    NotificationAuditLog.record("SMS", bookingNum, formattedPhone, "SENT", "SID=" + sid);
                     return new DeliveryResult(true, "Sent to " + formattedPhone + " via Twilio SMS", sid, true);
                 } else {
                     String err = parseErrorMessage(respBody, code);
@@ -414,10 +470,12 @@ public class SmsService {
                         err = "Twilio Trial limitation: Custom SMS body is restricted by Twilio Trial accounts. Upgrade account to enable custom SMS.";
                     }
                     System.err.println("[SmsService] Twilio SMS API Error (" + code + "): " + err);
+                    NotificationAuditLog.record("SMS", bookingNum, formattedPhone, "FAILED", err);
                     return new DeliveryResult(false, err, null, true);
                 }
             } catch (Exception e) {
                 System.err.println("[SmsService] Exception while sending SMS: " + e.getMessage());
+                NotificationAuditLog.record("SMS", bookingNum, "-", "FAILED", "Network error: " + e.getMessage());
                 return new DeliveryResult(false, "Network error: " + e.getMessage(), null, isTwilioConfigured());
             }
         });

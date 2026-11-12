@@ -5,6 +5,7 @@
 # DO NOT commit whatsapp.properties with real credentials.
 
 twilio.whatsapp.enabled=true
+twilio.sandbox.enabled=true
 twilio.account.sid=YOUR_TWILIO_ACCOUNT_SID
 twilio.auth.token=YOUR_TWILIO_AUTH_TOKEN
 twilio.from.number=whatsapp:+14155238886
