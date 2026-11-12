@@ -1,5 +1,6 @@
 package com.cinemats.ui.admin.settings;
 
+import com.cinemats.service.SmsService;
 import com.cinemats.service.WhatsAppService;
 import com.cinemats.ui.admin.AdminDashboard;
 import com.cinemats.util.Theme;
@@ -13,15 +14,25 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
 /**
- * Settings Page with a single, clean WhatsApp Notification ON/OFF toggle option.
+ * Settings Page with clean ON/OFF toggle options for WhatsApp and SMS Ticket Notifications.
  */
 public class SystemSettingsPage extends JPanel {
 
     private final AdminDashboard dashboard;
+
+    // --- WhatsApp Controls ---
     private ModernToggleSwitch whatsAppSwitch;
     private JLabel statusBadge;
     private JLabel statusDescription;
     private JPanel statusBox;
+
+    // --- SMS Controls ---
+    private ModernToggleSwitch smsSwitch;
+    private JLabel smsStatusBadge;
+    private JLabel smsStatusDescription;
+    private JPanel smsStatusBox;
+
+    // --- Toast Alert Feedback ---
     private JLabel toastLabel;
     private Timer toastTimer;
 
@@ -48,11 +59,11 @@ public class SystemSettingsPage extends JPanel {
         titleBlock.setLayout(new BoxLayout(titleBlock, BoxLayout.Y_AXIS));
         titleBlock.setOpaque(false);
 
-        JLabel title = new JLabel("⚙️  Settings");
+        JLabel title = new JLabel("⚙️  Notification & System Settings");
         title.setFont(new Font("Segoe UI", Font.BOLD, 20));
         title.setForeground(Theme.TEXT_DARK);
 
-        JLabel subtitle = new JLabel("Configure system notifications and preferences.");
+        JLabel subtitle = new JLabel("Configure customer ticket notification channels (WhatsApp & SMS).");
         subtitle.setFont(Theme.FONT_REGULAR);
         subtitle.setForeground(Theme.TEXT_MUTED);
 
@@ -63,7 +74,7 @@ public class SystemSettingsPage extends JPanel {
 
         add(headerPanel, BorderLayout.NORTH);
 
-        // 2. Main Center Container with the Single WhatsApp Toggle Card
+        // 2. Main Center Container with WhatsApp and SMS Cards
         JPanel centerPanel = new JPanel();
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
         centerPanel.setOpaque(false);
@@ -77,11 +88,19 @@ public class SystemSettingsPage extends JPanel {
         centerPanel.add(toastLabel);
         centerPanel.add(Box.createVerticalStrut(6));
 
-        // The WhatsApp Setting Card
-        JPanel card = createWhatsAppToggleCard();
-        card.setAlignmentX(Component.LEFT_ALIGNMENT);
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 160));
-        centerPanel.add(card);
+        // 1. The WhatsApp Setting Card
+        JPanel whatsAppCard = createWhatsAppToggleCard();
+        whatsAppCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        whatsAppCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, 160));
+        centerPanel.add(whatsAppCard);
+
+        centerPanel.add(Box.createVerticalStrut(18));
+
+        // 2. The SMS Setting Card
+        JPanel smsCard = createSmsToggleCard();
+        smsCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        smsCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, 160));
+        centerPanel.add(smsCard);
 
         centerPanel.add(Box.createVerticalGlue());
 
@@ -129,7 +148,7 @@ public class SystemSettingsPage extends JPanel {
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 4));
         right.setOpaque(false);
 
-        whatsAppSwitch = new ModernToggleSwitch(WhatsAppService.isEnabled(), this::handleToggleChanged);
+        whatsAppSwitch = new ModernToggleSwitch(WhatsAppService.isEnabled(), this::handleWhatsAppToggleChanged);
         right.add(whatsAppSwitch);
 
         mainRow.add(left, BorderLayout.WEST);
@@ -154,18 +173,93 @@ public class SystemSettingsPage extends JPanel {
         return card;
     }
 
-    private void handleToggleChanged() {
+    private JPanel createSmsToggleCard() {
+        JPanel card = new JPanel(new BorderLayout(0, 16));
+        card.setBackground(Theme.CARD_BG);
+        card.setBorder(new CompoundBorder(
+                new LineBorder(Theme.BORDER_COLOR, 1, true),
+                new EmptyBorder(24, 28, 24, 28)
+        ));
+
+        // Main Row: Left (Icon + Text) and Right (ON/OFF Toggle Switch)
+        JPanel mainRow = new JPanel(new BorderLayout(16, 0));
+        mainRow.setOpaque(false);
+
+        // Left Section: Icon, Title & Description
+        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 0));
+        left.setOpaque(false);
+
+        JLabel icon = new JLabel("📱");
+        icon.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 28));
+        left.add(icon);
+
+        JPanel textPanel = new JPanel();
+        textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
+        textPanel.setOpaque(false);
+
+        JLabel label = new JLabel("Send Ticket Confirmation via SMS");
+        label.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        label.setForeground(Theme.TEXT_DARK);
+
+        JLabel subLabel = new JLabel("Automatically dispatch movie ticket confirmation SMS to customer's mobile number upon booking.");
+        subLabel.setFont(Theme.FONT_REGULAR);
+        subLabel.setForeground(Theme.TEXT_MUTED);
+
+        textPanel.add(label);
+        textPanel.add(Box.createVerticalStrut(4));
+        textPanel.add(subLabel);
+        left.add(textPanel);
+
+        // Right Section: Toggle Switch
+        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 4));
+        right.setOpaque(false);
+
+        smsSwitch = new ModernToggleSwitch(SmsService.isEnabled(), this::handleSmsToggleChanged);
+        right.add(smsSwitch);
+
+        mainRow.add(left, BorderLayout.WEST);
+        mainRow.add(right, BorderLayout.EAST);
+        card.add(mainRow, BorderLayout.NORTH);
+
+        // Status Badge Panel
+        smsStatusBox = new JPanel(new BorderLayout(10, 0));
+        smsStatusBox.setOpaque(true);
+        smsStatusBox.setBorder(new EmptyBorder(10, 16, 10, 16));
+
+        smsStatusBadge = new JLabel();
+        smsStatusBadge.setFont(new Font("Segoe UI", Font.BOLD, 13));
+
+        smsStatusDescription = new JLabel();
+        smsStatusDescription.setFont(Theme.FONT_REGULAR);
+
+        smsStatusBox.add(smsStatusBadge, BorderLayout.WEST);
+        smsStatusBox.add(smsStatusDescription, BorderLayout.CENTER);
+        card.add(smsStatusBox, BorderLayout.CENTER);
+
+        return card;
+    }
+
+    private void handleWhatsAppToggleChanged() {
         boolean selected = whatsAppSwitch.isSelected();
         WhatsAppService.setEnabledAndSave(selected);
-        updateStatusVisuals(selected);
+        updateWhatsAppStatusVisuals(selected);
 
-        // Show quick auto-dismiss toast
         showToast(selected
                 ? "✓ WhatsApp notification turned ON (Tickets will be sent)"
                 : "✓ WhatsApp notification turned OFF (No messages will be sent)");
     }
 
-    private void updateStatusVisuals(boolean enabled) {
+    private void handleSmsToggleChanged() {
+        boolean selected = smsSwitch.isSelected();
+        SmsService.setEnabledAndSave(selected);
+        updateSmsStatusVisuals(selected);
+
+        showToast(selected
+                ? "✓ SMS notification turned ON (Tickets will be sent via SMS)"
+                : "✓ SMS notification turned OFF (No SMS messages will be sent)");
+    }
+
+    private void updateWhatsAppStatusVisuals(boolean enabled) {
         if (enabled) {
             statusBadge.setText("●  ON  (Enabled)");
             statusBadge.setForeground(new Color(22, 163, 74));
@@ -179,7 +273,7 @@ public class SystemSettingsPage extends JPanel {
         } else {
             statusBadge.setText("○  OFF  (Disabled)");
             statusBadge.setForeground(new Color(100, 116, 139));
-            statusDescription.setText("— WhatsApp notifications are paused. No messages will be sent on booking.");
+            statusDescription.setText("— WhatsApp notifications are paused. No WhatsApp messages will be sent on booking.");
             statusDescription.setForeground(new Color(71, 85, 105));
             statusBox.setBackground(new Color(241, 245, 249));
             statusBox.setBorder(new CompoundBorder(
@@ -189,6 +283,32 @@ public class SystemSettingsPage extends JPanel {
         }
         statusBox.revalidate();
         statusBox.repaint();
+    }
+
+    private void updateSmsStatusVisuals(boolean enabled) {
+        if (enabled) {
+            smsStatusBadge.setText("●  ON  (Enabled)");
+            smsStatusBadge.setForeground(new Color(22, 163, 74));
+            smsStatusDescription.setText("— Ticket confirmations will automatically be sent to customer via SMS on booking.");
+            smsStatusDescription.setForeground(new Color(21, 128, 61));
+            smsStatusBox.setBackground(new Color(240, 253, 244));
+            smsStatusBox.setBorder(new CompoundBorder(
+                    new LineBorder(new Color(187, 247, 208), 1, true),
+                    new EmptyBorder(10, 16, 10, 16)
+            ));
+        } else {
+            smsStatusBadge.setText("○  OFF  (Disabled)");
+            smsStatusBadge.setForeground(new Color(100, 116, 139));
+            smsStatusDescription.setText("— SMS notifications are paused. No SMS messages will be sent on booking.");
+            smsStatusDescription.setForeground(new Color(71, 85, 105));
+            smsStatusBox.setBackground(new Color(241, 245, 249));
+            smsStatusBox.setBorder(new CompoundBorder(
+                    new LineBorder(new Color(226, 232, 240), 1, true),
+                    new EmptyBorder(10, 16, 10, 16)
+            ));
+        }
+        smsStatusBox.revalidate();
+        smsStatusBox.repaint();
     }
 
     private void showToast(String message) {
@@ -210,12 +330,20 @@ public class SystemSettingsPage extends JPanel {
     }
 
     public void refreshSettings() {
-        boolean enabled = WhatsAppService.isEnabled();
+        boolean waEnabled = WhatsAppService.isEnabled();
         if (whatsAppSwitch != null) {
-            whatsAppSwitch.setSelected(enabled);
+            whatsAppSwitch.setSelected(waEnabled);
         }
         if (statusBox != null) {
-            updateStatusVisuals(enabled);
+            updateWhatsAppStatusVisuals(waEnabled);
+        }
+
+        boolean smsEnabled = SmsService.isEnabled();
+        if (smsSwitch != null) {
+            smsSwitch.setSelected(smsEnabled);
+        }
+        if (smsStatusBox != null) {
+            updateSmsStatusVisuals(smsEnabled);
         }
     }
 
