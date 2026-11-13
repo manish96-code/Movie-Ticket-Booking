@@ -18,7 +18,8 @@ public class DatabaseSeeder {
                 dropOnly = true;
             } else if ("--reset".equalsIgnoreCase(arg) || "-r".equalsIgnoreCase(arg) || "reset".equalsIgnoreCase(arg)) {
                 forceReset = true;
-            } else if ("--future".equalsIgnoreCase(arg) || "-f".equalsIgnoreCase(arg) || "future".equalsIgnoreCase(arg)) {
+            } else if ("--future".equalsIgnoreCase(arg) || "-f".equalsIgnoreCase(arg)
+                    || "future".equalsIgnoreCase(arg)) {
                 futureOnly = true;
             }
         }
@@ -61,6 +62,7 @@ public class DatabaseSeeder {
         com.cinemats.dao.MovieDAO.seedDefaultMovies();
         com.cinemats.dao.ScreenDAO.seedDefaultScreens();
         com.cinemats.dao.ScreenSeatDAO.seedDefaultScreenSeats();
+        com.cinemats.dao.SettingDAO.seedDefaultSettings();
         ScheduleMockData.seedShowsForRange(-1, 10);
         BookingMockData.seedWeeklyBookings(6, 1);
 
@@ -80,23 +82,31 @@ public class DatabaseSeeder {
     // Completely clears all tables in MySQL database
     public static void resetDatabase() {
         try (Connection conn = DBConnection.getConnection();
-             Statement stmt = conn.createStatement()) {
+                Statement stmt = conn.createStatement()) {
 
             String[] tables = {
-                "tickets", "payments", "booking_items", "bookings",
-                "show_seats", "show_prices", "shows",
-                "screen_seats", "screens", "movies", "categories", "customers", "users"
+                    "tickets", "payments", "booking_items", "bookings",
+                    "show_seats", "show_prices", "shows",
+                    "screen_seats", "screens", "movies", "categories", "customers", "users",
+                    "system_settings"
             };
 
-            try { stmt.execute("SET FOREIGN_KEY_CHECKS = 0;"); } catch (Exception ignored) {}
+            try {
+                stmt.execute("SET FOREIGN_KEY_CHECKS = 0;");
+            } catch (Exception ignored) {
+            }
 
             for (String table : tables) {
                 try {
                     stmt.execute("DROP TABLE IF EXISTS " + table);
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                }
             }
 
-            try { stmt.execute("SET FOREIGN_KEY_CHECKS = 1;"); } catch (Exception ignored) {}
+            try {
+                stmt.execute("SET FOREIGN_KEY_CHECKS = 1;");
+            } catch (Exception ignored) {
+            }
             System.out.println("[DatabaseSeeder] Dropped all MySQL tables cleanly.");
 
         } catch (Exception e) {
@@ -108,13 +118,13 @@ public class DatabaseSeeder {
     public static void printSummaryReport() {
         System.out.println("\n--- Current Database Records Summary ---");
         String[] tables = {
-            "users", "categories", "movies", "screens", "screen_seats",
-            "shows", "show_prices", "show_seats", "customers", "bookings",
-            "booking_items", "payments", "tickets"
+                "users", "categories", "movies", "screens", "screen_seats",
+                "shows", "show_prices", "show_seats", "customers", "bookings",
+                "booking_items", "payments", "tickets", "system_settings"
         };
 
         try (Connection conn = DBConnection.getConnection();
-             Statement stmt = conn.createStatement()) {
+                Statement stmt = conn.createStatement()) {
 
             for (String table : tables) {
                 try (ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM " + table)) {
@@ -129,14 +139,15 @@ public class DatabaseSeeder {
             // Show breakdown for booked vs available seats
             try (ResultSet rs = stmt.executeQuery(
                     "SELECT " +
-                    "SUM(CASE WHEN status = 'AVAILABLE' THEN 1 ELSE 0 END) AS avail, " +
-                    "SUM(CASE WHEN status = 'BOOKED' THEN 1 ELSE 0 END) AS booked " +
-                    "FROM show_seats")) {
+                            "SUM(CASE WHEN status = 'AVAILABLE' THEN 1 ELSE 0 END) AS avail, " +
+                            "SUM(CASE WHEN status = 'BOOKED' THEN 1 ELSE 0 END) AS booked " +
+                            "FROM show_seats")) {
                 if (rs.next()) {
                     System.out.printf("%n 🪑 Show Seat Status: %d Booked, %d Available%n",
                             rs.getInt("booked"), rs.getInt("avail"));
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
 
         } catch (Exception e) {
             System.err.println("[DatabaseSeeder] Error generating summary: " + e.getMessage());

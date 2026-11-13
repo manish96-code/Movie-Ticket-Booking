@@ -84,36 +84,59 @@ public class WhatsAppService {
         enabled = Boolean.parseBoolean(props.getProperty("twilio.whatsapp.enabled", "true"));
         sandboxMode = Boolean.parseBoolean(props.getProperty("twilio.sandbox.enabled", "true"));
 
-        // Priority: Saved System Settings (non-placeholder properties) > Environment variables > empty default
+        // Priority 1: MySQL database (system_settings table)
+        String dbSid = com.cinemats.dao.SettingDAO.getSetting(com.cinemats.dao.SettingDAO.KEY_ACCOUNT_SID, null);
+        String dbToken = com.cinemats.dao.SettingDAO.getSetting(com.cinemats.dao.SettingDAO.KEY_AUTH_TOKEN, null);
+        String dbWaEnabled = com.cinemats.dao.SettingDAO.getSetting(com.cinemats.dao.SettingDAO.KEY_WA_ENABLED, null);
+        String dbSandbox = com.cinemats.dao.SettingDAO.getSetting(com.cinemats.dao.SettingDAO.KEY_SANDBOX_ENABLED, null);
+        String dbFrom = com.cinemats.dao.SettingDAO.getSetting(com.cinemats.dao.SettingDAO.KEY_FROM_NUMBER, null);
+        String dbCc = com.cinemats.dao.SettingDAO.getSetting(com.cinemats.dao.SettingDAO.KEY_COUNTRY_CODE, null);
+
+        if (dbWaEnabled != null && !dbWaEnabled.trim().isEmpty()) {
+            enabled = Boolean.parseBoolean(dbWaEnabled.trim());
+        }
+        if (dbSandbox != null && !dbSandbox.trim().isEmpty()) {
+            sandboxMode = Boolean.parseBoolean(dbSandbox.trim());
+        }
+
+        // Priority 2: Properties file > Priority 3: Environment variables
         String envSid = System.getenv("TWILIO_ACCOUNT_SID");
         String envToken = System.getenv("TWILIO_AUTH_TOKEN");
 
-        String sid = props.getProperty("twilio.account.sid", "").trim();
-        if (!sid.isEmpty() && !sid.contains("YOUR_TWILIO")) {
-            accountSid = sid;
+        String propSid = props.getProperty("twilio.account.sid", "").trim();
+        if (dbSid != null && !dbSid.trim().isEmpty() && !dbSid.contains("YOUR_TWILIO")) {
+            accountSid = dbSid.trim();
+        } else if (!propSid.isEmpty() && !propSid.contains("YOUR_TWILIO")) {
+            accountSid = propSid;
         } else if (envSid != null && !envSid.trim().isEmpty()) {
             accountSid = envSid.trim();
         } else {
             accountSid = "";
         }
 
-        String token = props.getProperty("twilio.auth.token", "").trim();
-        if (!token.isEmpty() && !token.contains("YOUR_TWILIO")) {
-            authToken = token;
+        String propToken = props.getProperty("twilio.auth.token", "").trim();
+        if (dbToken != null && !dbToken.trim().isEmpty() && !dbToken.contains("YOUR_TWILIO")) {
+            authToken = dbToken.trim();
+        } else if (!propToken.isEmpty() && !propToken.contains("YOUR_TWILIO")) {
+            authToken = propToken;
         } else if (envToken != null && !envToken.trim().isEmpty()) {
             authToken = envToken.trim();
         } else {
             authToken = "";
         }
 
-        String from = props.getProperty("twilio.from.number", SANDBOX_SENDER).trim();
+        String from = (dbFrom != null && !dbFrom.trim().isEmpty())
+                ? dbFrom.trim()
+                : props.getProperty("twilio.from.number", SANDBOX_SENDER).trim();
         if (!from.isEmpty()) {
             fromNumber = from.startsWith("whatsapp:") ? from : "whatsapp:" + from;
         } else {
             fromNumber = SANDBOX_SENDER;
         }
 
-        String cc = props.getProperty("twilio.default.country.code", "+91").trim();
+        String cc = (dbCc != null && !dbCc.trim().isEmpty())
+                ? dbCc.trim()
+                : props.getProperty("twilio.default.country.code", "+91").trim();
         if (!cc.isEmpty()) defaultCountryCode = cc;
 
         loaded = true;
@@ -313,6 +336,18 @@ public class WhatsAppService {
             try (FileOutputStream out = new FileOutputStream(binFile)) {
                 props.store(out, "Cinema Express - WhatsApp Notification Configuration (Twilio Sandbox API)");
             } catch (Exception ignored) {}
+        }
+
+        // Persist to MySQL system_settings table via SettingDAO
+        try {
+            com.cinemats.dao.SettingDAO.setSetting(com.cinemats.dao.SettingDAO.KEY_WA_ENABLED, String.valueOf(enabled), "WhatsApp notifications enabled");
+            com.cinemats.dao.SettingDAO.setSetting(com.cinemats.dao.SettingDAO.KEY_SANDBOX_ENABLED, String.valueOf(sandboxMode), "Twilio sandbox mode");
+            com.cinemats.dao.SettingDAO.setSetting(com.cinemats.dao.SettingDAO.KEY_ACCOUNT_SID, accountSid != null ? accountSid : "", "Twilio Account SID");
+            com.cinemats.dao.SettingDAO.setSetting(com.cinemats.dao.SettingDAO.KEY_AUTH_TOKEN, authToken != null ? authToken : "", "Twilio Auth Token");
+            com.cinemats.dao.SettingDAO.setSetting(com.cinemats.dao.SettingDAO.KEY_FROM_NUMBER, getEffectiveFromNumber(), "Twilio WhatsApp sender number");
+            com.cinemats.dao.SettingDAO.setSetting(com.cinemats.dao.SettingDAO.KEY_COUNTRY_CODE, defaultCountryCode != null ? defaultCountryCode : "+91", "Default country code");
+        } catch (Exception e) {
+            System.err.println("[WhatsAppService] Notice: Could not sync settings to database: " + e.getMessage());
         }
 
         // Keep shared Twilio credentials synchronized with SmsService

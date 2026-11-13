@@ -79,7 +79,19 @@ public class SmsService {
         enabled = Boolean.parseBoolean(props.getProperty("twilio.sms.enabled",
                 props.getProperty("twilio.enabled", "false")));
 
-        // Priority: Saved sms.properties > shared whatsapp.properties > Environment variables > empty default
+        // Priority 1: MySQL database (system_settings table)
+        String dbSmsEnabled = com.cinemats.dao.SettingDAO.getSetting(com.cinemats.dao.SettingDAO.KEY_SMS_ENABLED, null);
+        String dbSid = com.cinemats.dao.SettingDAO.getSetting(com.cinemats.dao.SettingDAO.KEY_ACCOUNT_SID, null);
+        String dbToken = com.cinemats.dao.SettingDAO.getSetting(com.cinemats.dao.SettingDAO.KEY_AUTH_TOKEN, null);
+        String dbSmsFrom = com.cinemats.dao.SettingDAO.getSetting(com.cinemats.dao.SettingDAO.KEY_SMS_FROM_NUMBER, null);
+        String dbSmsTmpl = com.cinemats.dao.SettingDAO.getSetting(com.cinemats.dao.SettingDAO.KEY_SMS_TEMPLATE, null);
+        String dbCc = com.cinemats.dao.SettingDAO.getSetting(com.cinemats.dao.SettingDAO.KEY_COUNTRY_CODE, null);
+
+        if (dbSmsEnabled != null && !dbSmsEnabled.trim().isEmpty()) {
+            enabled = Boolean.parseBoolean(dbSmsEnabled.trim());
+        }
+
+        // Priority 2: Saved sms.properties > shared whatsapp.properties > Priority 3: Environment variables
         Properties waProps = new Properties();
         File waFile = new File("whatsapp.properties");
         if (waFile.exists() && waFile.isFile()) {
@@ -93,7 +105,9 @@ public class SmsService {
 
         String sid = props.getProperty("twilio.account.sid", "").trim();
         String waSid = waProps.getProperty("twilio.account.sid", "").trim();
-        if (!sid.isEmpty() && !sid.contains("YOUR_TWILIO")) {
+        if (dbSid != null && !dbSid.trim().isEmpty() && !dbSid.contains("YOUR_TWILIO")) {
+            accountSid = dbSid.trim();
+        } else if (!sid.isEmpty() && !sid.contains("YOUR_TWILIO")) {
             accountSid = sid;
         } else if (!waSid.isEmpty() && !waSid.contains("YOUR_TWILIO")) {
             accountSid = waSid;
@@ -105,7 +119,9 @@ public class SmsService {
 
         String token = props.getProperty("twilio.auth.token", "").trim();
         String waToken = waProps.getProperty("twilio.auth.token", "").trim();
-        if (!token.isEmpty() && !token.contains("YOUR_TWILIO")) {
+        if (dbToken != null && !dbToken.trim().isEmpty() && !dbToken.contains("YOUR_TWILIO")) {
+            authToken = dbToken.trim();
+        } else if (!token.isEmpty() && !token.contains("YOUR_TWILIO")) {
             authToken = token;
         } else if (!waToken.isEmpty() && !waToken.contains("YOUR_TWILIO")) {
             authToken = waToken;
@@ -115,15 +131,21 @@ public class SmsService {
             authToken = "";
         }
 
-        String from = props.getProperty("twilio.sms.from.number", "").trim();
+        String from = (dbSmsFrom != null && !dbSmsFrom.trim().isEmpty())
+                ? dbSmsFrom.trim()
+                : props.getProperty("twilio.sms.from.number", "").trim();
         if (!from.isEmpty()) {
             fromNumber = from.replace("whatsapp:", "");
         }
 
-        String tmpl = props.getProperty("twilio.sms.template", "").trim();
+        String tmpl = (dbSmsTmpl != null && !dbSmsTmpl.trim().isEmpty())
+                ? dbSmsTmpl.trim()
+                : props.getProperty("twilio.sms.template", "").trim();
         if (!tmpl.isEmpty()) smsTemplate = tmpl;
 
-        String cc = props.getProperty("twilio.default.country.code", "").trim();
+        String cc = (dbCc != null && !dbCc.trim().isEmpty())
+                ? dbCc.trim()
+                : props.getProperty("twilio.default.country.code", "").trim();
         if (!cc.isEmpty()) defaultCountryCode = cc;
 
         loaded = true;
@@ -238,6 +260,18 @@ public class SmsService {
             try (FileOutputStream out = new FileOutputStream(binFile)) {
                 props.store(out, "Cinema Express - SMS Notification Configuration (Twilio REST API)");
             } catch (Exception ignored) {}
+        }
+
+        // Persist to MySQL system_settings table via SettingDAO
+        try {
+            com.cinemats.dao.SettingDAO.setSetting(com.cinemats.dao.SettingDAO.KEY_SMS_ENABLED, String.valueOf(enabled), "SMS notifications enabled");
+            com.cinemats.dao.SettingDAO.setSetting(com.cinemats.dao.SettingDAO.KEY_SMS_FROM_NUMBER, fromNumber != null ? fromNumber : "", "SMS sender number");
+            com.cinemats.dao.SettingDAO.setSetting(com.cinemats.dao.SettingDAO.KEY_SMS_TEMPLATE, smsTemplate != null ? smsTemplate : "sms_order_confirmation", "SMS template");
+            com.cinemats.dao.SettingDAO.setSetting(com.cinemats.dao.SettingDAO.KEY_ACCOUNT_SID, accountSid != null ? accountSid : "", "Twilio Account SID");
+            com.cinemats.dao.SettingDAO.setSetting(com.cinemats.dao.SettingDAO.KEY_AUTH_TOKEN, authToken != null ? authToken : "", "Twilio Auth Token");
+            com.cinemats.dao.SettingDAO.setSetting(com.cinemats.dao.SettingDAO.KEY_COUNTRY_CODE, defaultCountryCode != null ? defaultCountryCode : "+91", "Default country code");
+        } catch (Exception e) {
+            System.err.println("[SmsService] Notice: Could not sync SMS settings to database: " + e.getMessage());
         }
 
         return ok;
