@@ -366,7 +366,7 @@ public class SystemSettingsPage extends JPanel {
         form.setOpaque(false);
 
         // Sandbox checkbox
-        sandboxModeCheckBox = new JCheckBox("  Enable Twilio WhatsApp Sandbox Mode (Official: whatsapp:+14155238886)");
+        sandboxModeCheckBox = new JCheckBox("  Enable Twilio WhatsApp Sandbox / Trial Mode");
         sandboxModeCheckBox.setFont(new Font("Segoe UI", Font.BOLD, 14));
         sandboxModeCheckBox.setForeground(Theme.TEXT_DARK);
         sandboxModeCheckBox.setOpaque(false);
@@ -385,14 +385,14 @@ public class SystemSettingsPage extends JPanel {
         senderLabel.setForeground(Theme.TEXT_DARK);
         senderRow.add(senderLabel);
 
-        senderNumberField = Theme.createTextField(WhatsAppService.SANDBOX_SENDER);
+        senderNumberField = Theme.createTextField(WhatsAppService.getEffectiveFromNumber());
         senderNumberField.setPreferredSize(new Dimension(280, 36));
         senderRow.add(senderNumberField);
 
         form.add(senderRow);
         form.add(Box.createVerticalStrut(6));
 
-        senderHintLabel = new JLabel("In Sandbox mode, the official Twilio sender (+1 415 523 8886) is locked. Customers join via sandbox keyword.");
+        senderHintLabel = new JLabel("Twilio Sandbox/Trial sender (" + WhatsAppService.getEffectiveFromNumber() + "). Customers must send a message to this number once.");
         senderHintLabel.setFont(Theme.FONT_SMALL);
         senderHintLabel.setForeground(Theme.TEXT_MUTED);
         senderHintLabel.setBorder(new EmptyBorder(0, 4, 0, 0));
@@ -495,15 +495,14 @@ public class SystemSettingsPage extends JPanel {
 
     private void updateSandboxFieldsState() {
         boolean sandbox = sandboxModeCheckBox.isSelected();
+        senderNumberField.setEnabled(true);
+        String current = senderNumberField.getText().trim();
+        if (current.isEmpty() || current.equals("whatsapp:+14155238886")) {
+            senderNumberField.setText(WhatsAppService.getEffectiveFromNumber());
+        }
         if (sandbox) {
-            senderNumberField.setText(WhatsAppService.SANDBOX_SENDER);
-            senderNumberField.setEnabled(false);
-            senderHintLabel.setText("Official Twilio Sandbox sender is active (+1 415 523 8886). Customers must join via WhatsApp code once.");
+            senderHintLabel.setText("Twilio Sandbox/Trial sender (" + senderNumberField.getText() + "). Customers must send a message to this number once.");
         } else {
-            senderNumberField.setEnabled(true);
-            if (senderNumberField.getText().trim().isEmpty() || senderNumberField.getText().equals(WhatsAppService.SANDBOX_SENDER)) {
-                senderNumberField.setText(WhatsAppService.getFromNumber());
-            }
             senderHintLabel.setText("Enter your Twilio approved WhatsApp Business sender in E.164 format (e.g. whatsapp:+1XXXXXXXXXX).");
         }
     }
@@ -535,6 +534,10 @@ public class SystemSettingsPage extends JPanel {
 
         if (countryCodeField != null) {
             countryCodeField.setText(WhatsAppService.getDefaultCountryCode());
+        }
+
+        if (senderNumberField != null) {
+            senderNumberField.setText(WhatsAppService.getEffectiveFromNumber());
         }
 
         if (sandboxModeCheckBox != null) {
@@ -628,7 +631,10 @@ public class SystemSettingsPage extends JPanel {
         boolean waEnabled = whatsAppSwitch.isSelected();
         boolean smsEnabled = smsSwitch.isSelected();
         boolean sandbox = sandboxModeCheckBox.isSelected();
-        String senderInput = sandbox ? WhatsAppService.SANDBOX_SENDER : senderNumberField.getText().trim();
+        String senderInput = senderNumberField.getText().trim();
+        if (senderInput.isEmpty()) {
+            senderInput = WhatsAppService.getEffectiveFromNumber();
+        }
         String ccInput = countryCodeField.getText().trim();
 
         // Validate before saving

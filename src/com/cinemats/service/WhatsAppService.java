@@ -30,11 +30,11 @@ import java.util.concurrent.CompletableFuture;
  */
 public class WhatsAppService {
 
-    public static final String SANDBOX_SENDER = "whatsapp:+14155238886";
+    public static final String SANDBOX_SENDER = "whatsapp:+17372508034";
 
     private static String accountSid = "";
     private static String authToken = "";
-    // Official Twilio WhatsApp Sandbox sender
+    // Configured Twilio WhatsApp Sender
     private static String fromNumber = SANDBOX_SENDER;
     private static String defaultCountryCode = "+91";
     private static boolean enabled = true;
@@ -190,15 +190,18 @@ public class WhatsAppService {
     }
 
     public static String getFromNumber() {
-        return fromNumber != null && !fromNumber.isEmpty() ? fromNumber : SANDBOX_SENDER;
+        return fromNumber != null && !fromNumber.trim().isEmpty() ? fromNumber.trim() : SANDBOX_SENDER;
     }
 
     /**
-     * Returns the active WhatsApp sender number. Always uses Twilio WhatsApp Sandbox sender
-     * when Sandbox mode is enabled.
+     * Returns the active WhatsApp sender number.
      */
     public static String getEffectiveFromNumber() {
-        return sandboxMode ? SANDBOX_SENDER : getFromNumber();
+        if (fromNumber != null && !fromNumber.trim().isEmpty() && !fromNumber.contains("YOUR_TWILIO")) {
+            String clean = fromNumber.trim();
+            return clean.startsWith("whatsapp:") ? clean : "whatsapp:" + clean;
+        }
+        return SANDBOX_SENDER;
     }
 
     public static String getDefaultCountryCode() {
@@ -295,11 +298,11 @@ public class WhatsAppService {
                 && !newAuthToken.contains("*") && !newAuthToken.contains("•")) {
             authToken = newAuthToken.trim();
         }
-        if (newSandboxMode) {
-            fromNumber = SANDBOX_SENDER;
-        } else if (newFromNumber != null && !newFromNumber.trim().isEmpty()) {
+        if (newFromNumber != null && !newFromNumber.trim().isEmpty()) {
             String trimmed = newFromNumber.trim();
             fromNumber = trimmed.startsWith("whatsapp:") ? trimmed : "whatsapp:" + trimmed;
+        } else if (fromNumber == null || fromNumber.trim().isEmpty()) {
+            fromNumber = SANDBOX_SENDER;
         }
         if (newCountryCode != null && !newCountryCode.trim().isEmpty()) {
             defaultCountryCode = newCountryCode.trim();
@@ -743,9 +746,11 @@ public class WhatsAppService {
         switch (twilioCode) {
             case 21654:
             case 63016:
-                return "24-hour customer messaging window is closed. To receive free-form WhatsApp ticket details, recipient must first send 'join <sandbox-code>' or a message to " + fromSender + " on WhatsApp.";
+                return "Meta 24-hour messaging window is closed. To receive custom movie ticket details, recipient must first send a message (e.g. 'Hi') to " + fromSender + " on WhatsApp.";
             case 63015:
-                return "Recipient has not joined the Twilio WhatsApp Sandbox (" + fromSender + "). Please send sandbox join code from the recipient phone.";
+                return "Recipient has not joined Twilio WhatsApp (" + fromSender + "). Please send sandbox join code or 'Hi' to " + fromSender + " first.";
+            case 572003:
+                return "Sender number (" + fromSender + ") is not assigned to this Twilio account. Check your Twilio Console for the trial number.";
             case 21211:
             case 21614:
                 return "Invalid recipient phone number format. Please ensure country code is included.";

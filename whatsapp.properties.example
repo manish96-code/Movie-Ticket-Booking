@@ -8,5 +8,6 @@ twilio.whatsapp.enabled=true
 twilio.sandbox.enabled=true
 twilio.account.sid=YOUR_TWILIO_ACCOUNT_SID
 twilio.auth.token=YOUR_TWILIO_AUTH_TOKEN
-twilio.from.number=whatsapp:+14155238886
+twilio.from.number=whatsapp:+17372508034
+twilio.whatsapp.content.sid=HXfe5ab5f00277942d4d4200328b4d403c
 twilio.default.country.code=+91

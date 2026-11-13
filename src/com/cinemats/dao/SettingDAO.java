@@ -25,6 +25,7 @@ public class SettingDAO {
     public static final String KEY_ACCOUNT_SID = "twilio.account.sid";
     public static final String KEY_AUTH_TOKEN = "twilio.auth.token";
     public static final String KEY_FROM_NUMBER = "twilio.from.number";
+    public static final String KEY_CONTENT_SID = "twilio.whatsapp.content.sid";
     public static final String KEY_COUNTRY_CODE = "twilio.default.country.code";
     public static final String KEY_SMS_FROM_NUMBER = "twilio.sms.from.number";
     public static final String KEY_SMS_TEMPLATE = "twilio.sms.template";
@@ -58,7 +59,8 @@ public class SettingDAO {
         defaults.put(KEY_WA_ENABLED, new String[]{"true", "Enable or disable automated WhatsApp ticket notifications"});
         defaults.put(KEY_SMS_ENABLED, new String[]{"false", "Enable or disable automated SMS ticket notifications"});
         defaults.put(KEY_SANDBOX_ENABLED, new String[]{"true", "Enforce official Twilio WhatsApp Sandbox mode"});
-        defaults.put(KEY_FROM_NUMBER, new String[]{"whatsapp:+14155238886", "Twilio WhatsApp sender number"});
+        defaults.put(KEY_FROM_NUMBER, new String[]{"whatsapp:+17372508034", "Twilio WhatsApp sender number"});
+        defaults.put(KEY_CONTENT_SID, new String[]{"HXfe5ab5f00277942d4d4200328b4d403c", "Twilio WhatsApp approved template Content SID"});
         defaults.put(KEY_COUNTRY_CODE, new String[]{"+91", "Default international country code for phone numbers"});
         defaults.put(KEY_SMS_FROM_NUMBER, new String[]{"+17372508034", "Twilio SMS sender phone number"});
         defaults.put(KEY_SMS_TEMPLATE, new String[]{"sms_order_confirmation", "Twilio SMS order confirmation template"});
