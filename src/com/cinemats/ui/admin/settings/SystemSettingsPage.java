@@ -2,7 +2,6 @@ package com.cinemats.ui.admin.settings;
 
 import com.cinemats.service.NotificationAuditLog;
 import com.cinemats.service.SmsService;
-import com.cinemats.service.WhatsAppService;
 import com.cinemats.ui.admin.AdminDashboard;
 import com.cinemats.util.Theme;
 
@@ -17,7 +16,7 @@ import java.util.List;
 
 /**
  * Administrator Notification & System Settings Control Panel.
- * Configures Twilio API credentials, WhatsApp Sandbox, SMS gateway,
+ * Configures Twilio API credentials, SMS gateway,
  * and customer ticket notification switches with live connection diagnostics.
  */
 public class SystemSettingsPage extends JPanel {
@@ -26,12 +25,7 @@ public class SystemSettingsPage extends JPanel {
 
     private final AdminDashboard dashboard;
 
-    // --- Channel Toggles ---
-    private ModernToggleSwitch whatsAppSwitch;
-    private JLabel whatsAppStatusBadge;
-    private JLabel whatsAppStatusDesc;
-    private JPanel whatsAppStatusBox;
-
+    // --- Channel Toggle ---
     private ModernToggleSwitch smsSwitch;
     private JLabel smsStatusBadge;
     private JLabel smsStatusDesc;
@@ -42,12 +36,8 @@ public class SystemSettingsPage extends JPanel {
     private JPasswordField authTokenField;
     private JButton togglePasswordBtn;
     private boolean passwordVisible = false;
+    private JTextField smsSenderField;
     private JTextField countryCodeField;
-
-    // --- WhatsApp Sender Fields ---
-    private JCheckBox sandboxModeCheckBox;
-    private JTextField senderNumberField;
-    private JLabel senderHintLabel;
 
     // --- Status Banner & Feedback ---
     private JPanel alertBanner;
@@ -88,11 +78,11 @@ public class SystemSettingsPage extends JPanel {
         titleBlock.setLayout(new BoxLayout(titleBlock, BoxLayout.Y_AXIS));
         titleBlock.setOpaque(false);
 
-        JLabel title = new JLabel("⚙️  Notification & Twilio Gateway Settings");
+        JLabel title = new JLabel("⚙️  Notification & Twilio SMS Gateway Settings");
         title.setFont(new Font("Segoe UI", Font.BOLD, 20));
         title.setForeground(Theme.TEXT_DARK);
 
-        JLabel subtitle = new JLabel("Configure customer movie ticket notification channels (WhatsApp & SMS) and Twilio REST API.");
+        JLabel subtitle = new JLabel("Configure customer movie ticket SMS notification channel and Twilio REST API.");
         subtitle.setFont(Theme.FONT_REGULAR);
         subtitle.setForeground(Theme.TEXT_MUTED);
 
@@ -148,15 +138,11 @@ public class SystemSettingsPage extends JPanel {
         contentPanel.add(createCredentialsCard());
         contentPanel.add(Box.createVerticalStrut(18));
 
-        // 3. WhatsApp Sender & Sandbox Card
-        contentPanel.add(createWhatsAppSenderCard());
-        contentPanel.add(Box.createVerticalStrut(18));
-
-        // 4. Testing & Action Controls Card
+        // 3. Testing & Action Controls Card
         contentPanel.add(createActionToolsCard());
         contentPanel.add(Box.createVerticalStrut(18));
 
-        // 5. Recent Notification Audit Log Card
+        // 4. Recent Notification Audit Log Card
         contentPanel.add(createAuditLogCard());
 
         JScrollPane scrollPane = new JScrollPane(contentPanel);
@@ -202,44 +188,10 @@ public class SystemSettingsPage extends JPanel {
     }
 
     private JPanel createChannelSwitchesCard() {
-        JPanel card = createSectionCard("📡 Notification Channels", "Toggle automated ticket notifications for counter bookings.");
+        JPanel card = createSectionCard("📡 Notification Channels", "Toggle automated SMS ticket notifications for counter bookings.");
 
-        JPanel body = new JPanel(new GridLayout(1, 2, 16, 0));
+        JPanel body = new JPanel(new GridLayout(1, 1, 16, 0));
         body.setOpaque(false);
-
-        // WhatsApp switch tile
-        JPanel waTile = new JPanel(new BorderLayout(0, 10));
-        waTile.setBackground(new Color(248, 250, 252));
-        waTile.setBorder(new CompoundBorder(
-                new LineBorder(Theme.BORDER_COLOR, 1, true),
-                new EmptyBorder(14, 16, 14, 16)
-        ));
-
-        JPanel waHeader = new JPanel(new BorderLayout());
-        waHeader.setOpaque(false);
-        JLabel waTitle = new JLabel("💬  WhatsApp Notifications");
-        waTitle.setFont(new Font("Segoe UI", Font.BOLD, 15));
-        waTitle.setForeground(Theme.TEXT_DARK);
-
-        whatsAppSwitch = new ModernToggleSwitch(WhatsAppService.isEnabled(), () -> {
-            boolean sel = whatsAppSwitch.isSelected();
-            WhatsAppService.setEnabledAndSave(sel);
-            updateWhatsAppStatusVisuals(sel);
-            showToast(sel ? "✓ WhatsApp dispatch enabled" : "✓ WhatsApp dispatch paused");
-        });
-        waHeader.add(waTitle, BorderLayout.WEST);
-        waHeader.add(whatsAppSwitch, BorderLayout.EAST);
-        waTile.add(waHeader, BorderLayout.NORTH);
-
-        whatsAppStatusBox = new JPanel(new BorderLayout(8, 0));
-        whatsAppStatusBox.setBorder(new EmptyBorder(6, 10, 6, 10));
-        whatsAppStatusBadge = new JLabel();
-        whatsAppStatusBadge.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        whatsAppStatusDesc = new JLabel();
-        whatsAppStatusDesc.setFont(Theme.FONT_SMALL);
-        whatsAppStatusBox.add(whatsAppStatusBadge, BorderLayout.WEST);
-        whatsAppStatusBox.add(whatsAppStatusDesc, BorderLayout.CENTER);
-        waTile.add(whatsAppStatusBox, BorderLayout.CENTER);
 
         // SMS switch tile
         JPanel smsTile = new JPanel(new BorderLayout(0, 10));
@@ -251,7 +203,7 @@ public class SystemSettingsPage extends JPanel {
 
         JPanel smsHeader = new JPanel(new BorderLayout());
         smsHeader.setOpaque(false);
-        JLabel smsTitle = new JLabel("📱  SMS Notifications");
+        JLabel smsTitle = new JLabel("📱  SMS Ticket Notifications");
         smsTitle.setFont(new Font("Segoe UI", Font.BOLD, 15));
         smsTitle.setForeground(Theme.TEXT_DARK);
 
@@ -275,7 +227,6 @@ public class SystemSettingsPage extends JPanel {
         smsStatusBox.add(smsStatusDesc, BorderLayout.CENTER);
         smsTile.add(smsStatusBox, BorderLayout.CENTER);
 
-        body.add(waTile);
         body.add(smsTile);
         card.add(body, BorderLayout.CENTER);
 
@@ -284,7 +235,7 @@ public class SystemSettingsPage extends JPanel {
 
     private JPanel createCredentialsCard() {
         JPanel card = createSectionCard("🔑 Twilio API Gateway Credentials",
-                "Stored safely in whatsapp.properties & sms.properties. Never committed to version control.");
+                "Stored safely in sms.properties. Never committed to version control.");
 
         JPanel form = new JPanel(new GridBagLayout());
         form.setOpaque(false);
@@ -334,8 +285,20 @@ public class SystemSettingsPage extends JPanel {
         passWrapper.add(togglePasswordBtn, BorderLayout.EAST);
         form.add(passWrapper, gbc);
 
-        // Row 3: Country Code
+        // Row 3: SMS Sender Phone Number
         gbc.gridx = 0; gbc.gridy = 2; gbc.weightx = 0.3;
+        JLabel senderLabel = new JLabel("Twilio SMS Sender Number *");
+        senderLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        senderLabel.setForeground(Theme.TEXT_DARK);
+        form.add(senderLabel, gbc);
+
+        gbc.gridx = 1; gbc.weightx = 0.7;
+        smsSenderField = Theme.createTextField("+17372508034");
+        smsSenderField.setPreferredSize(new Dimension(360, 38));
+        form.add(smsSenderField, gbc);
+
+        // Row 4: Country Code
+        gbc.gridx = 0; gbc.gridy = 3; gbc.weightx = 0.3;
         JLabel ccLabel = new JLabel("Default Country Code");
         ccLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
         ccLabel.setForeground(Theme.TEXT_DARK);
@@ -357,67 +320,22 @@ public class SystemSettingsPage extends JPanel {
         return card;
     }
 
-    private JPanel createWhatsAppSenderCard() {
-        JPanel card = createSectionCard("💬 WhatsApp Sender & Sandbox Configuration",
-                "Official Twilio WhatsApp Sandbox mode is recommended for testing and trial accounts.");
-
-        JPanel form = new JPanel();
-        form.setLayout(new BoxLayout(form, BoxLayout.Y_AXIS));
-        form.setOpaque(false);
-
-        // Sandbox checkbox
-        sandboxModeCheckBox = new JCheckBox("  Enable Twilio WhatsApp Sandbox / Trial Mode");
-        sandboxModeCheckBox.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        sandboxModeCheckBox.setForeground(Theme.TEXT_DARK);
-        sandboxModeCheckBox.setOpaque(false);
-        sandboxModeCheckBox.setSelected(WhatsAppService.isSandboxMode());
-        sandboxModeCheckBox.addActionListener(e -> updateSandboxFieldsState());
-        form.add(sandboxModeCheckBox);
-
-        form.add(Box.createVerticalStrut(10));
-
-        // Sender Number Row
-        JPanel senderRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
-        senderRow.setOpaque(false);
-
-        JLabel senderLabel = new JLabel("WhatsApp From Sender:");
-        senderLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        senderLabel.setForeground(Theme.TEXT_DARK);
-        senderRow.add(senderLabel);
-
-        senderNumberField = Theme.createTextField(WhatsAppService.getEffectiveFromNumber());
-        senderNumberField.setPreferredSize(new Dimension(280, 36));
-        senderRow.add(senderNumberField);
-
-        form.add(senderRow);
-        form.add(Box.createVerticalStrut(6));
-
-        senderHintLabel = new JLabel("Twilio Sandbox/Trial sender (" + WhatsAppService.getEffectiveFromNumber() + "). Customers must send a message to this number once.");
-        senderHintLabel.setFont(Theme.FONT_SMALL);
-        senderHintLabel.setForeground(Theme.TEXT_MUTED);
-        senderHintLabel.setBorder(new EmptyBorder(0, 4, 0, 0));
-        form.add(senderHintLabel);
-
-        card.add(form, BorderLayout.CENTER);
-        return card;
-    }
-
     private JPanel createActionToolsCard() {
         JPanel card = createSectionCard("🛠️ Validation, Testing & Actions",
-                "Verify connection with Twilio API and send real test ticket confirmations.");
+                "Verify connection with Twilio API and send real test SMS ticket confirmations.");
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 4));
         actions.setOpaque(false);
 
-        JButton testConnBtn = Theme.createPrimaryButton("🔌 Verify Twilio Connection");
-        testConnBtn.addActionListener(e -> performConnectionTest());
-
-        JButton testMsgBtn = Theme.createSuccessButton("📤 Send Test WhatsApp Ticket");
-        testMsgBtn.addActionListener(e -> promptAndSendTestTicket());
-
         JButton saveBtn = Theme.createPrimaryButton("💾 Save All Changes");
         saveBtn.setBackground(new Color(22, 163, 74));
         saveBtn.addActionListener(e -> saveAllSettings());
+
+        JButton testConnBtn = Theme.createPrimaryButton("🔌 Verify Twilio Connection");
+        testConnBtn.addActionListener(e -> performConnectionTest());
+
+        JButton testMsgBtn = Theme.createSuccessButton("📤 Send Test SMS Ticket");
+        testMsgBtn.addActionListener(e -> promptAndSendTestTicket());
 
         actions.add(saveBtn);
         actions.add(testConnBtn);
@@ -438,7 +356,7 @@ public class SystemSettingsPage extends JPanel {
         auditList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
         JScrollPane logScroll = new JScrollPane(auditList);
-        logScroll.setPreferredSize(new Dimension(400, 120));
+        logScroll.setPreferredSize(new Dimension(400, 140));
         logScroll.setBorder(new LineBorder(Theme.BORDER_COLOR, 1));
         card.add(logScroll, BorderLayout.CENTER);
 
@@ -493,56 +411,32 @@ public class SystemSettingsPage extends JPanel {
         }
     }
 
-    private void updateSandboxFieldsState() {
-        boolean sandbox = sandboxModeCheckBox.isSelected();
-        senderNumberField.setEnabled(true);
-        String current = senderNumberField.getText().trim();
-        if (current.isEmpty() || current.equals("whatsapp:+14155238886")) {
-            senderNumberField.setText(WhatsAppService.getEffectiveFromNumber());
-        }
-        if (sandbox) {
-            senderHintLabel.setText("Twilio Sandbox/Trial sender (" + senderNumberField.getText() + "). Customers must send a message to this number once.");
-        } else {
-            senderHintLabel.setText("Enter your Twilio approved WhatsApp Business sender in E.164 format (e.g. whatsapp:+1XXXXXXXXXX).");
-        }
-    }
-
     public void refreshSettings() {
-        WhatsAppService.reloadConfig();
         SmsService.reloadConfig();
-
-        boolean waEnabled = WhatsAppService.isEnabled();
-        if (whatsAppSwitch != null) whatsAppSwitch.setSelected(waEnabled);
-        updateWhatsAppStatusVisuals(waEnabled);
 
         boolean smsEnabled = SmsService.isEnabled();
         if (smsSwitch != null) smsSwitch.setSelected(smsEnabled);
         updateSmsStatusVisuals(smsEnabled);
 
         if (accountSidField != null) {
-            String sid = WhatsAppService.getAccountSid();
+            String sid = SmsService.getAccountSid();
             accountSidField.setText(sid.contains("YOUR_TWILIO") ? "" : sid);
         }
 
         if (authTokenField != null) {
-            if (WhatsAppService.isAuthTokenConfigured()) {
+            if (SmsService.isAuthTokenConfigured()) {
                 authTokenField.setText(MASK_PLACEHOLDER);
             } else {
                 authTokenField.setText("");
             }
         }
 
+        if (smsSenderField != null) {
+            smsSenderField.setText(SmsService.getFromNumber());
+        }
+
         if (countryCodeField != null) {
-            countryCodeField.setText(WhatsAppService.getDefaultCountryCode());
-        }
-
-        if (senderNumberField != null) {
-            senderNumberField.setText(WhatsAppService.getEffectiveFromNumber());
-        }
-
-        if (sandboxModeCheckBox != null) {
-            sandboxModeCheckBox.setSelected(WhatsAppService.isSandboxMode());
-            updateSandboxFieldsState();
+            countryCodeField.setText(SmsService.getDefaultCountryCode());
         }
 
         updateAlertBannerState();
@@ -550,7 +444,7 @@ public class SystemSettingsPage extends JPanel {
     }
 
     private void updateAlertBannerState() {
-        boolean configured = WhatsAppService.isTwilioConfigured();
+        boolean configured = SmsService.isTwilioConfigured();
         if (configured) {
             alertBanner.setBackground(new Color(240, 253, 244));
             alertBanner.setBorder(new CompoundBorder(
@@ -560,8 +454,8 @@ public class SystemSettingsPage extends JPanel {
             alertIcon.setText("✅");
             alertTitle.setText("Twilio Gateway Configured");
             alertTitle.setForeground(new Color(22, 163, 74));
-            alertSubtitle.setText("Twilio Account SID: " + WhatsAppService.getMaskedAccountSid()
-                    + "  |  Sender: " + WhatsAppService.getEffectiveFromNumber());
+            alertSubtitle.setText("Twilio Account SID: " + SmsService.getMaskedAccountSid()
+                    + "  |  SMS Sender: " + SmsService.getFromNumber());
             alertSubtitle.setForeground(new Color(21, 128, 61));
         } else {
             alertBanner.setBackground(new Color(255, 247, 237));
@@ -574,22 +468,6 @@ public class SystemSettingsPage extends JPanel {
             alertTitle.setForeground(new Color(154, 52, 18));
             alertSubtitle.setText("Customer ticket dispatches require Twilio Account SID and Auth Token to be saved below.");
             alertSubtitle.setForeground(new Color(194, 65, 12));
-        }
-    }
-
-    private void updateWhatsAppStatusVisuals(boolean enabled) {
-        if (enabled) {
-            whatsAppStatusBadge.setText("●  ACTIVE");
-            whatsAppStatusBadge.setForeground(new Color(22, 163, 74));
-            whatsAppStatusDesc.setText("— Ticket confirmations will automatically be sent to customer's WhatsApp.");
-            whatsAppStatusDesc.setForeground(new Color(21, 128, 61));
-            whatsAppStatusBox.setBackground(new Color(240, 253, 244));
-        } else {
-            whatsAppStatusBadge.setText("○  PAUSED");
-            whatsAppStatusBadge.setForeground(new Color(100, 116, 139));
-            whatsAppStatusDesc.setText("— WhatsApp notifications are paused. No WhatsApp messages will be dispatched.");
-            whatsAppStatusDesc.setForeground(new Color(71, 85, 105));
-            whatsAppStatusBox.setBackground(new Color(241, 245, 249));
         }
     }
 
@@ -628,21 +506,15 @@ public class SystemSettingsPage extends JPanel {
         String tokenInput = new String(tokenChars).trim();
         boolean isTokenPlaceholder = tokenInput.equals(MASK_PLACEHOLDER);
 
-        boolean waEnabled = whatsAppSwitch.isSelected();
         boolean smsEnabled = smsSwitch.isSelected();
-        boolean sandbox = sandboxModeCheckBox.isSelected();
-        String senderInput = senderNumberField.getText().trim();
-        if (senderInput.isEmpty()) {
-            senderInput = WhatsAppService.getEffectiveFromNumber();
-        }
+        String senderInput = smsSenderField.getText().trim();
         String ccInput = countryCodeField.getText().trim();
 
         // Validate before saving
-        WhatsAppService.ValidationResult val = WhatsAppService.validateConfig(
+        SmsService.ValidationResult val = SmsService.validateConfig(
                 sidInput,
                 isTokenPlaceholder ? "" : tokenInput,
                 isTokenPlaceholder,
-                sandbox,
                 senderInput,
                 ccInput
         );
@@ -655,21 +527,18 @@ public class SystemSettingsPage extends JPanel {
             return;
         }
 
-        String finalToken = isTokenPlaceholder ? WhatsAppService.getAuthToken() : tokenInput;
+        String finalToken = isTokenPlaceholder ? SmsService.getAuthToken() : tokenInput;
 
-        boolean waOk = WhatsAppService.saveConfig(waEnabled, sandbox, sidInput, finalToken, senderInput, ccInput);
         boolean smsOk = SmsService.saveConfig(smsEnabled, sidInput, finalToken,
-                SmsService.getFromNumber(), SmsService.getSmsTemplate(), ccInput);
+                senderInput, SmsService.getSmsTemplate(), ccInput);
 
-        if (waOk && smsOk) {
+        if (smsOk) {
             refreshSettings();
             showToast("✓ Settings successfully saved and applied!");
             JOptionPane.showMessageDialog(this,
-                    "Notification and Twilio Gateway settings have been saved successfully.\n"
-                            + "• Account SID: " + WhatsAppService.getMaskedAccountSid() + "\n"
-                            + "• WhatsApp Sender: " + WhatsAppService.getEffectiveFromNumber() + "\n"
-                            + "• Sandbox Mode: " + (sandbox ? "Enabled" : "Disabled") + "\n"
-                            + "• WhatsApp Status: " + (waEnabled ? "Active" : "Paused") + "\n"
+                    "Notification and Twilio SMS Gateway settings have been saved successfully.\n"
+                            + "• Account SID: " + SmsService.getMaskedAccountSid() + "\n"
+                            + "• SMS Sender: " + SmsService.getFromNumber() + "\n"
                             + "• SMS Status: " + (smsEnabled ? "Active" : "Paused"),
                     "Settings Saved",
                     JOptionPane.INFORMATION_MESSAGE);
@@ -682,7 +551,7 @@ public class SystemSettingsPage extends JPanel {
     }
 
     private void performConnectionTest() {
-        if (!WhatsAppService.isTwilioConfigured()) {
+        if (!SmsService.isTwilioConfigured()) {
             JOptionPane.showMessageDialog(this,
                     "Please enter and save your Twilio Account SID and Auth Token first before testing.",
                     "Missing Credentials",
@@ -706,7 +575,7 @@ public class SystemSettingsPage extends JPanel {
         p.add(bar);
         progressDialog.add(p);
 
-        WhatsAppService.testTwilioConnection().thenAccept(res -> SwingUtilities.invokeLater(() -> {
+        SmsService.testTwilioConnection().thenAccept(res -> SwingUtilities.invokeLater(() -> {
             progressDialog.dispose();
             refreshAuditLogList();
             if (res.isSuccess()) {
@@ -726,7 +595,7 @@ public class SystemSettingsPage extends JPanel {
     }
 
     private void promptAndSendTestTicket() {
-        if (!WhatsAppService.isTwilioConfigured()) {
+        if (!SmsService.isTwilioConfigured()) {
             JOptionPane.showMessageDialog(this,
                     "Twilio credentials not configured. Please save Account SID and Auth Token first.",
                     "Missing Credentials",
@@ -735,14 +604,13 @@ public class SystemSettingsPage extends JPanel {
         }
 
         String inputPhone = JOptionPane.showInputDialog(this,
-                "Enter recipient WhatsApp mobile number (with country code, e.g. +919876543210):\n"
-                        + "Note: If using Twilio Sandbox, this number must have joined the Sandbox first.",
-                "Send Test WhatsApp Ticket",
+                "Enter recipient mobile number (with country code, e.g. +919876543210):",
+                "Send Test SMS Ticket",
                 JOptionPane.QUESTION_MESSAGE);
 
         if (inputPhone == null || inputPhone.trim().isEmpty()) return;
 
-        JDialog progress = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Sending Test Ticket", true);
+        JDialog progress = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Sending Test SMS", true);
         progress.setSize(340, 120);
         progress.setLocationRelativeTo(this);
         JPanel p = new JPanel(new FlowLayout(FlowLayout.CENTER, 14, 24));
@@ -750,42 +618,27 @@ public class SystemSettingsPage extends JPanel {
         JProgressBar bar = new JProgressBar();
         bar.setIndeterminate(true);
         bar.setPreferredSize(new Dimension(200, 18));
-        JLabel lbl = new JLabel("Dispatching ticket via Twilio...");
+        JLabel lbl = new JLabel("Dispatching SMS via Twilio...");
         lbl.setFont(Theme.FONT_REGULAR);
         p.add(lbl);
         p.add(bar);
         progress.add(p);
 
-        WhatsAppService.sendTestMessage(inputPhone.trim()).thenAccept(result -> SwingUtilities.invokeLater(() -> {
+        SmsService.sendTestMessage(inputPhone.trim()).thenAccept(result -> SwingUtilities.invokeLater(() -> {
             progress.dispose();
             refreshAuditLogList();
             if (result.isSuccess()) {
                 JOptionPane.showMessageDialog(this,
-                        "✓ Test ticket sent successfully!\n"
-                                + "Message SID: " + result.getMessageSid() + "\n"
-                                + "Status: " + result.getStatus() + "\n\n"
-                                + "The customer mobile should receive the ticket details shortly.",
-                        "WhatsApp Test Sent",
+                        "✓ Test SMS sent successfully!\n"
+                                + "Message SID: " + result.getMessageSid() + "\n\n"
+                                + "The customer mobile should receive the SMS details shortly.",
+                        "SMS Test Sent",
                         JOptionPane.INFORMATION_MESSAGE);
             } else {
-                int opt = JOptionPane.showConfirmDialog(this,
-                        "Twilio API delivery failed:\n" + result.getMessage() + "\n\n"
-                                + "Would you like to preview / send this ticket directly via WhatsApp Web?",
-                        "WhatsApp Delivery Status",
-                        JOptionPane.YES_NO_OPTION,
+                JOptionPane.showMessageDialog(this,
+                        "Twilio SMS delivery failed:\n" + result.getMessage(),
+                        "SMS Delivery Status",
                         JOptionPane.WARNING_MESSAGE);
-                if (opt == JOptionPane.YES_OPTION) {
-                    com.cinemats.model.Booking b = new com.cinemats.model.Booking();
-                    b.setBookingNumber("TEST-" + (System.currentTimeMillis() % 100000));
-                    b.setCustomerName("Manish Kumar");
-                    b.setCustomerPhone(inputPhone.trim());
-                    b.setMovieTitle("Interstellar");
-                    b.setScreenName("Audi 1 (Grand IMAX)");
-                    b.setShowDate(java.time.LocalDate.now().toString());
-                    b.setStartTime("03:00 PM");
-                    b.setTotalAmount(new java.math.BigDecimal("295.00"));
-                    WhatsAppService.openInBrowser(b);
-                }
             }
         }));
 

@@ -5,7 +5,6 @@ import com.cinemats.model.BookingItem;
 import com.cinemats.model.Ticket;
 import com.cinemats.service.NotificationAuditLog;
 import com.cinemats.service.SmsService;
-import com.cinemats.service.WhatsAppService;
 import com.cinemats.util.QRCodeRenderer;
 import com.cinemats.util.Theme;
 
@@ -69,31 +68,6 @@ public class TicketConfirmationDialog extends JDialog {
         footer.setBackground(Color.WHITE);
         footer.setBorder(new LineBorder(Theme.BORDER_COLOR, 1, false));
 
-        JButton waBtn = Theme.createSuccessButton("💬 Send on WhatsApp");
-        waBtn.setPreferredSize(new Dimension(175, 36));
-        waBtn.setBackground(new Color(37, 211, 102));
-        waBtn.setForeground(Color.WHITE);
-        waBtn.setToolTipText("Open WhatsApp Web to send complete formatted movie ticket to customer");
-        waBtn.addActionListener(e -> {
-            boolean opened = WhatsAppService.openInBrowser(booking);
-            if (!opened) {
-                String url = WhatsAppService.getClickToChatUrl(booking);
-                try {
-                    java.awt.Toolkit.getDefaultToolkit().getSystemClipboard().setContents(
-                            new java.awt.datatransfer.StringSelection(url), null);
-                    JOptionPane.showMessageDialog(this,
-                            "WhatsApp ticket link copied to clipboard:\n" + url,
-                            "WhatsApp Ticket Link",
-                            JOptionPane.INFORMATION_MESSAGE);
-                } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(this,
-                            "WhatsApp Ticket Link:\n" + url,
-                            "WhatsApp Ticket Link",
-                            JOptionPane.INFORMATION_MESSAGE);
-                }
-            }
-        });
-
         JButton printBtn = Theme.createPrimaryButton("🖨  Print Tickets");
         printBtn.setPreferredSize(new Dimension(140, 36));
         printBtn.addActionListener(e -> printReceipt());
@@ -107,43 +81,27 @@ public class TicketConfirmationDialog extends JDialog {
             }
         });
 
-        footer.add(waBtn);
         footer.add(printBtn);
         footer.add(newBookingBtn);
         add(footer, BorderLayout.SOUTH);
     }
 
     /**
-     * Completely silent background dispatch of automatic customer notifications (WhatsApp & SMS).
+     * Completely silent background dispatch of automatic customer SMS notification.
      * Invisible to UI, runs asynchronously, and causes no popups or UI interruptions.
      */
     private void dispatchAutomaticNotificationsSilently() {
         if (booking == null) {
-            NotificationAuditLog.record("ALL", "-", "-", "SKIPPED", "Booking data unavailable for notification dispatch");
+            NotificationAuditLog.record("SMS", "-", "-", "SKIPPED", "Booking data unavailable for notification dispatch");
             return;
         }
         String phone = booking.getCustomerPhone();
         if (phone == null || phone.trim().isEmpty()) {
-            NotificationAuditLog.record("ALL", booking.getBookingNumber(), "-", "SKIPPED", "Customer mobile number is empty");
+            NotificationAuditLog.record("SMS", booking.getBookingNumber(), "-", "SKIPPED", "Customer mobile number is empty");
             return;
         }
 
-        // 1. WhatsApp Dispatch (if enabled in settings)
-        WhatsAppService.sendTicketAsync(booking).thenAccept(result -> {
-            if (result.isSuccess()) {
-                System.out.println("[WhatsApp] Auto-sent ticket via Twilio to " + phone + " (SID=" + result.getMessageSid() + ")");
-            } else {
-                System.out.println("[WhatsApp] Status for " + phone + ": " + result.getMessage());
-                // Automatic fallback: If Twilio API rejects (e.g. Free Trial Error 21654), automatically launch WhatsApp Web
-                if (WhatsAppService.isEnabled()) {
-                    SwingUtilities.invokeLater(() -> {
-                        WhatsAppService.openInBrowser(booking);
-                    });
-                }
-            }
-        });
-
-        // 2. SMS Dispatch (if enabled in settings)
+        // SMS Dispatch (if enabled in settings)
         SmsService.sendTicketAsync(booking).thenAccept(result -> {
             if (result.isSuccess()) {
                 System.out.println("[SMS] Auto-sent ticket via Twilio SMS to " + phone + " (SID=" + result.getMessageSid() + ")");

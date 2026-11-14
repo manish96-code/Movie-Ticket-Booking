@@ -19,13 +19,9 @@ import java.util.Properties;
  */
 public class SettingDAO {
 
-    public static final String KEY_WA_ENABLED = "twilio.whatsapp.enabled";
     public static final String KEY_SMS_ENABLED = "twilio.sms.enabled";
-    public static final String KEY_SANDBOX_ENABLED = "twilio.sandbox.enabled";
     public static final String KEY_ACCOUNT_SID = "twilio.account.sid";
     public static final String KEY_AUTH_TOKEN = "twilio.auth.token";
-    public static final String KEY_FROM_NUMBER = "twilio.from.number";
-    public static final String KEY_CONTENT_SID = "twilio.whatsapp.content.sid";
     public static final String KEY_COUNTRY_CODE = "twilio.default.country.code";
     public static final String KEY_SMS_FROM_NUMBER = "twilio.sms.from.number";
     public static final String KEY_SMS_TEMPLATE = "twilio.sms.template";
@@ -56,11 +52,7 @@ public class SettingDAO {
 
         // 1. Gather baseline default values
         Map<String, String[]> defaults = new LinkedHashMap<>();
-        defaults.put(KEY_WA_ENABLED, new String[]{"true", "Enable or disable automated WhatsApp ticket notifications"});
         defaults.put(KEY_SMS_ENABLED, new String[]{"false", "Enable or disable automated SMS ticket notifications"});
-        defaults.put(KEY_SANDBOX_ENABLED, new String[]{"true", "Enforce official Twilio WhatsApp Sandbox mode"});
-        defaults.put(KEY_FROM_NUMBER, new String[]{"whatsapp:+17372508034", "Twilio WhatsApp sender number"});
-        defaults.put(KEY_CONTENT_SID, new String[]{"HXfe5ab5f00277942d4d4200328b4d403c", "Twilio WhatsApp approved template Content SID"});
         defaults.put(KEY_COUNTRY_CODE, new String[]{"+91", "Default international country code for phone numbers"});
         defaults.put(KEY_SMS_FROM_NUMBER, new String[]{"+17372508034", "Twilio SMS sender phone number"});
         defaults.put(KEY_SMS_TEMPLATE, new String[]{"sms_order_confirmation", "Twilio SMS order confirmation template"});
@@ -112,6 +104,12 @@ public class SettingDAO {
             }
 
             ps.executeBatch();
+
+            // Purge any legacy WhatsApp settings from database
+            try (Statement cleanup = conn.createStatement()) {
+                cleanup.executeUpdate("DELETE FROM system_settings WHERE setting_key LIKE '%whatsapp%' OR setting_key IN ('twilio.sandbox.enabled', 'twilio.from.number')");
+            } catch (SQLException ignored) {}
+
             System.out.println("[SettingDAO] Seeded default system & notification settings into database.");
 
         } catch (SQLException e) {
@@ -179,7 +177,7 @@ public class SettingDAO {
 
     private static Properties loadLocalProperties() {
         Properties props = new Properties();
-        String[] files = {"whatsapp.properties", "sms.properties"};
+        String[] files = {"sms.properties"};
         for (String fileName : files) {
             File f = new File(fileName);
             if (f.exists() && f.isFile()) {

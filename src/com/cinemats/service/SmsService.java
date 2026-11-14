@@ -91,26 +91,15 @@ public class SmsService {
             enabled = Boolean.parseBoolean(dbSmsEnabled.trim());
         }
 
-        // Priority 2: Saved sms.properties > shared whatsapp.properties > Priority 3: Environment variables
-        Properties waProps = new Properties();
-        File waFile = new File("whatsapp.properties");
-        if (waFile.exists() && waFile.isFile()) {
-            try (InputStream in = new FileInputStream(waFile)) {
-                waProps.load(in);
-            } catch (Exception ignored) {}
-        }
-
+        // Priority 2: Saved sms.properties > Priority 3: Environment variables
         String envSid = System.getenv("TWILIO_ACCOUNT_SID");
         String envToken = System.getenv("TWILIO_AUTH_TOKEN");
 
         String sid = props.getProperty("twilio.account.sid", "").trim();
-        String waSid = waProps.getProperty("twilio.account.sid", "").trim();
         if (dbSid != null && !dbSid.trim().isEmpty() && !dbSid.contains("YOUR_TWILIO")) {
             accountSid = dbSid.trim();
         } else if (!sid.isEmpty() && !sid.contains("YOUR_TWILIO")) {
             accountSid = sid;
-        } else if (!waSid.isEmpty() && !waSid.contains("YOUR_TWILIO")) {
-            accountSid = waSid;
         } else if (envSid != null && !envSid.trim().isEmpty()) {
             accountSid = envSid.trim();
         } else {
@@ -118,13 +107,10 @@ public class SmsService {
         }
 
         String token = props.getProperty("twilio.auth.token", "").trim();
-        String waToken = waProps.getProperty("twilio.auth.token", "").trim();
         if (dbToken != null && !dbToken.trim().isEmpty() && !dbToken.contains("YOUR_TWILIO")) {
             authToken = dbToken.trim();
         } else if (!token.isEmpty() && !token.contains("YOUR_TWILIO")) {
             authToken = token;
-        } else if (!waToken.isEmpty() && !waToken.contains("YOUR_TWILIO")) {
-            authToken = waToken;
         } else if (envToken != null && !envToken.trim().isEmpty()) {
             authToken = envToken.trim();
         } else {
@@ -135,7 +121,7 @@ public class SmsService {
                 ? dbSmsFrom.trim()
                 : props.getProperty("twilio.sms.from.number", "").trim();
         if (!from.isEmpty()) {
-            fromNumber = from.replace("whatsapp:", "");
+            fromNumber = from.trim();
         }
 
         String tmpl = (dbSmsTmpl != null && !dbSmsTmpl.trim().isEmpty())
@@ -193,6 +179,14 @@ public class SmsService {
         return accountSid != null ? accountSid : "";
     }
 
+    public static String getMaskedAccountSid() {
+        return NotificationAuditLog.maskIdentifier(accountSid);
+    }
+
+    public static boolean isAuthTokenConfigured() {
+        return authToken != null && !authToken.trim().isEmpty() && !authToken.contains("YOUR_TWILIO");
+    }
+
     public static String getAuthToken() {
         return authToken != null ? authToken : "";
     }
@@ -222,7 +216,7 @@ public class SmsService {
             authToken = newAuthToken.trim();
         }
         if (newFromNumber != null && !newFromNumber.trim().isEmpty()) {
-            fromNumber = newFromNumber.trim().replace("whatsapp:", "");
+            fromNumber = newFromNumber.trim();
         }
         if (newTemplate != null && !newTemplate.trim().isEmpty()) {
             smsTemplate = newTemplate.trim();
@@ -282,6 +276,166 @@ public class SmsService {
      */
     public static synchronized boolean setEnabledAndSave(boolean newEnabled) {
         return saveConfig(newEnabled, accountSid, authToken, fromNumber, smsTemplate, defaultCountryCode);
+    }
+
+    /**
+     * Result of validating Twilio SMS configuration fields.
+     */
+    public static class ValidationResult {
+        private final boolean valid;
+        private final String errorMessage;
+
+        public ValidationResult(boolean valid, String errorMessage) {
+            this.valid = valid;
+            this.errorMessage = errorMessage;
+        }
+
+        public boolean isValid() {
+            return valid;
+        }
+
+        public String getErrorMessage() {
+            return errorMessage;
+        }
+    }
+
+    /**
+     * Validates candidate configuration values before saving.
+     */
+    public static ValidationResult validateConfig(String sid, String tokenInput, boolean allowExistingTokenIfBlank,
+                                                  String senderInput, String countryCodeInput) {
+        String cleanSid = sid != null ? sid.trim() : "";
+        if (cleanSid.isEmpty() || cleanSid.contains("YOUR_TWILIO")) {
+            return new ValidationResult(false, "Twilio Account SID is required (starts with 'AC', 34 characters).");
+        }
+        if (!cleanSid.matches("^AC[0-9a-fA-F]{32}$")) {
+            return new ValidationResult(false, "Invalid Twilio Account SID format. It must start with 'AC' followed by 32 hex characters.");
+        }
+
+        String cleanToken = tokenInput != null ? tokenInput.trim() : "";
+        if (cleanToken.isEmpty()) {
+            if (!allowExistingTokenIfBlank || !isAuthTokenConfigured()) {
+                return new ValidationResult(false, "Twilio Auth Token is required.");
+            }
+        } else {
+            if (cleanToken.contains("YOUR_TWILIO") || cleanToken.contains("*") || cleanToken.contains("•")) {
+                return new ValidationResult(false, "Enter a valid Twilio Auth Token (placeholder or masked characters are not allowed).");
+            }
+            if (cleanToken.length() < 16 || cleanToken.matches(".*\\s+.*")) {
+                return new ValidationResult(false, "Invalid Twilio Auth Token format (must be at least 16 characters with no spaces).");
+            }
+        }
+
+        if (senderInput != null && !senderInput.trim().isEmpty()) {
+            String cleanSender = senderInput.trim();
+            if (!cleanSender.matches("^\\+[1-9][0-9]{7,14}$")) {
+                return new ValidationResult(false, "Invalid SMS Sender Phone Number. Use international E.164 format (e.g. +17372508034).");
+            }
+        }
+
+        if (countryCodeInput != null && !countryCodeInput.trim().isEmpty()) {
+            String cleanCc = countryCodeInput.trim();
+            if (!cleanCc.matches("^\\+[0-9]{1,4}$")) {
+                return new ValidationResult(false, "Invalid Country Code. Use international prefix format, e.g., +91 or +1.");
+            }
+        }
+
+        return new ValidationResult(true, "Configuration valid.");
+    }
+
+    /**
+     * Connection test result.
+     */
+    public static class ConnectionTestResult {
+        private final boolean success;
+        private final int httpStatus;
+        private final String message;
+        private final String details;
+
+        public ConnectionTestResult(boolean success, int httpStatus, String message, String details) {
+            this.success = success;
+            this.httpStatus = httpStatus;
+            this.message = message;
+            this.details = details;
+        }
+
+        public boolean isSuccess() { return success; }
+        public int getHttpStatus() { return httpStatus; }
+        public String getMessage() { return message; }
+        public String getDetails() { return details; }
+    }
+
+    /**
+     * Validates live Twilio API credentials against Twilio's Account verification endpoint.
+     */
+    public static CompletableFuture<ConnectionTestResult> testTwilioConnection() {
+        return CompletableFuture.supplyAsync(() -> {
+            if (!isTwilioConfigured()) {
+                return new ConnectionTestResult(false, 0,
+                        "Twilio credentials not configured. Please fill Account SID and Auth Token.",
+                        "Status: Unconfigured");
+            }
+
+            try {
+                String apiUrl = "https://api.twilio.com/2010-04-01/Accounts/" + accountSid + ".json";
+                String authHeader = "Basic " + Base64.getEncoder().encodeToString(
+                        (accountSid + ":" + authToken).getBytes(StandardCharsets.UTF_8)
+                );
+
+                HttpClient client = HttpClient.newBuilder()
+                        .connectTimeout(Duration.ofSeconds(8))
+                        .build();
+
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(apiUrl))
+                        .timeout(Duration.ofSeconds(10))
+                        .header("Authorization", authHeader)
+                        .GET()
+                        .build();
+
+                HttpResponse<String> resp = client.send(request, HttpResponse.BodyHandlers.ofString());
+                int code = resp.statusCode();
+                String body = resp.body();
+
+                if (code == 200) {
+                    String friendlyName = extractJsonField(body, "friendly_name");
+                    String acctStatus = extractJsonField(body, "status");
+                    String type = extractJsonField(body, "type");
+                    String info = "Account: " + (friendlyName.isEmpty() ? getMaskedAccountSid() : friendlyName)
+                            + " | Status: " + acctStatus
+                            + (type.isEmpty() ? "" : " (" + type + ")");
+                    NotificationAuditLog.record("SMS_GATEWAY", "-", fromNumber, "TEST_SUCCESS", info);
+                    return new ConnectionTestResult(true, code, "Twilio credentials verified successfully!", info);
+                } else if (code == 401) {
+                    String err = "Authentication failed (HTTP 401). Account SID or Auth Token is incorrect.";
+                    NotificationAuditLog.record("SMS_GATEWAY", "-", fromNumber, "TEST_FAILED", err);
+                    return new ConnectionTestResult(false, code, err, "Twilio error: " + extractJsonField(body, "message"));
+                } else {
+                    String rawMsg = extractJsonField(body, "message");
+                    String err = "Twilio returned HTTP " + code + (rawMsg.isEmpty() ? "" : ": " + rawMsg);
+                    NotificationAuditLog.record("SMS_GATEWAY", "-", fromNumber, "TEST_FAILED", err);
+                    return new ConnectionTestResult(false, code, err, body);
+                }
+            } catch (Exception ex) {
+                String err = "Connection error: " + ex.getMessage();
+                NotificationAuditLog.record("SMS_GATEWAY", "-", fromNumber, "TEST_FAILED", err);
+                return new ConnectionTestResult(false, 0, err, ex.toString());
+            }
+        });
+    }
+
+    public static String extractJsonField(String json, String field) {
+        if (json == null) return "";
+        String target = "\"" + field + "\":";
+        int idx = json.indexOf(target);
+        if (idx != -1) {
+            int start = json.indexOf("\"", idx + target.length());
+            int end = json.indexOf("\"", start + 1);
+            if (start != -1 && end != -1) {
+                return json.substring(start + 1, end);
+            }
+        }
+        return "";
     }
 
     /**
