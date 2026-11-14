@@ -12,7 +12,6 @@ import com.cinemats.ui.admin.reports.FinancialReportsPage;
 import com.cinemats.ui.admin.screens.AddScreenPage;
 import com.cinemats.ui.admin.screens.ManageScreensPage;
 import com.cinemats.ui.admin.screens.SeatLayoutPage;
-import com.cinemats.ui.admin.settings.SystemSettingsPage;
 import com.cinemats.ui.admin.shows.AddShowPage;
 import com.cinemats.ui.admin.shows.ManageSchedulesPage;
 import com.cinemats.ui.admin.staff.AddStaffPage;
@@ -68,7 +67,6 @@ public class AdminDashboard extends JFrame {
     private StaffAccountsPage staffAccountsPage;
     private AddStaffPage addStaffPage;
     private FinancialReportsPage reportsPage;
-    private SystemSettingsPage settingsPage;
     private AddMoviePage addMoviePage;
     private AddScreenPage addScreenPage;
     private AddShowPage addShowPage;
@@ -345,7 +343,6 @@ public class AdminDashboard extends JFrame {
         staffAccountsPage = new StaffAccountsPage(this);
         addStaffPage = new AddStaffPage(this);
         reportsPage = new FinancialReportsPage(this);
-        settingsPage = new SystemSettingsPage(this);
         addMoviePage = new AddMoviePage(this);
         addScreenPage = new AddScreenPage(this);
         addShowPage = new AddShowPage(this);
@@ -365,7 +362,6 @@ public class AdminDashboard extends JFrame {
         mainContentPanel.add(staffAccountsPage, "PAGE_STAFF");
         mainContentPanel.add(addStaffPage, "PAGE_ADD_STAFF");
         mainContentPanel.add(reportsPage, "PAGE_REPORTS");
-        mainContentPanel.add(settingsPage, "PAGE_SETTINGS");
         mainContentPanel.add(addMoviePage, "PAGE_ADD_MOVIE");
         mainContentPanel.add(addScreenPage, "PAGE_ADD_SCREEN");
         mainContentPanel.add(addShowPage, "PAGE_ADD_SHOW");
@@ -500,12 +496,6 @@ public class AdminDashboard extends JFrame {
             navMenuPanel.add(createCategoryHeader("FINANCIAL AUDIT"));
             ModernNavButton reportsBtn = createNavButton("Financial Reports", "PAGE_REPORTS", false);
             navMenuPanel.add(reportsBtn);
-
-            navMenuPanel.add(Box.createVerticalStrut(14));
-
-            navMenuPanel.add(createCategoryHeader("SYSTEM CONFIGURATION"));
-            ModernNavButton settingsBtn = createNavButton("System Settings", "PAGE_SETTINGS", false);
-            navMenuPanel.add(settingsBtn);
 
             navMenuPanel.add(Box.createVerticalGlue());
 
@@ -690,8 +680,6 @@ public class AdminDashboard extends JFrame {
             orderBookingPage.refreshData();
         } else if ("PAGE_REPORTS".equals(targetKey) && reportsPage != null) {
             reportsPage.refreshReports();
-        } else if ("PAGE_SETTINGS".equals(targetKey) && settingsPage != null) {
-            settingsPage.refreshSettings();
         } else if ("PAGE_MOVIES_LIST".equals(targetKey) && moviesListPage != null) {
             moviesListPage.loadMoviesFromDatabase();
         } else if ("PAGE_TODAY_SHOWS".equals(targetKey) && todayShowsPage != null) {
@@ -912,19 +900,6 @@ public class AdminDashboard extends JFrame {
                 g2.drawLine(x + 5, centerY - 6, x + 5, centerY + 6);
                 g2.drawLine(x + 8, centerY - 2, x + 12, centerY - 2);
                 g2.drawLine(x + 8, centerY + 2, x + 12, centerY + 2);
-            } else if ("PAGE_SETTINGS".equals(key)) {
-                // Settings Gear Vector Icon
-                g2.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                g2.drawOval(x + 3, centerY - 4, 8, 8);
-                // Gear cogs
-                g2.drawLine(x + 7, centerY - 7, x + 7, centerY - 4);
-                g2.drawLine(x + 7, centerY + 4, x + 7, centerY + 7);
-                g2.drawLine(x, centerY, x + 3, centerY);
-                g2.drawLine(x + 11, centerY, x + 14, centerY);
-                g2.drawLine(x + 2, centerY - 5, x + 4, centerY - 3);
-                g2.drawLine(x + 10, centerY + 3, x + 12, centerY + 5);
-                g2.drawLine(x + 2, centerY + 5, x + 4, centerY + 3);
-                g2.drawLine(x + 10, centerY - 3, x + 12, centerY - 5);
             }
 
             g2.setStroke(oldStroke);
@@ -993,16 +968,6 @@ public class AdminDashboard extends JFrame {
             menu.add(roleItem);
 
             menu.addSeparator();
-
-            if (currentUser.isAdmin()) {
-                JMenuItem settingsItem = new JMenuItem("⚙️  System Settings");
-                settingsItem.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-                settingsItem.setForeground(Theme.TEXT_DARK);
-                settingsItem.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-                settingsItem.addActionListener(e -> switchToPage("PAGE_SETTINGS"));
-                menu.add(settingsItem);
-                menu.addSeparator();
-            }
 
             JMenuItem logoutItem = new JMenuItem("🚪  Sign Out / Logout");
             logoutItem.setFont(new Font("Segoe UI", Font.PLAIN, 12));

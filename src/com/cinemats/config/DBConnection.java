@@ -164,8 +164,6 @@ public class DBConnection {
             com.cinemats.dao.ShowSeatDAO.initShowSeatsTable();
             com.cinemats.dao.CustomerDAO.initCustomersTable();
             com.cinemats.dao.BookingDAO.initBookingsTables();
-            com.cinemats.dao.SettingDAO.initSettingsTable();
-            com.cinemats.dao.SettingDAO.seedDefaultSettings();
 
             System.out.println("[DBConnection] MySQL database schema & default records verified for " + getDatabaseType());
 

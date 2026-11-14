@@ -62,7 +62,6 @@ public class DatabaseSeeder {
         com.cinemats.dao.MovieDAO.seedDefaultMovies();
         com.cinemats.dao.ScreenDAO.seedDefaultScreens();
         com.cinemats.dao.ScreenSeatDAO.seedDefaultScreenSeats();
-        com.cinemats.dao.SettingDAO.seedDefaultSettings();
         ScheduleMockData.seedShowsForRange(-1, 10);
         BookingMockData.seedWeeklyBookings(6, 1);
 
@@ -87,8 +86,7 @@ public class DatabaseSeeder {
             String[] tables = {
                     "tickets", "payments", "booking_items", "bookings",
                     "show_seats", "show_prices", "shows",
-                    "screen_seats", "screens", "movies", "categories", "customers", "users",
-                    "system_settings"
+                    "screen_seats", "screens", "movies", "categories", "customers", "users"
             };
 
             try {
@@ -120,7 +118,7 @@ public class DatabaseSeeder {
         String[] tables = {
                 "users", "categories", "movies", "screens", "screen_seats",
                 "shows", "show_prices", "show_seats", "customers", "bookings",
-                "booking_items", "payments", "tickets", "system_settings"
+                "booking_items", "payments", "tickets"
         };
 
         try (Connection conn = DBConnection.getConnection();
