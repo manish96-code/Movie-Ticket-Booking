@@ -768,10 +768,24 @@ public class SystemSettingsPage extends JPanel {
                         "WhatsApp Test Sent",
                         JOptionPane.INFORMATION_MESSAGE);
             } else {
-                JOptionPane.showMessageDialog(this,
-                        "Failed to send test ticket:\n\n" + result.getMessage(),
-                        "WhatsApp Delivery Failed",
-                        JOptionPane.ERROR_MESSAGE);
+                int opt = JOptionPane.showConfirmDialog(this,
+                        "Twilio API delivery failed:\n" + result.getMessage() + "\n\n"
+                                + "Would you like to preview / send this ticket directly via WhatsApp Web?",
+                        "WhatsApp Delivery Status",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE);
+                if (opt == JOptionPane.YES_OPTION) {
+                    com.cinemats.model.Booking b = new com.cinemats.model.Booking();
+                    b.setBookingNumber("TEST-" + (System.currentTimeMillis() % 100000));
+                    b.setCustomerName("Manish Kumar");
+                    b.setCustomerPhone(inputPhone.trim());
+                    b.setMovieTitle("Interstellar");
+                    b.setScreenName("Audi 1 (Grand IMAX)");
+                    b.setShowDate(java.time.LocalDate.now().toString());
+                    b.setStartTime("03:00 PM");
+                    b.setTotalAmount(new java.math.BigDecimal("295.00"));
+                    WhatsAppService.openInBrowser(b);
+                }
             }
         }));
 

@@ -745,6 +745,7 @@ public class WhatsAppService {
     private static String formatFriendlyError(int twilioCode, String rawMsg, String fromSender) {
         switch (twilioCode) {
             case 21654:
+                return "Twilio Free Trial restriction (Error 21654): Twilio Trial numbers do not allow custom 'Body' text. In production, an approved ContentSid template is required, or use the direct 'Send on WhatsApp' button.";
             case 63016:
                 return "Meta 24-hour messaging window is closed. To receive custom movie ticket details, recipient must first send a message (e.g. 'Hi') to " + fromSender + " on WhatsApp.";
             case 63015:
@@ -779,24 +780,64 @@ public class WhatsAppService {
      * Opens WhatsApp Web or WhatsApp Desktop in system default browser.
      */
     public static boolean openInBrowser(Booking booking) {
+        String url = getClickToChatUrl(booking);
+        return openUrlInBrowser(url);
+    }
+
+    /**
+     * Robust browser launcher that bypasses Linux KDE KIO socket bugs by directly
+     * invoking the installed browser (Brave, Chrome, Firefox) before falling back.
+     */
+    public static boolean openUrlInBrowser(String url) {
+        if (url == null || url.trim().isEmpty()) return false;
+
+        String os = System.getProperty("os.name", "").toLowerCase();
+
+        // 1. On Linux, prefer direct browser binaries to bypass KDE KIO worker errors
+        if (os.contains("linux")) {
+            String[] linuxBrowsers = {
+                    "brave-browser",
+                    "brave-browser-stable",
+                    "google-chrome",
+                    "google-chrome-stable",
+                    "firefox",
+                    "chromium-browser",
+                    "chromium"
+            };
+            for (String b : linuxBrowsers) {
+                try {
+                    new ProcessBuilder(b, url).start();
+                    return true;
+                } catch (Exception ignored) {}
+            }
+        }
+
+        // 2. Try standard Java Desktop API
         try {
-            String url = getClickToChatUrl(booking);
             if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
                 Desktop.getDesktop().browse(URI.create(url));
+                return true;
+            }
+        } catch (Exception ex) {
+            System.err.println("[WhatsAppService] Desktop.browse failed: " + ex.getMessage());
+        }
+
+        // 3. Fallback to platform-specific CLI command
+        try {
+            if (os.contains("win")) {
+                new ProcessBuilder("cmd.exe", "/c", "start", "", url).start();
+                return true;
+            } else if (os.contains("mac")) {
+                new ProcessBuilder("open", url).start();
                 return true;
             } else {
                 new ProcessBuilder("xdg-open", url).start();
                 return true;
             }
         } catch (Exception ex) {
-            try {
-                String url = getClickToChatUrl(booking);
-                new ProcessBuilder("xdg-open", url).start();
-                return true;
-            } catch (Exception e2) {
-                System.err.println("[WhatsAppService] Failed to launch browser: " + ex.getMessage());
-            }
+            System.err.println("[WhatsAppService] ProcessBuilder launch failed: " + ex.getMessage());
         }
+
         return false;
     }
 
