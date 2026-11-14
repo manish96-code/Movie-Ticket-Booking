@@ -3,8 +3,6 @@ package com.cinemats.ui.staff.booking;
 import com.cinemats.model.Booking;
 import com.cinemats.model.BookingItem;
 import com.cinemats.model.Ticket;
-import com.cinemats.service.NotificationAuditLog;
-import com.cinemats.service.SmsService;
 import com.cinemats.util.QRCodeRenderer;
 import com.cinemats.util.Theme;
 
@@ -35,7 +33,6 @@ public class TicketConfirmationDialog extends JDialog {
         getContentPane().setBackground(Theme.BG_MAIN);
 
         initUI();
-        dispatchAutomaticNotificationsSilently();
     }
 
     private void initUI() {
@@ -84,31 +81,6 @@ public class TicketConfirmationDialog extends JDialog {
         footer.add(printBtn);
         footer.add(newBookingBtn);
         add(footer, BorderLayout.SOUTH);
-    }
-
-    /**
-     * Completely silent background dispatch of automatic customer SMS notification.
-     * Invisible to UI, runs asynchronously, and causes no popups or UI interruptions.
-     */
-    private void dispatchAutomaticNotificationsSilently() {
-        if (booking == null) {
-            NotificationAuditLog.record("SMS", "-", "-", "SKIPPED", "Booking data unavailable for notification dispatch");
-            return;
-        }
-        String phone = booking.getCustomerPhone();
-        if (phone == null || phone.trim().isEmpty()) {
-            NotificationAuditLog.record("SMS", booking.getBookingNumber(), "-", "SKIPPED", "Customer mobile number is empty");
-            return;
-        }
-
-        // SMS Dispatch (if enabled in settings)
-        SmsService.sendTicketAsync(booking).thenAccept(result -> {
-            if (result.isSuccess()) {
-                System.out.println("[SMS] Auto-sent ticket via Twilio SMS to " + phone + " (SID=" + result.getMessageSid() + ")");
-            } else {
-                System.out.println("[SMS] Status for " + phone + ": " + result.getMessage());
-            }
-        });
     }
 
     private JPanel buildTicketReceipt() {

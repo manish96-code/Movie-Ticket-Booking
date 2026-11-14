@@ -2,9 +2,6 @@ package com.cinemats.dao;
 
 import com.cinemats.config.DBConnection;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -12,19 +9,18 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Properties;
 
 /**
- * Data Access Object for cinema system and notification gateway settings (system_settings table).
+ * Data Access Object for cinema system and general configuration (system_settings table).
  */
 public class SettingDAO {
 
-    public static final String KEY_SMS_ENABLED = "twilio.sms.enabled";
-    public static final String KEY_ACCOUNT_SID = "twilio.account.sid";
-    public static final String KEY_AUTH_TOKEN = "twilio.auth.token";
-    public static final String KEY_COUNTRY_CODE = "twilio.default.country.code";
-    public static final String KEY_SMS_FROM_NUMBER = "twilio.sms.from.number";
-    public static final String KEY_SMS_TEMPLATE = "twilio.sms.template";
+    public static final String KEY_CINEMA_NAME = "cinema.name";
+    public static final String KEY_CINEMA_LOCATION = "cinema.location";
+    public static final String KEY_CONTACT_EMAIL = "cinema.contact.email";
+    public static final String KEY_CONTACT_PHONE = "cinema.contact.phone";
+    public static final String KEY_CURRENCY = "cinema.currency";
+    public static final String KEY_TAX_RATE = "cinema.tax.rate";
 
     // Initializes system_settings table in database
     public static synchronized void initSettingsTable() {
@@ -45,53 +41,24 @@ public class SettingDAO {
         }
     }
 
-    // Seeds default notification and gateway settings into system_settings table
+    // Seeds default cinema and system settings into system_settings table
     public static synchronized void seedDefaultSettings() {
         initSettingsTable();
         if (!DBConnection.isDriverAvailable()) return;
 
-        // 1. Gather baseline default values
+        // 1. Baseline default cinema settings
         Map<String, String[]> defaults = new LinkedHashMap<>();
-        defaults.put(KEY_SMS_ENABLED, new String[]{"false", "Enable or disable automated SMS ticket notifications"});
-        defaults.put(KEY_COUNTRY_CODE, new String[]{"+91", "Default international country code for phone numbers"});
-        defaults.put(KEY_SMS_FROM_NUMBER, new String[]{"+17372508034", "Twilio SMS sender phone number"});
-        defaults.put(KEY_SMS_TEMPLATE, new String[]{"sms_order_confirmation", "Twilio SMS order confirmation template"});
+        defaults.put(KEY_CINEMA_NAME, new String[]{"Cinema Express", "Official Cinema Brand Name"});
+        defaults.put(KEY_CINEMA_LOCATION, new String[]{"Downtown Multiplex, Audi 1-4", "Cinema Theater Address / Location"});
+        defaults.put(KEY_CONTACT_EMAIL, new String[]{"support@cinemaexpress.com", "Cinema Customer Support Email"});
+        defaults.put(KEY_CONTACT_PHONE, new String[]{"+91 9876543210", "Cinema Box Office Contact Number"});
+        defaults.put(KEY_CURRENCY, new String[]{"₹", "Currency Symbol (INR)"});
+        defaults.put(KEY_TAX_RATE, new String[]{"18", "Default GST / Tax Rate (%)"});
 
-        // 2. Resolve credentials with priority: environment variables -> local properties file
-        String sid = System.getenv("TWILIO_ACCOUNT_SID");
-        String token = System.getenv("TWILIO_AUTH_TOKEN");
-
-        Properties localProps = loadLocalProperties();
-        if ((sid == null || sid.trim().isEmpty()) && localProps.containsKey(KEY_ACCOUNT_SID)) {
-            String val = localProps.getProperty(KEY_ACCOUNT_SID, "").trim();
-            if (!val.isEmpty() && !val.contains("YOUR_TWILIO")) {
-                sid = val;
-            }
-        }
-        if ((token == null || token.trim().isEmpty()) && localProps.containsKey(KEY_AUTH_TOKEN)) {
-            String val = localProps.getProperty(KEY_AUTH_TOKEN, "").trim();
-            if (!val.isEmpty() && !val.contains("YOUR_TWILIO")) {
-                token = val;
-            }
-        }
-
-        defaults.put(KEY_ACCOUNT_SID, new String[]{sid != null ? sid.trim() : "", "Twilio Account SID (starts with AC)"});
-        defaults.put(KEY_AUTH_TOKEN, new String[]{token != null ? token.trim() : "", "Twilio API Auth Token secret"});
-
-        // Override defaults if local properties specified other values
-        for (String k : defaults.keySet()) {
-            if (localProps.containsKey(k)) {
-                String v = localProps.getProperty(k, "").trim();
-                if (!v.isEmpty()) {
-                    defaults.get(k)[0] = v;
-                }
-            }
-        }
-
-        // 3. Upsert into system_settings table
+        // 2. Upsert into system_settings table
         String upsertSQL = "INSERT INTO system_settings (setting_key, setting_value, description) "
                 + "VALUES (?, ?, ?) "
-                + "ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), description = VALUES(description)";
+                + "ON DUPLICATE KEY UPDATE description = VALUES(description)";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(upsertSQL)) {
@@ -105,12 +72,12 @@ public class SettingDAO {
 
             ps.executeBatch();
 
-            // Purge any legacy WhatsApp settings from database
+            // Purge any legacy WhatsApp / SMS / Twilio settings from database
             try (Statement cleanup = conn.createStatement()) {
-                cleanup.executeUpdate("DELETE FROM system_settings WHERE setting_key LIKE '%whatsapp%' OR setting_key IN ('twilio.sandbox.enabled', 'twilio.from.number')");
+                cleanup.executeUpdate("DELETE FROM system_settings WHERE setting_key LIKE '%whatsapp%' OR setting_key LIKE '%twilio%' OR setting_key LIKE '%sms%'");
             } catch (SQLException ignored) {}
 
-            System.out.println("[SettingDAO] Seeded default system & notification settings into database.");
+            System.out.println("[SettingDAO] Initialized default cinema system settings.");
 
         } catch (SQLException e) {
             System.err.println("[SettingDAO] Failed to seed system settings: " + e.getMessage());
@@ -174,19 +141,4 @@ public class SettingDAO {
         } catch (SQLException ignored) {}
         return map;
     }
-
-    private static Properties loadLocalProperties() {
-        Properties props = new Properties();
-        String[] files = {"sms.properties"};
-        for (String fileName : files) {
-            File f = new File(fileName);
-            if (f.exists() && f.isFile()) {
-                try (InputStream in = new FileInputStream(f)) {
-                    props.load(in);
-                } catch (Exception ignored) {}
-            }
-        }
-        return props;
-    }
 }
-

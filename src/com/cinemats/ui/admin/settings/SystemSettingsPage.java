@@ -1,7 +1,6 @@
 package com.cinemats.ui.admin.settings;
 
-import com.cinemats.service.NotificationAuditLog;
-import com.cinemats.service.SmsService;
+import com.cinemats.dao.SettingDAO;
 import com.cinemats.ui.admin.AdminDashboard;
 import com.cinemats.util.Theme;
 
@@ -10,46 +9,28 @@ import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.util.List;
 
 /**
- * Administrator Notification & System Settings Control Panel.
- * Configures Twilio API credentials, SMS gateway,
- * and customer ticket notification switches with live connection diagnostics.
+ * Administrator Cinema & System Configuration Control Panel.
+ * Configures cinema details, contact information, billing currency, and tax rates.
  */
 public class SystemSettingsPage extends JPanel {
 
-    private static final String MASK_PLACEHOLDER = "••••••••••••••••••••••••••••••••";
-
     private final AdminDashboard dashboard;
 
-    // --- Channel Toggle ---
-    private ModernToggleSwitch smsSwitch;
-    private JLabel smsStatusBadge;
-    private JLabel smsStatusDesc;
-    private JPanel smsStatusBox;
+    // --- Cinema Profile Fields ---
+    private JTextField cinemaNameField;
+    private JTextField cinemaLocationField;
+    private JTextField contactEmailField;
+    private JTextField contactPhoneField;
 
-    // --- Gateway Credential Fields ---
-    private JTextField accountSidField;
-    private JPasswordField authTokenField;
-    private JButton togglePasswordBtn;
-    private boolean passwordVisible = false;
-    private JTextField smsSenderField;
-    private JTextField countryCodeField;
+    // --- Billing & Tax Fields ---
+    private JTextField currencyField;
+    private JTextField taxRateField;
 
-    // --- Status Banner & Feedback ---
-    private JPanel alertBanner;
-    private JLabel alertIcon;
-    private JLabel alertTitle;
-    private JLabel alertSubtitle;
+    // --- Feedback Toast ---
     private JLabel toastLabel;
     private Timer toastTimer;
-
-    // --- Audit Log Panel ---
-    private DefaultListModel<String> auditListModel;
-    private JList<String> auditList;
 
     public SystemSettingsPage(AdminDashboard dashboard) {
         this.dashboard = dashboard;
@@ -61,7 +42,7 @@ public class SystemSettingsPage extends JPanel {
     }
 
     private void initUI() {
-        // Top Main Header
+        // Top Header
         JPanel topContainer = new JPanel();
         topContainer.setLayout(new BoxLayout(topContainer, BoxLayout.Y_AXIS));
         topContainer.setOpaque(false);
@@ -78,11 +59,11 @@ public class SystemSettingsPage extends JPanel {
         titleBlock.setLayout(new BoxLayout(titleBlock, BoxLayout.Y_AXIS));
         titleBlock.setOpaque(false);
 
-        JLabel title = new JLabel("⚙️  Notification & Twilio SMS Gateway Settings");
+        JLabel title = new JLabel("⚙️  System & Cinema Configuration");
         title.setFont(new Font("Segoe UI", Font.BOLD, 20));
         title.setForeground(Theme.TEXT_DARK);
 
-        JLabel subtitle = new JLabel("Configure customer movie ticket SMS notification channel and Twilio REST API.");
+        JLabel subtitle = new JLabel("Manage cinema details, theater location, currency symbol, and tax rates.");
         subtitle.setFont(Theme.FONT_REGULAR);
         subtitle.setForeground(Theme.TEXT_MUTED);
 
@@ -91,28 +72,21 @@ public class SystemSettingsPage extends JPanel {
         titleBlock.add(subtitle);
         headerPanel.add(titleBlock, BorderLayout.WEST);
 
-        // Header quick buttons
+        // Header Action Button
         JPanel headerActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         headerActions.setOpaque(false);
-
-        JButton testConnBtn = Theme.createSecondaryButton("🔌 Test Connection");
-        testConnBtn.setPreferredSize(new Dimension(150, 36));
-        testConnBtn.addActionListener(e -> performConnectionTest());
 
         JButton saveAllBtn = Theme.createPrimaryButton("💾 Save Settings");
         saveAllBtn.setPreferredSize(new Dimension(140, 36));
         saveAllBtn.addActionListener(e -> saveAllSettings());
-
-        headerActions.add(testConnBtn);
         headerActions.add(saveAllBtn);
         headerPanel.add(headerActions, BorderLayout.EAST);
 
         topContainer.add(headerPanel);
         topContainer.add(Box.createVerticalStrut(12));
 
-        // Alert Banner (Diagnostic status)
-        alertBanner = createAlertBanner();
-        topContainer.add(alertBanner);
+        // Status Banner
+        topContainer.add(createStatusBanner());
 
         // Toast feedback label
         toastLabel = new JLabel(" ");
@@ -130,20 +104,16 @@ public class SystemSettingsPage extends JPanel {
         contentPanel.setOpaque(false);
         contentPanel.setBorder(new EmptyBorder(4, 28, 28, 28));
 
-        // 1. Notification Channel Switches Card
-        contentPanel.add(createChannelSwitchesCard());
+        // 1. Cinema Identity & Location Card
+        contentPanel.add(createCinemaProfileCard());
         contentPanel.add(Box.createVerticalStrut(18));
 
-        // 2. Twilio API Credentials Card
-        contentPanel.add(createCredentialsCard());
+        // 2. Billing & Tax Configuration Card
+        contentPanel.add(createBillingCard());
         contentPanel.add(Box.createVerticalStrut(18));
 
-        // 3. Testing & Action Controls Card
-        contentPanel.add(createActionToolsCard());
-        contentPanel.add(Box.createVerticalStrut(18));
-
-        // 4. Recent Notification Audit Log Card
-        contentPanel.add(createAuditLogCard());
+        // 3. Actions Card
+        contentPanel.add(createActionsCard());
 
         JScrollPane scrollPane = new JScrollPane(contentPanel);
         scrollPane.setBorder(null);
@@ -155,174 +125,155 @@ public class SystemSettingsPage extends JPanel {
         add(scrollPane, BorderLayout.CENTER);
     }
 
-    private JPanel createAlertBanner() {
+    private JPanel createStatusBanner() {
         JPanel banner = new JPanel(new BorderLayout(12, 0));
         banner.setBorder(new CompoundBorder(
-                new LineBorder(new Color(254, 215, 170), 1, true),
+                new LineBorder(new Color(187, 247, 208), 1, true),
                 new EmptyBorder(12, 18, 12, 18)
         ));
-        banner.setBackground(new Color(255, 247, 237));
+        banner.setBackground(new Color(240, 253, 244));
 
-        alertIcon = new JLabel("⚠️");
-        alertIcon.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 22));
-        banner.add(alertIcon, BorderLayout.WEST);
+        JLabel icon = new JLabel("✅");
+        icon.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 22));
+        banner.add(icon, BorderLayout.WEST);
 
         JPanel textPanel = new JPanel();
         textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
         textPanel.setOpaque(false);
 
-        alertTitle = new JLabel("Twilio Credentials Required");
-        alertTitle.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        alertTitle.setForeground(new Color(154, 52, 18));
+        JLabel bannerTitle = new JLabel("Standalone Box Office System Active");
+        bannerTitle.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        bannerTitle.setForeground(new Color(22, 163, 74));
 
-        alertSubtitle = new JLabel("Customer ticket dispatches require Twilio Account SID and Auth Token to be saved below.");
-        alertSubtitle.setFont(Theme.FONT_REGULAR);
-        alertSubtitle.setForeground(new Color(194, 65, 12));
+        JLabel bannerSubtitle = new JLabel("All ticket bookings, counter printing, seat selections, and financial audits operate locally.");
+        bannerSubtitle.setFont(Theme.FONT_REGULAR);
+        bannerSubtitle.setForeground(new Color(21, 128, 61));
 
-        textPanel.add(alertTitle);
+        textPanel.add(bannerTitle);
         textPanel.add(Box.createVerticalStrut(2));
-        textPanel.add(alertSubtitle);
+        textPanel.add(bannerSubtitle);
         banner.add(textPanel, BorderLayout.CENTER);
 
         return banner;
     }
 
-    private JPanel createChannelSwitchesCard() {
-        JPanel card = createSectionCard("📡 Notification Channels", "Toggle automated SMS ticket notifications for counter bookings.");
-
-        JPanel body = new JPanel(new GridLayout(1, 1, 16, 0));
-        body.setOpaque(false);
-
-        // SMS switch tile
-        JPanel smsTile = new JPanel(new BorderLayout(0, 10));
-        smsTile.setBackground(new Color(248, 250, 252));
-        smsTile.setBorder(new CompoundBorder(
-                new LineBorder(Theme.BORDER_COLOR, 1, true),
-                new EmptyBorder(14, 16, 14, 16)
-        ));
-
-        JPanel smsHeader = new JPanel(new BorderLayout());
-        smsHeader.setOpaque(false);
-        JLabel smsTitle = new JLabel("📱  SMS Ticket Notifications");
-        smsTitle.setFont(new Font("Segoe UI", Font.BOLD, 15));
-        smsTitle.setForeground(Theme.TEXT_DARK);
-
-        smsSwitch = new ModernToggleSwitch(SmsService.isEnabled(), () -> {
-            boolean sel = smsSwitch.isSelected();
-            SmsService.setEnabledAndSave(sel);
-            updateSmsStatusVisuals(sel);
-            showToast(sel ? "✓ SMS dispatch enabled" : "✓ SMS dispatch paused");
-        });
-        smsHeader.add(smsTitle, BorderLayout.WEST);
-        smsHeader.add(smsSwitch, BorderLayout.EAST);
-        smsTile.add(smsHeader, BorderLayout.NORTH);
-
-        smsStatusBox = new JPanel(new BorderLayout(8, 0));
-        smsStatusBox.setBorder(new EmptyBorder(6, 10, 6, 10));
-        smsStatusBadge = new JLabel();
-        smsStatusBadge.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        smsStatusDesc = new JLabel();
-        smsStatusDesc.setFont(Theme.FONT_SMALL);
-        smsStatusBox.add(smsStatusBadge, BorderLayout.WEST);
-        smsStatusBox.add(smsStatusDesc, BorderLayout.CENTER);
-        smsTile.add(smsStatusBox, BorderLayout.CENTER);
-
-        body.add(smsTile);
-        card.add(body, BorderLayout.CENTER);
-
-        return card;
-    }
-
-    private JPanel createCredentialsCard() {
-        JPanel card = createSectionCard("🔑 Twilio API Gateway Credentials",
-                "Stored safely in sms.properties. Never committed to version control.");
+    private JPanel createCinemaProfileCard() {
+        JPanel card = createSectionCard("🏢 Cinema Identity & Location",
+                "Appears on printed tickets, box office receipts, and dashboard headers.");
 
         JPanel form = new JPanel(new GridBagLayout());
         form.setOpaque(false);
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(6, 4, 6, 4);
+        gbc.insets = new Insets(8, 4, 8, 4);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        // Row 1: Account SID
+        // Cinema Name
         gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0.3;
-        JLabel sidLabel = new JLabel("Twilio Account SID *");
-        sidLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        sidLabel.setForeground(Theme.TEXT_DARK);
-        form.add(sidLabel, gbc);
+        JLabel nameLabel = new JLabel("Cinema Name *");
+        nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        nameLabel.setForeground(Theme.TEXT_DARK);
+        form.add(nameLabel, gbc);
 
         gbc.gridx = 1; gbc.weightx = 0.7;
-        accountSidField = Theme.createTextField("ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
-        accountSidField.setPreferredSize(new Dimension(360, 38));
-        form.add(accountSidField, gbc);
+        cinemaNameField = Theme.createTextField("Cinema Express");
+        cinemaNameField.setPreferredSize(new Dimension(360, 38));
+        form.add(cinemaNameField, gbc);
 
-        // Row 2: Auth Token (Masked Password Field)
+        // Cinema Location / Address
         gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0.3;
-        JLabel tokenLabel = new JLabel("Twilio Auth Token *");
-        tokenLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        tokenLabel.setForeground(Theme.TEXT_DARK);
-        form.add(tokenLabel, gbc);
+        JLabel locLabel = new JLabel("Theater Location / Address");
+        locLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        locLabel.setForeground(Theme.TEXT_DARK);
+        form.add(locLabel, gbc);
 
         gbc.gridx = 1; gbc.weightx = 0.7;
-        JPanel passWrapper = new JPanel(new BorderLayout(6, 0));
-        passWrapper.setOpaque(false);
+        cinemaLocationField = Theme.createTextField("Downtown Multiplex, Audi 1-4");
+        cinemaLocationField.setPreferredSize(new Dimension(360, 38));
+        form.add(cinemaLocationField, gbc);
 
-        authTokenField = new JPasswordField();
-        authTokenField.setFont(Theme.FONT_REGULAR);
-        authTokenField.setBorder(new CompoundBorder(
-                new LineBorder(Theme.BORDER_COLOR, 1, true),
-                new EmptyBorder(8, 10, 8, 10)
-        ));
-        authTokenField.setPreferredSize(new Dimension(300, 38));
-
-        togglePasswordBtn = new JButton("👁 Show");
-        togglePasswordBtn.setFont(Theme.FONT_SMALL);
-        togglePasswordBtn.setFocusPainted(false);
-        togglePasswordBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        togglePasswordBtn.setPreferredSize(new Dimension(80, 38));
-        togglePasswordBtn.addActionListener(e -> togglePasswordVisibility());
-
-        passWrapper.add(authTokenField, BorderLayout.CENTER);
-        passWrapper.add(togglePasswordBtn, BorderLayout.EAST);
-        form.add(passWrapper, gbc);
-
-        // Row 3: SMS Sender Phone Number
+        // Support Email
         gbc.gridx = 0; gbc.gridy = 2; gbc.weightx = 0.3;
-        JLabel senderLabel = new JLabel("Twilio SMS Sender Number *");
-        senderLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        senderLabel.setForeground(Theme.TEXT_DARK);
-        form.add(senderLabel, gbc);
+        JLabel emailLabel = new JLabel("Support Email");
+        emailLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        emailLabel.setForeground(Theme.TEXT_DARK);
+        form.add(emailLabel, gbc);
 
         gbc.gridx = 1; gbc.weightx = 0.7;
-        smsSenderField = Theme.createTextField("+17372508034");
-        smsSenderField.setPreferredSize(new Dimension(360, 38));
-        form.add(smsSenderField, gbc);
+        contactEmailField = Theme.createTextField("support@cinemaexpress.com");
+        contactEmailField.setPreferredSize(new Dimension(360, 38));
+        form.add(contactEmailField, gbc);
 
-        // Row 4: Country Code
+        // Contact Phone
         gbc.gridx = 0; gbc.gridy = 3; gbc.weightx = 0.3;
-        JLabel ccLabel = new JLabel("Default Country Code");
-        ccLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        ccLabel.setForeground(Theme.TEXT_DARK);
-        form.add(ccLabel, gbc);
+        JLabel phoneLabel = new JLabel("Box Office Contact Phone");
+        phoneLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        phoneLabel.setForeground(Theme.TEXT_DARK);
+        form.add(phoneLabel, gbc);
 
         gbc.gridx = 1; gbc.weightx = 0.7;
-        countryCodeField = Theme.createTextField("+91");
-        countryCodeField.setPreferredSize(new Dimension(120, 38));
-        JPanel ccWrapper = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        ccWrapper.setOpaque(false);
-        ccWrapper.add(countryCodeField);
-        JLabel ccHint = new JLabel("  (Prepend to 10-digit customer mobile numbers, e.g. +91)");
-        ccHint.setFont(Theme.FONT_SMALL);
-        ccHint.setForeground(Theme.TEXT_MUTED);
-        ccWrapper.add(ccHint);
-        form.add(ccWrapper, gbc);
+        contactPhoneField = Theme.createTextField("+91 9876543210");
+        contactPhoneField.setPreferredSize(new Dimension(360, 38));
+        form.add(contactPhoneField, gbc);
 
         card.add(form, BorderLayout.CENTER);
         return card;
     }
 
-    private JPanel createActionToolsCard() {
-        JPanel card = createSectionCard("🛠️ Validation, Testing & Actions",
-                "Verify connection with Twilio API and send real test SMS ticket confirmations.");
+    private JPanel createBillingCard() {
+        JPanel card = createSectionCard("💳 Billing, Currency & Taxes",
+                "Configure price display currency symbol and applicable Goods & Services Tax (GST).");
+
+        JPanel form = new JPanel(new GridBagLayout());
+        form.setOpaque(false);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(8, 4, 8, 4);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        // Currency
+        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0.3;
+        JLabel currLabel = new JLabel("Currency Symbol");
+        currLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        currLabel.setForeground(Theme.TEXT_DARK);
+        form.add(currLabel, gbc);
+
+        gbc.gridx = 1; gbc.weightx = 0.7;
+        currencyField = Theme.createTextField("₹");
+        currencyField.setPreferredSize(new Dimension(100, 38));
+        JPanel currWrapper = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        currWrapper.setOpaque(false);
+        currWrapper.add(currencyField);
+        JLabel currHint = new JLabel("  (Default: ₹ for Indian Rupee)");
+        currHint.setFont(Theme.FONT_SMALL);
+        currHint.setForeground(Theme.TEXT_MUTED);
+        currWrapper.add(currHint);
+        form.add(currWrapper, gbc);
+
+        // GST Tax Rate
+        gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0.3;
+        JLabel taxLabel = new JLabel("GST / Tax Rate (%)");
+        taxLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        taxLabel.setForeground(Theme.TEXT_DARK);
+        form.add(taxLabel, gbc);
+
+        gbc.gridx = 1; gbc.weightx = 0.7;
+        taxRateField = Theme.createTextField("18");
+        taxRateField.setPreferredSize(new Dimension(100, 38));
+        JPanel taxWrapper = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        taxWrapper.setOpaque(false);
+        taxWrapper.add(taxRateField);
+        JLabel taxHint = new JLabel("  (% added to base ticket subtotal)");
+        taxHint.setFont(Theme.FONT_SMALL);
+        taxHint.setForeground(Theme.TEXT_MUTED);
+        taxWrapper.add(taxHint);
+        form.add(taxWrapper, gbc);
+
+        card.add(form, BorderLayout.CENTER);
+        return card;
+    }
+
+    private JPanel createActionsCard() {
+        JPanel card = createSectionCard("💾 Save & Apply",
+                "Apply changes across box office counters, ticket receipts, and booking summaries.");
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 4));
         actions.setOpaque(false);
@@ -331,44 +282,13 @@ public class SystemSettingsPage extends JPanel {
         saveBtn.setBackground(new Color(22, 163, 74));
         saveBtn.addActionListener(e -> saveAllSettings());
 
-        JButton testConnBtn = Theme.createPrimaryButton("🔌 Verify Twilio Connection");
-        testConnBtn.addActionListener(e -> performConnectionTest());
-
-        JButton testMsgBtn = Theme.createSuccessButton("📤 Send Test SMS Ticket");
-        testMsgBtn.addActionListener(e -> promptAndSendTestTicket());
+        JButton resetBtn = Theme.createSecondaryButton("↺ Reload Defaults");
+        resetBtn.addActionListener(e -> refreshSettings());
 
         actions.add(saveBtn);
-        actions.add(testConnBtn);
-        actions.add(testMsgBtn);
+        actions.add(resetBtn);
 
         card.add(actions, BorderLayout.CENTER);
-        return card;
-    }
-
-    private JPanel createAuditLogCard() {
-        JPanel card = createSectionCard("📋 Recent Notification Dispatch Audit",
-                "Live record of dispatch outcomes, skips, and reasons (notifications.log).");
-
-        auditListModel = new DefaultListModel<>();
-        auditList = new JList<>(auditListModel);
-        auditList.setFont(new Font("Monospaced", Font.PLAIN, 12));
-        auditList.setBackground(new Color(248, 250, 252));
-        auditList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-
-        JScrollPane logScroll = new JScrollPane(auditList);
-        logScroll.setPreferredSize(new Dimension(400, 140));
-        logScroll.setBorder(new LineBorder(Theme.BORDER_COLOR, 1));
-        card.add(logScroll, BorderLayout.CENTER);
-
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 4));
-        footer.setOpaque(false);
-        JButton refreshLogBtn = Theme.createSecondaryButton("🔄 Refresh Log");
-        refreshLogBtn.setPreferredSize(new Dimension(120, 30));
-        refreshLogBtn.setFont(Theme.FONT_SMALL);
-        refreshLogBtn.addActionListener(e -> refreshAuditLogList());
-        footer.add(refreshLogBtn);
-        card.add(footer, BorderLayout.SOUTH);
-
         return card;
     }
 
@@ -400,249 +320,60 @@ public class SystemSettingsPage extends JPanel {
         return card;
     }
 
-    private void togglePasswordVisibility() {
-        passwordVisible = !passwordVisible;
-        if (passwordVisible) {
-            authTokenField.setEchoChar((char) 0);
-            togglePasswordBtn.setText("🙈 Hide");
-        } else {
-            authTokenField.setEchoChar('•');
-            togglePasswordBtn.setText("👁 Show");
-        }
-    }
-
     public void refreshSettings() {
-        SmsService.reloadConfig();
-
-        boolean smsEnabled = SmsService.isEnabled();
-        if (smsSwitch != null) smsSwitch.setSelected(smsEnabled);
-        updateSmsStatusVisuals(smsEnabled);
-
-        if (accountSidField != null) {
-            String sid = SmsService.getAccountSid();
-            accountSidField.setText(sid.contains("YOUR_TWILIO") ? "" : sid);
+        if (cinemaNameField != null) {
+            cinemaNameField.setText(SettingDAO.getSetting(SettingDAO.KEY_CINEMA_NAME, "Cinema Express"));
         }
-
-        if (authTokenField != null) {
-            if (SmsService.isAuthTokenConfigured()) {
-                authTokenField.setText(MASK_PLACEHOLDER);
-            } else {
-                authTokenField.setText("");
-            }
+        if (cinemaLocationField != null) {
+            cinemaLocationField.setText(SettingDAO.getSetting(SettingDAO.KEY_CINEMA_LOCATION, "Downtown Multiplex, Audi 1-4"));
         }
-
-        if (smsSenderField != null) {
-            smsSenderField.setText(SmsService.getFromNumber());
+        if (contactEmailField != null) {
+            contactEmailField.setText(SettingDAO.getSetting(SettingDAO.KEY_CONTACT_EMAIL, "support@cinemaexpress.com"));
         }
-
-        if (countryCodeField != null) {
-            countryCodeField.setText(SmsService.getDefaultCountryCode());
+        if (contactPhoneField != null) {
+            contactPhoneField.setText(SettingDAO.getSetting(SettingDAO.KEY_CONTACT_PHONE, "+91 9876543210"));
         }
-
-        updateAlertBannerState();
-        refreshAuditLogList();
-    }
-
-    private void updateAlertBannerState() {
-        boolean configured = SmsService.isTwilioConfigured();
-        if (configured) {
-            alertBanner.setBackground(new Color(240, 253, 244));
-            alertBanner.setBorder(new CompoundBorder(
-                    new LineBorder(new Color(187, 247, 208), 1, true),
-                    new EmptyBorder(12, 18, 12, 18)
-            ));
-            alertIcon.setText("✅");
-            alertTitle.setText("Twilio Gateway Configured");
-            alertTitle.setForeground(new Color(22, 163, 74));
-            alertSubtitle.setText("Twilio Account SID: " + SmsService.getMaskedAccountSid()
-                    + "  |  SMS Sender: " + SmsService.getFromNumber());
-            alertSubtitle.setForeground(new Color(21, 128, 61));
-        } else {
-            alertBanner.setBackground(new Color(255, 247, 237));
-            alertBanner.setBorder(new CompoundBorder(
-                    new LineBorder(new Color(254, 215, 170), 1, true),
-                    new EmptyBorder(12, 18, 12, 18)
-            ));
-            alertIcon.setText("⚠️");
-            alertTitle.setText("Twilio Credentials Required");
-            alertTitle.setForeground(new Color(154, 52, 18));
-            alertSubtitle.setText("Customer ticket dispatches require Twilio Account SID and Auth Token to be saved below.");
-            alertSubtitle.setForeground(new Color(194, 65, 12));
+        if (currencyField != null) {
+            currencyField.setText(SettingDAO.getSetting(SettingDAO.KEY_CURRENCY, "₹"));
         }
-    }
-
-    private void updateSmsStatusVisuals(boolean enabled) {
-        if (enabled) {
-            smsStatusBadge.setText("●  ACTIVE");
-            smsStatusBadge.setForeground(new Color(22, 163, 74));
-            smsStatusDesc.setText("— SMS confirmations will automatically be dispatched upon booking.");
-            smsStatusDesc.setForeground(new Color(21, 128, 61));
-            smsStatusBox.setBackground(new Color(240, 253, 244));
-        } else {
-            smsStatusBadge.setText("○  PAUSED");
-            smsStatusBadge.setForeground(new Color(100, 116, 139));
-            smsStatusDesc.setText("— SMS notifications are paused. No SMS messages will be dispatched.");
-            smsStatusDesc.setForeground(new Color(71, 85, 105));
-            smsStatusBox.setBackground(new Color(241, 245, 249));
-        }
-    }
-
-    private void refreshAuditLogList() {
-        if (auditListModel == null) return;
-        auditListModel.clear();
-        List<NotificationAuditLog.Entry> entries = NotificationAuditLog.getRecentEntries();
-        if (entries.isEmpty()) {
-            auditListModel.addElement("No recent notification dispatch events recorded yet.");
-        } else {
-            for (NotificationAuditLog.Entry e : entries) {
-                auditListModel.addElement(e.formatLine());
-            }
+        if (taxRateField != null) {
+            taxRateField.setText(SettingDAO.getSetting(SettingDAO.KEY_TAX_RATE, "18"));
         }
     }
 
     private void saveAllSettings() {
-        String sidInput = accountSidField.getText().trim();
-        char[] tokenChars = authTokenField.getPassword();
-        String tokenInput = new String(tokenChars).trim();
-        boolean isTokenPlaceholder = tokenInput.equals(MASK_PLACEHOLDER);
+        String name = cinemaNameField.getText().trim();
+        String loc = cinemaLocationField.getText().trim();
+        String email = contactEmailField.getText().trim();
+        String phone = contactPhoneField.getText().trim();
+        String curr = currencyField.getText().trim();
+        String tax = taxRateField.getText().trim();
 
-        boolean smsEnabled = smsSwitch.isSelected();
-        String senderInput = smsSenderField.getText().trim();
-        String ccInput = countryCodeField.getText().trim();
-
-        // Validate before saving
-        SmsService.ValidationResult val = SmsService.validateConfig(
-                sidInput,
-                isTokenPlaceholder ? "" : tokenInput,
-                isTokenPlaceholder,
-                senderInput,
-                ccInput
-        );
-
-        if (!val.isValid()) {
+        if (name.isEmpty()) {
             JOptionPane.showMessageDialog(this,
-                    val.getErrorMessage(),
+                    "Cinema Name cannot be empty.",
                     "Validation Error",
                     JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        String finalToken = isTokenPlaceholder ? SmsService.getAuthToken() : tokenInput;
+        SettingDAO.setSetting(SettingDAO.KEY_CINEMA_NAME, name, "Official Cinema Brand Name");
+        SettingDAO.setSetting(SettingDAO.KEY_CINEMA_LOCATION, loc, "Cinema Location / Address");
+        SettingDAO.setSetting(SettingDAO.KEY_CONTACT_EMAIL, email, "Customer Support Email");
+        SettingDAO.setSetting(SettingDAO.KEY_CONTACT_PHONE, phone, "Box Office Contact Number");
+        SettingDAO.setSetting(SettingDAO.KEY_CURRENCY, curr, "Currency Symbol");
+        SettingDAO.setSetting(SettingDAO.KEY_TAX_RATE, tax, "GST / Tax Rate (%)");
 
-        boolean smsOk = SmsService.saveConfig(smsEnabled, sidInput, finalToken,
-                senderInput, SmsService.getSmsTemplate(), ccInput);
-
-        if (smsOk) {
-            refreshSettings();
-            showToast("✓ Settings successfully saved and applied!");
-            JOptionPane.showMessageDialog(this,
-                    "Notification and Twilio SMS Gateway settings have been saved successfully.\n"
-                            + "• Account SID: " + SmsService.getMaskedAccountSid() + "\n"
-                            + "• SMS Sender: " + SmsService.getFromNumber() + "\n"
-                            + "• SMS Status: " + (smsEnabled ? "Active" : "Paused"),
-                    "Settings Saved",
-                    JOptionPane.INFORMATION_MESSAGE);
-        } else {
-            JOptionPane.showMessageDialog(this,
-                    "Failed to save configuration files. Please check file permissions.",
-                    "Save Error",
-                    JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    private void performConnectionTest() {
-        if (!SmsService.isTwilioConfigured()) {
-            JOptionPane.showMessageDialog(this,
-                    "Please enter and save your Twilio Account SID and Auth Token first before testing.",
-                    "Missing Credentials",
-                    JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        JDialog progressDialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Testing Twilio Connection", true);
-        progressDialog.setSize(340, 120);
-        progressDialog.setLocationRelativeTo(this);
-        progressDialog.setLayout(new BorderLayout());
-
-        JPanel p = new JPanel(new FlowLayout(FlowLayout.CENTER, 14, 24));
-        p.setBackground(Color.WHITE);
-        JProgressBar bar = new JProgressBar();
-        bar.setIndeterminate(true);
-        bar.setPreferredSize(new Dimension(200, 18));
-        JLabel lbl = new JLabel("Pinging Twilio API...");
-        lbl.setFont(Theme.FONT_REGULAR);
-        p.add(lbl);
-        p.add(bar);
-        progressDialog.add(p);
-
-        SmsService.testTwilioConnection().thenAccept(res -> SwingUtilities.invokeLater(() -> {
-            progressDialog.dispose();
-            refreshAuditLogList();
-            if (res.isSuccess()) {
-                JOptionPane.showMessageDialog(this,
-                        res.getMessage() + "\n\n" + res.getDetails(),
-                        "Connection Verified",
-                        JOptionPane.INFORMATION_MESSAGE);
-            } else {
-                JOptionPane.showMessageDialog(this,
-                        res.getMessage() + "\n\n" + res.getDetails(),
-                        "Connection Test Failed",
-                        JOptionPane.ERROR_MESSAGE);
-            }
-        }));
-
-        progressDialog.setVisible(true);
-    }
-
-    private void promptAndSendTestTicket() {
-        if (!SmsService.isTwilioConfigured()) {
-            JOptionPane.showMessageDialog(this,
-                    "Twilio credentials not configured. Please save Account SID and Auth Token first.",
-                    "Missing Credentials",
-                    JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        String inputPhone = JOptionPane.showInputDialog(this,
-                "Enter recipient mobile number (with country code, e.g. +919876543210):",
-                "Send Test SMS Ticket",
-                JOptionPane.QUESTION_MESSAGE);
-
-        if (inputPhone == null || inputPhone.trim().isEmpty()) return;
-
-        JDialog progress = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Sending Test SMS", true);
-        progress.setSize(340, 120);
-        progress.setLocationRelativeTo(this);
-        JPanel p = new JPanel(new FlowLayout(FlowLayout.CENTER, 14, 24));
-        p.setBackground(Color.WHITE);
-        JProgressBar bar = new JProgressBar();
-        bar.setIndeterminate(true);
-        bar.setPreferredSize(new Dimension(200, 18));
-        JLabel lbl = new JLabel("Dispatching SMS via Twilio...");
-        lbl.setFont(Theme.FONT_REGULAR);
-        p.add(lbl);
-        p.add(bar);
-        progress.add(p);
-
-        SmsService.sendTestMessage(inputPhone.trim()).thenAccept(result -> SwingUtilities.invokeLater(() -> {
-            progress.dispose();
-            refreshAuditLogList();
-            if (result.isSuccess()) {
-                JOptionPane.showMessageDialog(this,
-                        "✓ Test SMS sent successfully!\n"
-                                + "Message SID: " + result.getMessageSid() + "\n\n"
-                                + "The customer mobile should receive the SMS details shortly.",
-                        "SMS Test Sent",
-                        JOptionPane.INFORMATION_MESSAGE);
-            } else {
-                JOptionPane.showMessageDialog(this,
-                        "Twilio SMS delivery failed:\n" + result.getMessage(),
-                        "SMS Delivery Status",
-                        JOptionPane.WARNING_MESSAGE);
-            }
-        }));
-
-        progress.setVisible(true);
+        refreshSettings();
+        showToast("✓ System settings successfully saved!");
+        JOptionPane.showMessageDialog(this,
+                "Cinema and system settings have been saved successfully.\n"
+                        + "• Cinema Name: " + name + "\n"
+                        + "• Location: " + (loc.isEmpty() ? "Not specified" : loc) + "\n"
+                        + "• Currency: " + curr + "\n"
+                        + "• Tax Rate: " + tax + "%",
+                "Settings Saved",
+                JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void showToast(String message) {
@@ -661,78 +392,5 @@ public class SystemSettingsPage extends JPanel {
         });
         toastTimer.setRepeats(false);
         toastTimer.start();
-    }
-
-    // --- SLEEK MODERN TOGGLE SWITCH ---
-    public static class ModernToggleSwitch extends JComponent {
-        private boolean selected = true;
-        private final Runnable onToggle;
-
-        public ModernToggleSwitch(boolean initial, Runnable onToggle) {
-            this.selected = initial;
-            this.onToggle = onToggle;
-            setPreferredSize(new Dimension(64, 32));
-            setMinimumSize(new Dimension(64, 32));
-            setMaximumSize(new Dimension(64, 32));
-            setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-            addMouseListener(new MouseAdapter() {
-                @Override
-                public void mouseClicked(MouseEvent e) {
-                    selected = !selected;
-                    repaint();
-                    if (onToggle != null) {
-                        onToggle.run();
-                    }
-                }
-            });
-        }
-
-        public boolean isSelected() {
-            return selected;
-        }
-
-        public void setSelected(boolean val) {
-            this.selected = val;
-            repaint();
-        }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-            int w = getWidth();
-            int h = getHeight();
-
-            Color trackColor = selected ? new Color(22, 163, 74) : new Color(203, 213, 225);
-            g2.setColor(trackColor);
-            g2.fillRoundRect(2, 2, w - 4, h - 4, h, h);
-
-            g2.setFont(new Font("Segoe UI", Font.BOLD, 10));
-            if (selected) {
-                g2.setColor(Color.WHITE);
-                g2.drawString("ON", 10, h / 2 + 4);
-            } else {
-                g2.setColor(new Color(100, 116, 139));
-                g2.drawString("OFF", w - 28, h / 2 + 4);
-            }
-
-            int knobSize = h - 8;
-            int knobX = selected ? (w - knobSize - 5) : 5;
-
-            g2.setColor(new Color(0, 0, 0, 35));
-            g2.fillOval(knobX, 5, knobSize, knobSize);
-
-            g2.setColor(Color.WHITE);
-            g2.fillOval(knobX, 4, knobSize, knobSize);
-
-            if (selected) {
-                g2.setColor(new Color(22, 163, 74));
-                g2.fillOval(knobX + knobSize / 2 - 2, 4 + knobSize / 2 - 2, 4, 4);
-            }
-
-            g2.dispose();
-        }
     }
 }
