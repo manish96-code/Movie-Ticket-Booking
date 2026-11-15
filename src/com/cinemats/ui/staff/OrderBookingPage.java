@@ -410,7 +410,8 @@ public class OrderBookingPage extends JPanel {
         gbc.weightx = 0.32;
         gbc.insets = new Insets(0, 0, 0, 0);
         JPanel col2 = buildSummaryAndPaymentPanel();
-        col2.setMinimumSize(new Dimension(300, 0));
+        col2.setPreferredSize(new Dimension(360, 0));
+        col2.setMinimumSize(new Dimension(340, 0));
         workspace.add(col2, gbc);
 
         view.add(workspace, BorderLayout.CENTER);
@@ -1087,6 +1088,7 @@ public class OrderBookingPage extends JPanel {
     private JPanel buildSummaryAndPaymentPanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(Color.WHITE);
+        panel.setPreferredSize(new Dimension(360, 0));
         panel.setBorder(new CompoundBorder(
                 new LineBorder(new Color(226, 232, 240), 1, true),
                 new EmptyBorder(0, 0, 0, 0)
@@ -1398,8 +1400,8 @@ public class OrderBookingPage extends JPanel {
                 new EmptyBorder(4, 4, 4, 4)
         ));
         qrFrame.setAlignmentX(Component.CENTER_ALIGNMENT);
-        qrFrame.setPreferredSize(new Dimension(148, 148));
-        qrFrame.setMaximumSize(new Dimension(148, 148));
+        qrFrame.setPreferredSize(new Dimension(116, 116));
+        qrFrame.setMaximumSize(new Dimension(116, 116));
 
         upiQrImageLabel = new JLabel("", SwingConstants.CENTER);
         qrFrame.add(upiQrImageLabel);
@@ -1644,7 +1646,7 @@ public class OrderBookingPage extends JPanel {
             upiPayload = "upi://pay?pa=" + UPI_VPA + "&pn=Cinema%20Express&am=" + amountStr + "&cu=INR&tn=Tickets&tr=" + currentUpiTrxId;
         }
 
-        BufferedImage qrImg = QRCodeRenderer.renderQRCode(upiPayload, 140, 140);
+        BufferedImage qrImg = QRCodeRenderer.renderQRCode(upiPayload, 108, 108);
         upiQrImageLabel.setText("");
         upiQrImageLabel.setIcon(new ImageIcon(qrImg));
 
