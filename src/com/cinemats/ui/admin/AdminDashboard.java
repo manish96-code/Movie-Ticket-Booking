@@ -305,6 +305,7 @@ public class AdminDashboard extends JFrame {
         sidebarPanel = new JPanel(new BorderLayout());
         sidebarPanel.setBackground(Color.WHITE);
         sidebarPanel.setPreferredSize(new Dimension(265, 0));
+        sidebarPanel.setMinimumSize(new Dimension(265, 0));
         sidebarPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, Theme.BORDER_COLOR));
 
         navMenuPanel = new JPanel();
@@ -524,38 +525,53 @@ public class AdminDashboard extends JFrame {
             navMenuPanel.add(Box.createVerticalGlue());
 
             // Shift Card & Logout Button
-            JPanel shiftCard = new JPanel(new BorderLayout());
+            JPanel shiftCard = new JPanel();
+            shiftCard.setLayout(new BoxLayout(shiftCard, BoxLayout.Y_AXIS));
             shiftCard.setBackground(Theme.CARD_HOVER);
             shiftCard.setBorder(new CompoundBorder(
                     new LineBorder(Theme.BORDER_COLOR, 1, true),
                     new EmptyBorder(8, 12, 8, 12)
             ));
+            shiftCard.setAlignmentX(Component.CENTER_ALIGNMENT);
+            shiftCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, 78));
 
-            JPanel shiftTop = new JPanel(new BorderLayout());
-            shiftTop.setOpaque(false);
-            String shiftName = (currentUser.getShift() != null && !currentUser.getShift().trim().isEmpty())
-                    ? currentUser.getShift() : "Shift Active";
-            JLabel shiftLbl = new JLabel(shiftName);
-            shiftLbl.setFont(Theme.FONT_SMALL);
-            shiftLbl.setForeground(Theme.TEXT_MUTED);
+            // Line 1: Counter Name (WEST) + Online Status badge (EAST)
+            JPanel shiftHeader = new JPanel(new BorderLayout(6, 0));
+            shiftHeader.setOpaque(false);
+            shiftHeader.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+            String fullCounter = (currentUser.getCounter() != null && !currentUser.getCounter().trim().isEmpty())
+                    ? currentUser.getCounter() : "Counter #01";
+            String counterShort = fullCounter.contains("(") ? fullCounter.substring(0, fullCounter.indexOf("(")).trim() : fullCounter;
+            JLabel counterLbl = new JLabel(counterShort);
+            counterLbl.setFont(Theme.FONT_BOLD_SM);
+            counterLbl.setForeground(Theme.TEXT_DARK);
 
             JLabel liveIndicator = new JLabel("● ONLINE");
             liveIndicator.setFont(new Font("Segoe UI", Font.BOLD, 10));
             liveIndicator.setForeground(new Color(22, 163, 74));
 
-            shiftTop.add(shiftLbl, BorderLayout.WEST);
-            shiftTop.add(liveIndicator, BorderLayout.EAST);
+            shiftHeader.add(counterLbl, BorderLayout.WEST);
+            shiftHeader.add(liveIndicator, BorderLayout.EAST);
+            shiftCard.add(shiftHeader);
+            shiftCard.add(Box.createVerticalStrut(4));
 
-            String cName = (currentUser.getCounter() != null && !currentUser.getCounter().trim().isEmpty())
-                    ? currentUser.getCounter() : "POS";
-            JLabel counterInfo = new JLabel(cName + " • " + adminName);
-            counterInfo.setFont(Theme.FONT_BOLD_SM);
-            counterInfo.setForeground(Theme.TEXT_DARK);
-            counterInfo.setBorder(new EmptyBorder(3, 0, 0, 0));
+            // Line 2: Staff Name
+            JLabel staffLbl = new JLabel("👤 " + adminName);
+            staffLbl.setFont(Theme.FONT_SMALL);
+            staffLbl.setForeground(new Color(71, 85, 105));
+            staffLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+            shiftCard.add(staffLbl);
+            shiftCard.add(Box.createVerticalStrut(3));
 
-            shiftCard.add(shiftTop, BorderLayout.NORTH);
-            shiftCard.add(counterInfo, BorderLayout.CENTER);
-            shiftCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, 56));
+            // Line 3: Shift Name & Timing
+            String shiftName = (currentUser.getShift() != null && !currentUser.getShift().trim().isEmpty())
+                    ? currentUser.getShift() : "Morning Shift";
+            JLabel shiftLbl = new JLabel("⏰ " + shiftName);
+            shiftLbl.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+            shiftLbl.setForeground(Theme.TEXT_MUTED);
+            shiftLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+            shiftCard.add(shiftLbl);
 
             bottomSection.add(shiftCard);
             bottomSection.add(Box.createVerticalStrut(8));
@@ -611,18 +627,20 @@ public class AdminDashboard extends JFrame {
                     g2.setColor(new Color(71, 85, 105));
                 }
 
-                g2.setFont(new Font("Segoe UI", Font.BOLD, 13));
+                g2.setFont(new Font("Segoe UI", Font.BOLD, 12));
                 FontMetrics fm = g2.getFontMetrics();
                 String text = getText();
-                int textX = (width - fm.stringWidth(text)) / 2;
+                int textX = Math.max(8, (width - fm.stringWidth(text)) / 2);
                 int textY = (height - fm.getHeight()) / 2 + fm.getAscent();
                 g2.drawString(text, textX, textY);
                 g2.dispose();
             }
         };
 
-        logoutBtn.setPreferredSize(new Dimension(236, 42));
-        logoutBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
+        logoutBtn.setPreferredSize(new Dimension(236, 40));
+        logoutBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        logoutBtn.setMinimumSize(new Dimension(200, 40));
+        logoutBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
         logoutBtn.setFocusPainted(false);
         logoutBtn.setContentAreaFilled(false);
         logoutBtn.setBorderPainted(false);
