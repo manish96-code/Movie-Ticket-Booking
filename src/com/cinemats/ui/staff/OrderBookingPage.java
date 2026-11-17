@@ -47,6 +47,7 @@ public class OrderBookingPage extends JPanel {
     private final JPanel stepCardsPanel = new JPanel(stepCardLayout);
     public static final String STEP_MOVIES_SHOWS = "STEP_MOVIES_SHOWS";
     public static final String STEP_SEATS_SUMMARY = "STEP_SEATS_SUMMARY";
+    private String currentStep = STEP_MOVIES_SHOWS;
 
     // Step 2 Header Navigation & Meta Labels
     private final JLabel step2MovieTitle = new JLabel("-");
@@ -209,7 +210,7 @@ public class OrderBookingPage extends JPanel {
     public void refreshData() {
         loadMovies();
         refreshRecentBookings();
-        if (selectedShow != null) {
+        if (STEP_SEATS_SUMMARY.equals(currentStep) && selectedShow != null) {
             loadSeatsForSelectedShow();
         }
     }
@@ -500,10 +501,12 @@ public class OrderBookingPage extends JPanel {
     }
 
     public void showStep1() {
+        currentStep = STEP_MOVIES_SHOWS;
         stepCardLayout.show(stepCardsPanel, STEP_MOVIES_SHOWS);
     }
 
     public void showStep2() {
+        currentStep = STEP_SEATS_SUMMARY;
         if (selectedMovie != null && selectedShow != null) {
             step2MovieTitle.setText("🎬 " + capitalizeTitle(selectedMovie.getTitle()) + "  •  " + selectedShow.getScreenName() + " (" + selectedShow.getScreenType() + ")");
             step2ShowMeta.setText("📅 " + formatDatePill(selectedShow.getShowDate()) + "  •  ⏰ " + selectedShow.getStartTime() + "  •  " + selectedMovie.getLanguage() + " • " + selectedMovie.getCertificate() + " • " + selectedMovie.getShortDuration());
@@ -748,7 +751,6 @@ public class OrderBookingPage extends JPanel {
     }
 
     private JPanel createMovieGridCard(Movie movie) {
-        final boolean isSelected = (selectedMovie != null && selectedMovie.getId() == movie.getId());
         final String capitalizedTitle = capitalizeTitle(movie.getTitle());
         final BufferedImage posterImg = getOrLoadPosterImage(movie);
 
@@ -775,8 +777,10 @@ public class OrderBookingPage extends JPanel {
                     }
 
                     @Override
-                    public void mouseClicked(MouseEvent e) {
-                        selectMovie(movie);
+                    public void mousePressed(MouseEvent e) {
+                        if (SwingUtilities.isLeftMouseButton(e)) {
+                            selectMovie(movie);
+                        }
                     }
                 });
             }
@@ -787,10 +791,10 @@ public class OrderBookingPage extends JPanel {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-                g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
 
                 int w = getWidth();
                 int h = getHeight();
+                boolean isSelected = (selectedMovie != null && selectedMovie.getId() == movie.getId());
 
                 // 1. Draw Card Shape & Background
                 RoundRectangle2D cardShape = new RoundRectangle2D.Float(1, 1, w - 2, h - 2, ARC, ARC);
@@ -804,14 +808,7 @@ public class OrderBookingPage extends JPanel {
                 g2.setClip(posterClip);
 
                 if (posterImg != null) {
-                    int iw = posterImg.getWidth();
-                    int ih = posterImg.getHeight();
-                    double scale = Math.max((double) w / iw, (double) POSTER_H / ih);
-                    int sw = (int) (iw * scale);
-                    int sh = (int) (ih * scale);
-                    int sx = (w - sw) / 2;
-                    int sy = (POSTER_H - sh) / 2;
-                    g2.drawImage(posterImg, sx, sy, sw, sh, null);
+                    g2.drawImage(posterImg, 0, 0, null);
 
                     // Gradient fade at bottom of poster
                     GradientPaint fade = new GradientPaint(0, POSTER_H - 35, new Color(0, 0, 0, 0), 0, POSTER_H, new Color(0, 0, 0, 110));
@@ -951,9 +948,29 @@ public class OrderBookingPage extends JPanel {
         if (posterImageCache.containsKey(movie.getId())) {
             return posterImageCache.get(movie.getId());
         }
-        BufferedImage img = loadPosterImage(movie);
-        posterImageCache.put(movie.getId(), img);
-        return img;
+        BufferedImage raw = loadPosterImage(movie);
+        if (raw != null) {
+            int targetW = 144;
+            int targetH = 152;
+            int iw = raw.getWidth();
+            int ih = raw.getHeight();
+            double scale = Math.max((double) targetW / iw, (double) targetH / ih);
+            int sw = Math.max(1, (int) (iw * scale));
+            int sh = Math.max(1, (int) (ih * scale));
+            int sx = (targetW - sw) / 2;
+            int sy = (targetH - sh) / 2;
+
+            BufferedImage thumb = new BufferedImage(targetW, targetH, BufferedImage.TYPE_INT_RGB);
+            Graphics2D g2 = thumb.createGraphics();
+            g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+            g2.drawImage(raw, sx, sy, sw, sh, null);
+            g2.dispose();
+            posterImageCache.put(movie.getId(), thumb);
+            return thumb;
+        }
+        posterImageCache.put(movie.getId(), null);
+        return null;
     }
 
     private BufferedImage loadPosterImage(Movie movie) {
@@ -2204,7 +2221,6 @@ public class OrderBookingPage extends JPanel {
             showsContainerPanel.add(emptyState);
 
             selectedShow = null;
-            loadSeatsForSelectedShow();
             showsContainerPanel.revalidate();
             showsContainerPanel.repaint();
             return;
@@ -2230,13 +2246,11 @@ public class OrderBookingPage extends JPanel {
             showsContainerPanel.add(createShowTile(s));
         }
 
-        loadSeatsForSelectedShow();
         showsContainerPanel.revalidate();
         showsContainerPanel.repaint();
     }
 
     private JPanel createShowTile(Show show) {
-        boolean isSelected = (selectedShow != null && selectedShow.getId() == show.getId());
         final boolean bookable = show.isBookable();
 
         JPanel tile = new JPanel(new BorderLayout(6, 4)) {
@@ -2255,6 +2269,23 @@ public class OrderBookingPage extends JPanel {
                         isHovered = false;
                         repaint();
                     }
+
+                    @Override
+                    public void mousePressed(MouseEvent e) {
+                        if (SwingUtilities.isLeftMouseButton(e)) {
+                            if (!bookable) {
+                                JOptionPane.showMessageDialog(OrderBookingPage.this,
+                                        "Ticket booking for this screening is closed.\n\n"
+                                        + "• Movie: " + show.getMovieTitle() + "\n"
+                                        + "• Showtime: " + show.getStartTime() + " (" + formatDatePill(show.getShowDate()) + ")\n"
+                                        + "• Reason: Past 30-minute booking cutoff window.\n\n"
+                                        + "Please select an upcoming screening.",
+                                        "Screening Closed", JOptionPane.WARNING_MESSAGE);
+                                return;
+                            }
+                            selectShow(show);
+                        }
+                    }
                 });
             }
 
@@ -2264,6 +2295,7 @@ public class OrderBookingPage extends JPanel {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 int w = getWidth();
                 int h = getHeight();
+                boolean isSelected = (selectedShow != null && selectedShow.getId() == show.getId());
 
                 if (isSelected || (isHovered && bookable)) {
                     g2.setColor(new Color(239, 246, 255));
@@ -2368,23 +2400,6 @@ public class OrderBookingPage extends JPanel {
         content.add(botRow);
 
         tile.add(content, BorderLayout.CENTER);
-
-        tile.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if (!show.isBookable()) {
-                    JOptionPane.showMessageDialog(OrderBookingPage.this,
-                            "Ticket booking for this screening is closed.\n\n"
-                            + "• Movie: " + show.getMovieTitle() + "\n"
-                            + "• Showtime: " + show.getStartTime() + " (" + formatDatePill(show.getShowDate()) + ")\n"
-                            + "• Reason: Past 30-minute booking cutoff window.\n\n"
-                            + "Please select an upcoming screening.",
-                            "Screening Closed", JOptionPane.WARNING_MESSAGE);
-                    return;
-                }
-                selectShow(show);
-            }
-        });
 
         return tile;
     }
