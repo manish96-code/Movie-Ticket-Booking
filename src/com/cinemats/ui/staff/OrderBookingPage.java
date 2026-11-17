@@ -209,6 +209,9 @@ public class OrderBookingPage extends JPanel {
     public void refreshData() {
         loadMovies();
         refreshRecentBookings();
+        if (selectedShow != null) {
+            loadSeatsForSelectedShow();
+        }
     }
 
     private void initUI() {

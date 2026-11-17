@@ -7,5 +7,5 @@
         "lib/**/*.jar"
     ],
     "java.debug.settings.onBuildFailureProceed": true,
-    "files.autoSave": "off"
+    "files.autoSave": "afterDelay"
 }
