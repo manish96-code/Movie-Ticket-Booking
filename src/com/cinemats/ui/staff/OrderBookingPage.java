@@ -2314,21 +2314,22 @@ public class OrderBookingPage extends JPanel {
             }
         };
 
-        tile.setPreferredSize(new Dimension(152, 70));
-        tile.setMinimumSize(new Dimension(140, 70));
+        tile.setPreferredSize(new Dimension(180, 74));
+        tile.setMinimumSize(new Dimension(160, 70));
         tile.setCursor(new Cursor(bookable ? Cursor.HAND_CURSOR : Cursor.DEFAULT_CURSOR));
-        tile.setBorder(new EmptyBorder(6, 10, 6, 10));
+        tile.setBorder(new EmptyBorder(6, 8, 6, 8));
 
         JPanel content = new JPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
         content.setOpaque(false);
 
         // Screen Name & Type
-        JPanel screenRow = new JPanel(new BorderLayout(4, 0));
+        JPanel screenRow = new JPanel(new BorderLayout(6, 0));
         screenRow.setOpaque(false);
         JLabel screenLbl = new JLabel(show.getScreenName());
         screenLbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
         screenLbl.setForeground(new Color(30, 41, 59));
+        screenLbl.setToolTipText(show.getScreenName() + " (" + show.getScreenType() + ")");
 
         JLabel typePill = new JLabel(" " + show.getScreenType() + " ");
         typePill.setFont(new Font("Segoe UI", Font.BOLD, 9));
@@ -2337,11 +2338,11 @@ public class OrderBookingPage extends JPanel {
         typePill.setOpaque(true);
         typePill.setBorder(new LineBorder(new Color(199, 210, 254), 1, true));
 
-        screenRow.add(screenLbl, BorderLayout.WEST);
+        screenRow.add(screenLbl, BorderLayout.CENTER);
         screenRow.add(typePill, BorderLayout.EAST);
 
         // Time & Date (when ALL or advance)
-        JPanel timeRow = new JPanel(new BorderLayout(4, 0));
+        JPanel timeRow = new JPanel(new BorderLayout(6, 0));
         timeRow.setOpaque(false);
         JLabel timeLbl = new JLabel("⏰ " + show.getStartTime());
         timeLbl.setFont(new Font("Segoe UI", Font.BOLD, 13));
@@ -2356,7 +2357,7 @@ public class OrderBookingPage extends JPanel {
         }
 
         // Seats & Action
-        JPanel botRow = new JPanel(new BorderLayout(4, 0));
+        JPanel botRow = new JPanel(new BorderLayout(6, 0));
         botRow.setOpaque(false);
 
         JLabel seatsLbl;
@@ -2390,7 +2391,7 @@ public class OrderBookingPage extends JPanel {
             actionLbl.setForeground(new Color(37, 99, 235));
         }
 
-        botRow.add(seatsLbl, BorderLayout.WEST);
+        botRow.add(seatsLbl, BorderLayout.CENTER);
         botRow.add(actionLbl, BorderLayout.EAST);
 
         content.add(screenRow);
