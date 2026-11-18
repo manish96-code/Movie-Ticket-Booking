@@ -11,13 +11,14 @@ import java.awt.*;
  */
 public class ModernScrollBarUI extends BasicScrollBarUI {
 
-    private int thickness = 8;
-    private static final Color THUMB_NORMAL = new Color(203, 213, 225, 200); // Slate-300
-    private static final Color THUMB_HOVER = new Color(148, 163, 184, 230);  // Slate-400
-    private static final Color THUMB_DRAG = new Color(100, 116, 139, 255);   // Slate-500
+    private int thickness = 10;
+    private static final Color TRACK_BG = new Color(241, 245, 249, 180);
+    private static final Color THUMB_NORMAL = new Color(148, 163, 184, 220); // Slate-400
+    private static final Color THUMB_HOVER = new Color(100, 116, 139, 240);  // Slate-500
+    private static final Color THUMB_DRAG = new Color(71, 85, 105, 255);     // Slate-600
 
     public ModernScrollBarUI() {
-        this(8);
+        this(10);
     }
 
     public ModernScrollBarUI(int thickness) {
@@ -52,7 +53,11 @@ public class ModernScrollBarUI extends BasicScrollBarUI {
 
     @Override
     protected void paintTrack(Graphics g, JComponent c, Rectangle trackBounds) {
-        // Transparent track
+        if (!scrollbar.isEnabled()) return;
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setColor(TRACK_BG);
+        g2.fillRect(trackBounds.x, trackBounds.y, trackBounds.width, trackBounds.height);
+        g2.dispose();
     }
 
     @Override
@@ -78,17 +83,15 @@ public class ModernScrollBarUI extends BasicScrollBarUI {
         int h = thumbBounds.height;
 
         if (scrollbar.getOrientation() == JScrollBar.VERTICAL) {
-            int padding = Math.max(1, (w - thickness) / 2);
-            int thumbW = Math.min(w, thickness);
-            int thumbX = x + padding;
+            int thumbW = Math.max(4, Math.min(w - 2, thickness - 2));
+            int thumbX = x + (w - thumbW) / 2;
             int arc = Math.min(thumbW, 8);
-            g2.fillRoundRect(thumbX, y + 2, thumbW, Math.max(8, h - 4), arc, arc);
+            g2.fillRoundRect(thumbX, y + 2, thumbW, Math.max(24, h - 4), arc, arc);
         } else {
-            int padding = Math.max(1, (h - thickness) / 2);
-            int thumbH = Math.min(h, thickness);
-            int thumbY = y + padding;
+            int thumbH = Math.max(4, Math.min(h - 2, thickness - 2));
+            int thumbY = y + (h - thumbH) / 2;
             int arc = Math.min(thumbH, 8);
-            g2.fillRoundRect(x + 2, thumbY, Math.max(8, w - 4), thumbH, arc, arc);
+            g2.fillRoundRect(x + 2, thumbY, Math.max(24, w - 4), thumbH, arc, arc);
         }
 
         g2.dispose();
@@ -107,7 +110,7 @@ public class ModernScrollBarUI extends BasicScrollBarUI {
      * Applies this modern scrollbar UI to both vertical and horizontal scrollbars of a JScrollPane.
      */
     public static void apply(JScrollPane scrollPane) {
-        apply(scrollPane, 8);
+        apply(scrollPane, 10);
     }
 
     /**
@@ -122,8 +125,8 @@ public class ModernScrollBarUI extends BasicScrollBarUI {
         JScrollBar vBar = scrollPane.getVerticalScrollBar();
         if (vBar != null) {
             vBar.setUI(new ModernScrollBarUI(thickness));
-            vBar.setUnitIncrement(18);
-            vBar.setBlockIncrement(60);
+            vBar.setUnitIncrement(36);
+            vBar.setBlockIncrement(144);
             vBar.setOpaque(false);
             vBar.setPreferredSize(new Dimension(thickness, 0));
         }
@@ -131,8 +134,8 @@ public class ModernScrollBarUI extends BasicScrollBarUI {
         JScrollBar hBar = scrollPane.getHorizontalScrollBar();
         if (hBar != null) {
             hBar.setUI(new ModernScrollBarUI(thickness));
-            hBar.setUnitIncrement(18);
-            hBar.setBlockIncrement(60);
+            hBar.setUnitIncrement(36);
+            hBar.setBlockIncrement(144);
             hBar.setOpaque(false);
             hBar.setPreferredSize(new Dimension(0, thickness));
         }

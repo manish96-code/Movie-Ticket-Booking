@@ -74,6 +74,7 @@ public class OrderBookingPage extends JPanel {
     private final JLabel movieSectionTitleLbl = new JLabel("🎬 Movies Playing Today");
     private final JLabel movieCountBadge = new JLabel("0 Movies");
     private JScrollPane cardsScroll;
+    private JScrollPane showsScroll;
     private final JPanel movieListPanel = new ScrollableWrapPanel(new com.cinemats.util.WrapLayout(FlowLayout.LEFT, 10, 12));
     private List<Movie> allMoviesList = new ArrayList<>();
     private List<Movie> dateFilteredMovies = new ArrayList<>();
@@ -367,14 +368,16 @@ public class OrderBookingPage extends JPanel {
         showSection.add(showHeader, BorderLayout.NORTH);
 
         showsContainerPanel.setBackground(Color.WHITE);
-        showsContainerPanel.setBorder(new EmptyBorder(8, 8, 20, 8));
-        JScrollPane showsScroll = new JScrollPane(showsContainerPanel);
+        showsContainerPanel.setBorder(new EmptyBorder(8, 8, 36, 8));
+        showsScroll = new JScrollPane(showsContainerPanel);
         showsScroll.setBorder(new LineBorder(Theme.BORDER_COLOR, 1, true));
         showsScroll.getViewport().setBackground(Color.WHITE);
         showsScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        showsScroll.getVerticalScrollBar().setUnitIncrement(20);
-        showsScroll.getVerticalScrollBar().setBlockIncrement(100);
-        com.cinemats.util.ModernScrollBarUI.apply(showsScroll, 8);
+        showsScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
+        showsScroll.getVerticalScrollBar().setUnitIncrement(36);
+        showsScroll.getVerticalScrollBar().setBlockIncrement(144);
+        com.cinemats.util.ModernScrollBarUI.apply(showsScroll, 10);
+        attachWheelScrollForwarder(showsContainerPanel, showsScroll);
 
         showSection.add(showsScroll, BorderLayout.CENTER);
 
@@ -613,15 +616,42 @@ public class OrderBookingPage extends JPanel {
         // Scrollable Movie Cards List (Responsive 4-column Wrap Grid)
         movieListPanel.setLayout(new com.cinemats.util.WrapLayout(FlowLayout.LEFT, 10, 12));
         movieListPanel.setBackground(new Color(248, 250, 252));
-        movieListPanel.setBorder(new EmptyBorder(10, 10, 24, 10));
+        movieListPanel.setBorder(new EmptyBorder(10, 10, 48, 10));
 
         cardsScroll = new JScrollPane(movieListPanel);
         cardsScroll.setBorder(new LineBorder(new Color(226, 232, 240), 1, true));
         cardsScroll.getViewport().setBackground(new Color(248, 250, 252));
         cardsScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        cardsScroll.getVerticalScrollBar().setUnitIncrement(24);
-        cardsScroll.getVerticalScrollBar().setBlockIncrement(120);
-        com.cinemats.util.ModernScrollBarUI.apply(cardsScroll, 8);
+        cardsScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
+        cardsScroll.getVerticalScrollBar().setUnitIncrement(36);
+        cardsScroll.getVerticalScrollBar().setBlockIncrement(144);
+        com.cinemats.util.ModernScrollBarUI.apply(cardsScroll, 10);
+
+        attachWheelScrollForwarder(movieListPanel, cardsScroll);
+
+        MouseAdapter moviePanelPanner = new MouseAdapter() {
+            private Point pressPoint;
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                pressPoint = e.getLocationOnScreen();
+            }
+
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                if (pressPoint == null || cardsScroll == null) return;
+                Point current = e.getLocationOnScreen();
+                int dy = pressPoint.y - current.y;
+                JViewport vp = cardsScroll.getViewport();
+                Point viewPos = vp.getViewPosition();
+                int maxY = Math.max(0, vp.getView().getHeight() - vp.getHeight());
+                int targetY = Math.max(0, Math.min(maxY, viewPos.y + dy));
+                vp.setViewPosition(new Point(viewPos.x, targetY));
+                pressPoint = current;
+            }
+        };
+        movieListPanel.addMouseListener(moviePanelPanner);
+        movieListPanel.addMouseMotionListener(moviePanelPanner);
 
         panel.add(cardsScroll, BorderLayout.CENTER);
         return panel;
@@ -941,6 +971,7 @@ public class OrderBookingPage extends JPanel {
         card.setCursor(new Cursor(Cursor.HAND_CURSOR));
         card.setToolTipText(capitalizedTitle + " (" + movie.getLanguage() + " • " + movie.getCertificate() + " • " + movie.getShortDuration() + ")");
 
+        attachWheelScrollForwarder(card, cardsScroll);
         return card;
     }
 
@@ -2401,6 +2432,7 @@ public class OrderBookingPage extends JPanel {
         content.add(botRow);
 
         tile.add(content, BorderLayout.CENTER);
+        attachWheelScrollForwarder(tile, showsScroll);
 
         return tile;
     }
@@ -3206,6 +3238,28 @@ public class OrderBookingPage extends JPanel {
     }
 
     /**
+     * Recursively attaches mouse wheel forwarding so wheel scrolling over any child component
+     * (cards, posters, buttons, badges) seamlessly scrolls the parent JScrollPane.
+     */
+    private void attachWheelScrollForwarder(Component component, JScrollPane scrollPane) {
+        if (component == null || scrollPane == null) return;
+        component.addMouseWheelListener(e -> {
+            JScrollBar vBar = scrollPane.getVerticalScrollBar();
+            if (vBar != null && vBar.isEnabled()) {
+                int rotation = e.getWheelRotation();
+                int scrollAmount = e.getScrollAmount();
+                int delta = rotation * scrollAmount * vBar.getUnitIncrement();
+                vBar.setValue(vBar.getValue() + delta);
+            }
+        });
+        if (component instanceof Container) {
+            for (Component child : ((Container) component).getComponents()) {
+                attachWheelScrollForwarder(child, scrollPane);
+            }
+        }
+    }
+
+    /**
      * Responsive Wrap Panel implementing Scrollable to track viewport width strictly.
      * Prevents horizontal overflow in JScrollPane and ensures accurate dynamic height
      * calculation so vertical scrolling never gets cut off or stuck.
@@ -3222,12 +3276,12 @@ public class OrderBookingPage extends JPanel {
 
         @Override
         public int getScrollableUnitIncrement(Rectangle visibleRect, int orientation, int direction) {
-            return 24;
+            return 36;
         }
 
         @Override
         public int getScrollableBlockIncrement(Rectangle visibleRect, int orientation, int direction) {
-            return 120;
+            return 144;
         }
 
         @Override
