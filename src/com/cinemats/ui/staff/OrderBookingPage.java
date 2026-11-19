@@ -1037,6 +1037,25 @@ public class OrderBookingPage extends JPanel {
             } catch (Exception ignored) {
             }
         }
+
+        // Fallback: load from embedded JAR resources if running as standalone package
+        try {
+            String resPath = imgPath.trim().replace('\\', '/');
+            if (!resPath.startsWith("/")) {
+                resPath = "/" + resPath;
+            }
+            java.net.URL resUrl = getClass().getResource(resPath);
+            if (resUrl == null) {
+                resUrl = getClass().getResource("/assets/posters/" + new File(imgPath.trim()).getName());
+            }
+            if (resUrl != null) {
+                BufferedImage img = ImageIO.read(resUrl);
+                if (img != null) {
+                    return img;
+                }
+            }
+        } catch (Exception ignored) {
+        }
         return null;
     }
 

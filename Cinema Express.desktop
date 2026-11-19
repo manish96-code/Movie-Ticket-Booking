@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Cinema Express
+Comment=Cinema Express Box Office POS & HQ Control Panel
+Exec=bash -c "cd '/home/manish/Project/ticket_booking' && java -jar dist/CinemaExpress.jar"
+Icon=/home/manish/Project/ticket_booking/assets/icon.png
+Terminal=false
+Categories=Office;Finance;Java;
+StartupNotify=true
+StartupWMClass=com-cinemats-Main
