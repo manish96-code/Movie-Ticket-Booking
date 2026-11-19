@@ -75,7 +75,7 @@ public class OrderBookingPage extends JPanel {
     private final JLabel movieCountBadge = new JLabel("0 Movies");
     private JScrollPane cardsScroll;
     private JScrollPane showsScroll;
-    private final JPanel movieListPanel = new ScrollableWrapPanel(new com.cinemats.util.WrapLayout(FlowLayout.LEFT, 10, 12));
+    private final JPanel movieListPanel = new ScrollableWrapPanel(new com.cinemats.util.WrapLayout(FlowLayout.LEFT, 10, 8));
     private List<Movie> allMoviesList = new ArrayList<>();
     private List<Movie> dateFilteredMovies = new ArrayList<>();
     private List<Movie> filteredMoviesList = new ArrayList<>();
@@ -614,17 +614,17 @@ public class OrderBookingPage extends JPanel {
         panel.add(topArea, BorderLayout.NORTH);
 
         // Scrollable Movie Cards List (Responsive 4-column Wrap Grid)
-        movieListPanel.setLayout(new com.cinemats.util.WrapLayout(FlowLayout.LEFT, 10, 12));
+        movieListPanel.setLayout(new com.cinemats.util.WrapLayout(FlowLayout.LEFT, 10, 8));
         movieListPanel.setBackground(new Color(248, 250, 252));
-        movieListPanel.setBorder(new EmptyBorder(10, 10, 48, 10));
+        movieListPanel.setBorder(new EmptyBorder(10, 10, 16, 10));
 
         cardsScroll = new JScrollPane(movieListPanel);
         cardsScroll.setBorder(new LineBorder(new Color(226, 232, 240), 1, true));
         cardsScroll.getViewport().setBackground(new Color(248, 250, 252));
         cardsScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        cardsScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
-        cardsScroll.getVerticalScrollBar().setUnitIncrement(36);
-        cardsScroll.getVerticalScrollBar().setBlockIncrement(144);
+        cardsScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
+        cardsScroll.getVerticalScrollBar().setUnitIncrement(28);
+        cardsScroll.getVerticalScrollBar().setBlockIncrement(112);
         com.cinemats.util.ModernScrollBarUI.apply(cardsScroll, 10);
 
         attachWheelScrollForwarder(movieListPanel, cardsScroll);
@@ -784,9 +784,9 @@ public class OrderBookingPage extends JPanel {
         final String capitalizedTitle = capitalizeTitle(movie.getTitle());
         final BufferedImage posterImg = getOrLoadPosterImage(movie);
 
-        final int CARD_W = 144;
-        final int CARD_H = 232;
-        final int POSTER_H = 152;
+        final int CARD_W = 140;
+        final int CARD_H = 196;
+        final int POSTER_H = 134;
         final int ARC = 12;
 
         JPanel card = new JPanel() {
@@ -841,9 +841,9 @@ public class OrderBookingPage extends JPanel {
                     g2.drawImage(posterImg, 0, 0, null);
 
                     // Gradient fade at bottom of poster
-                    GradientPaint fade = new GradientPaint(0, POSTER_H - 35, new Color(0, 0, 0, 0), 0, POSTER_H, new Color(0, 0, 0, 110));
+                    GradientPaint fade = new GradientPaint(0, POSTER_H - 28, new Color(0, 0, 0, 0), 0, POSTER_H, new Color(0, 0, 0, 110));
                     g2.setPaint(fade);
-                    g2.fillRect(0, POSTER_H - 35, w, 35);
+                    g2.fillRect(0, POSTER_H - 28, w, 28);
                 } else {
                     // Fallback cinematic gradient poster
                     int hash = movie.getTitle().hashCode();
@@ -894,17 +894,17 @@ public class OrderBookingPage extends JPanel {
 
                 // Selected Checkmark Badge (bottom-right of poster)
                 if (isSelected) {
-                    int bx = w - 26;
-                    int by = POSTER_H - 26;
+                    int bx = w - 24;
+                    int by = POSTER_H - 24;
                     g2.setColor(new Color(37, 99, 235));
-                    g2.fillOval(bx, by, 20, 20);
+                    g2.fillOval(bx, by, 18, 18);
                     g2.setColor(Color.WHITE);
-                    g2.setFont(new Font("Segoe UI", Font.BOLD, 12));
-                    g2.drawString("✓", bx + 5, by + 15);
+                    g2.setFont(new Font("Segoe UI", Font.BOLD, 11));
+                    g2.drawString("✓", bx + 4, by + 13);
                 }
 
                 // 4. Text / Details Section (Bottom: POSTER_H to h)
-                int textY = POSTER_H + 16;
+                int textY = POSTER_H + 15;
 
                 // Title
                 g2.setFont(new Font("Segoe UI", Font.BOLD, 12));
@@ -920,7 +920,7 @@ public class OrderBookingPage extends JPanel {
                 g2.drawString(displayTitle, 8, textY);
 
                 // Genre
-                textY += 15;
+                textY += 14;
                 g2.setFont(new Font("Segoe UI", Font.PLAIN, 10));
                 g2.setColor(new Color(100, 116, 139));
                 FontMetrics genreFm = g2.getFontMetrics();
@@ -934,7 +934,7 @@ public class OrderBookingPage extends JPanel {
                 g2.drawString(genre != null ? genre : "", 8, textY);
 
                 // Duration & Status Pill
-                textY += 15;
+                textY += 14;
                 g2.setFont(new Font("Segoe UI", Font.PLAIN, 10));
                 g2.setColor(new Color(71, 85, 105));
                 g2.drawString("⏱ " + movie.getShortDuration(), 8, textY);
@@ -942,7 +942,7 @@ public class OrderBookingPage extends JPanel {
                 // If Selected: Bottom Accent Indicator Bar
                 if (isSelected) {
                     g2.setColor(new Color(37, 99, 235));
-                    g2.fillRoundRect(8, h - 5, w - 16, 3, 2, 2);
+                    g2.fillRoundRect(8, h - 4, w - 16, 3, 2, 2);
                 }
 
                 // 5. Border & Focus Ring
@@ -981,8 +981,8 @@ public class OrderBookingPage extends JPanel {
         }
         BufferedImage raw = loadPosterImage(movie);
         if (raw != null) {
-            int targetW = 144;
-            int targetH = 152;
+            int targetW = 140;
+            int targetH = 134;
             int iw = raw.getWidth();
             int ih = raw.getHeight();
             double scale = Math.max((double) targetW / iw, (double) targetH / ih);
@@ -3276,12 +3276,12 @@ public class OrderBookingPage extends JPanel {
 
         @Override
         public int getScrollableUnitIncrement(Rectangle visibleRect, int orientation, int direction) {
-            return 36;
+            return 28;
         }
 
         @Override
         public int getScrollableBlockIncrement(Rectangle visibleRect, int orientation, int direction) {
-            return 144;
+            return 112;
         }
 
         @Override
