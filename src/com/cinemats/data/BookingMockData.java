@@ -56,67 +56,67 @@ public final class BookingMockData {
         // 1. TODAY'S BOOKINGS (dayOffset = 0)
         // ==========================================
         // Audi 1 (Grand IMAX - 200 seats)
-        list.add(new BookingTemplate("Ananya Verma", "9876543210", "Dune: Part Two",
-                1, 0, "10:30 AM", new String[]{"J5", "J6"}, "Rahul Verma", "UPI", BigDecimal.ZERO, "CONFIRMED"));
+        list.add(new BookingTemplate("Ananya Verma", "9876543210", "Gladiator II",
+                1, 0, "10:15 AM", new String[]{"A5", "A6"}, "Rahul Sharma", "UPI", BigDecimal.ZERO, "CONFIRMED"));
 
-        list.add(new BookingTemplate("Rajesh Kumar", "9811223344", "Interstellar",
-                1, 0, "02:00 PM", new String[]{"H10", "H11"}, "Rahul Verma", "CASH", BigDecimal.ZERO, "CONFIRMED"));
+        list.add(new BookingTemplate("Rajesh Kumar", "9811223344", "Dune: Part Two",
+                1, 0, "01:30 PM", new String[]{"B10", "B11"}, "Rahul Sharma", "CASH", BigDecimal.ZERO, "CONFIRMED"));
 
-        list.add(new BookingTemplate("Rohan Deshmukh", "9877889900", "Kalki 2898 AD",
-                1, 0, "05:45 PM", new String[]{"C6", "C7", "C8"}, "Rahul Verma", "UPI", BigDecimal.ZERO, "CONFIRMED"));
+        list.add(new BookingTemplate("Rohan Deshmukh", "9877889900", "Interstellar",
+                1, 0, "05:00 PM", new String[]{"C6", "C7", "C8"}, "Rahul Sharma", "UPI", BigDecimal.ZERO, "CONFIRMED"));
 
         list.add(new BookingTemplate("Vikram Malhotra", "9833445566", "Deadpool & Wolverine",
-                1, 0, "09:30 PM", new String[]{"J10", "J11", "J12"}, "Rahul Verma", "UPI", BigDecimal.ZERO, "CONFIRMED"));
+                1, 0, "08:30 PM", new String[]{"E10", "E11", "E12"}, "Rahul Sharma", "UPI", BigDecimal.ZERO, "CONFIRMED"));
 
         // Audi 2 (Dolby Atmos - 150 seats)
-        list.add(new BookingTemplate("Meera Joshi", "9888990011", "Inception",
-                2, 0, "09:30 PM", new String[]{"G8", "G9"}, "Admin", "CARD", BigDecimal.ZERO, "CONFIRMED"));
+        list.add(new BookingTemplate("Meera Joshi", "9888990011", "Pushpa 2: The Rule",
+                2, 0, "10:30 AM", new String[]{"A3", "A4"}, "HQ Admin", "CARD", BigDecimal.ZERO, "CONFIRMED"));
 
         list.add(new BookingTemplate("Aditya Roy", "9755443322", "Stree 2",
-                2, 0, "06:15 PM", new String[]{"B4", "B5"}, "Priya Sharma", "CASH", BigDecimal.ZERO, "CONFIRMED"));
+                2, 0, "02:30 PM", new String[]{"B4", "B5"}, "Priya Verma", "CASH", BigDecimal.ZERO, "CONFIRMED"));
+
+        list.add(new BookingTemplate("Aarav Sharma", "9876501234", "Singham Again",
+                2, 0, "05:30 PM", new String[]{"C8", "C9"}, "Priya Verma", "UPI", BigDecimal.ZERO, "CONFIRMED"));
+
+        list.add(new BookingTemplate("Sneha Patel", "9844556677", "Bhool Bhulaiyaa 3",
+                2, 0, "08:50 PM", new String[]{"E5", "E6"}, "HQ Admin", "UPI", BigDecimal.ZERO, "CONFIRMED"));
 
         // Audi 3 (Cine Royale - 300 seats)
-        list.add(new BookingTemplate("Priya Sharma", "9822334455", "Oppenheimer",
-                3, 0, "11:30 AM", new String[]{"B5", "B6"}, "Priya Sharma", "CARD", new BigDecimal("50.00"), "CONFIRMED"));
+        list.add(new BookingTemplate("Priya Sharma", "9822334455", "Mufasa: The Lion King",
+                3, 0, "11:00 AM", new String[]{"A5", "A6"}, "Priya Verma", "CARD", new BigDecimal("50.00"), "CONFIRMED"));
 
-        list.add(new BookingTemplate("Sneha Patel", "9844556677", "Spider-Man: Across The Spider-Verse",
-                3, 0, "03:30 PM", new String[]{"N8", "N9"}, "Admin", "UPI", BigDecimal.ZERO, "CONFIRMED"));
+        list.add(new BookingTemplate("Sunita Rao", "9766554433", "Spider-Man: Across The Spider-Verse",
+                3, 0, "01:45 PM", new String[]{"C12", "C13"}, "Priya Verma", "UPI", BigDecimal.ZERO, "CONFIRMED"));
 
-        list.add(new BookingTemplate("Sunita Rao", "9766554433", "Fighter",
-                3, 0, "06:45 PM", new String[]{"J12", "J13"}, "Priya Sharma", "UPI", BigDecimal.ZERO, "CONFIRMED"));
+        list.add(new BookingTemplate("Kavita Nair", "9866778899", "Oppenheimer",
+                3, 0, "04:45 PM", new String[]{"E8", "E9"}, "Priya Verma", "UPI", BigDecimal.ZERO, "CONFIRMED"));
+
+        list.add(new BookingTemplate("Siddharth Rao", "9722334455", "Avatar: The Way of Water",
+                3, 0, "08:30 PM", new String[]{"B1", "B2"}, "Rahul Sharma", "CASH", BigDecimal.ZERO, "CONFIRMED"));
 
         // ==========================================
         // 2. YESTERDAY'S BOOKINGS (dayOffset = -1)
         // ==========================================
-        list.add(new BookingTemplate("Amitabh Sen", "9855667788", "Jawan",
-                2, -1, "11:00 AM", new String[]{"D1", "D2", "D3"}, "Rahul Verma", "CARD", BigDecimal.ZERO, "CONFIRMED"));
+        list.add(new BookingTemplate("Amitabh Sen", "9855667788", "Pushpa 2: The Rule",
+                2, -1, "10:30 AM", new String[]{"D1", "D2", "D3"}, "Rahul Sharma", "CARD", BigDecimal.ZERO, "CONFIRMED"));
 
-        list.add(new BookingTemplate("Kavita Nair", "9866778899", "Stree 2",
-                2, -1, "06:15 PM", new String[]{"A5", "A6"}, "Priya Sharma", "CASH", BigDecimal.ZERO, "CONFIRMED"));
+        list.add(new BookingTemplate("Rohit Mehra", "9811992288", "Gladiator II",
+                1, -1, "10:15 AM", new String[]{"B4", "B5"}, "Rahul Sharma", "CARD", BigDecimal.ZERO, "CONFIRMED"));
 
-        list.add(new BookingTemplate("Siddharth Rao", "9722334455", "Avatar: The Way of Water",
-                3, -1, "10:00 PM", new String[]{"N5", "N6"}, "Rahul Verma", "CASH", BigDecimal.ZERO, "CONFIRMED"));
-
-        list.add(new BookingTemplate("Neha Gupta", "9711223344", "Fighter",
-                3, -1, "06:45 PM", new String[]{"K1", "K2"}, "Priya Sharma", "UPI", BigDecimal.ZERO, "CONFIRMED"));
-
-        list.add(new BookingTemplate("Arjun Kapoor", "9899001122", "The Dark Knight",
-                2, -1, "02:45 PM", new String[]{"B1", "B2"}, "Rahul Verma", "UPI", BigDecimal.ZERO, "CANCELLED"));
-
-        list.add(new BookingTemplate("Rohit Mehra", "9811992288", "Dune: Part Two",
-                1, -1, "10:30 AM", new String[]{"G4", "G5"}, "Rahul Verma", "CARD", BigDecimal.ZERO, "CONFIRMED"));
+        list.add(new BookingTemplate("Arjun Kapoor", "9899001122", "Bhool Bhulaiyaa 3",
+                2, -1, "08:50 PM", new String[]{"C1", "C2"}, "Rahul Sharma", "UPI", BigDecimal.ZERO, "CANCELLED"));
 
         // ==========================================
         // 3. TOMORROW'S ADVANCE RESERVATIONS (dayOffset = 1)
         // ==========================================
-        list.add(new BookingTemplate("Deepika Padukone", "9733445566", "Dune: Part Two",
-                1, 1, "10:30 AM", new String[]{"G15", "G16"}, "Rahul Verma", "UPI", BigDecimal.ZERO, "CONFIRMED"));
+        list.add(new BookingTemplate("Deepika Padukone", "9733445566", "Gladiator II",
+                1, 1, "10:15 AM", new String[]{"A1", "A2"}, "Rahul Sharma", "UPI", BigDecimal.ZERO, "CONFIRMED"));
 
-        list.add(new BookingTemplate("Kabir Khan", "9744556677", "Interstellar",
-                1, 1, "02:00 PM", new String[]{"J1", "J2"}, "Priya Sharma", "CARD", BigDecimal.ZERO, "CONFIRMED"));
+        list.add(new BookingTemplate("Kabir Khan", "9744556677", "Pushpa 2: The Rule",
+                2, 1, "10:30 AM", new String[]{"A5", "A6"}, "Priya Verma", "CARD", BigDecimal.ZERO, "CONFIRMED"));
 
-        list.add(new BookingTemplate("Varun Dhawan", "9788776655", "Deadpool & Wolverine",
-                1, 1, "09:30 PM", new String[]{"C10", "C11"}, "Rahul Verma", "UPI", BigDecimal.ZERO, "CONFIRMED"));
+        list.add(new BookingTemplate("Varun Dhawan", "9788776655", "Bhool Bhulaiyaa 3",
+                2, 1, "08:50 PM", new String[]{"B10", "B11"}, "Rahul Sharma", "UPI", BigDecimal.ZERO, "CONFIRMED"));
 
         list.add(new BookingTemplate("Alia Bhatt", "9799887766", "Oppenheimer",
                 3, 1, "11:30 AM", new String[]{"J5", "J6"}, "Admin", "CARD", BigDecimal.ZERO, "CONFIRMED"));

@@ -25,12 +25,14 @@ public final class MovieMockData {
         movies.add(new Movie(31, "Deadpool & Wolverine", "Action / Comedy", 128, "A", "DEADPOOL & WOLVERINE", "NOW_SHOWING", "assets/posters/poster_deadpool_wolverine.jpg", "English", "2024-07-26"));
         movies.add(new Movie(32, "Fighter", "Action / Thriller", 166, "UA 13+", "FIGHTER", "NOW_SHOWING", "assets/posters/poster_fighter.jpg", "Hindi", "2024-01-25"));
         movies.add(new Movie(33, "Avatar: The Way of Water", "Sci-Fi / Adventure", 192, "UA 13+", "AVATAR: WATER", "NOW_SHOWING", "assets/posters/poster_avatar_water.jpg", "English", "2022-12-16"));
-        movies.add(new Movie(34, "Pushpa 2: The Rule", "Action / Drama", 200, "UA 13+", "PUSHPA 2", "UPCOMING", "assets/posters/poster_pushpa2.jpg", "Hindi", "2026-12-05"));
-        movies.add(new Movie(35, "Singham Again", "Action / Crime", 160, "UA 13+", "SINGHAM AGAIN", "UPCOMING", "assets/posters/poster_singham_again.jpg", "Hindi", "2026-11-01"));
-        movies.add(new Movie(36, "Gladiator II", "Action / Drama", 148, "A", "GLADIATOR II", "UPCOMING", "assets/posters/poster_gladiator2.jpg", "English", "2026-11-22"));
-        movies.add(new Movie(37, "Avengers: Doomsday", "Action / Sci-Fi", 180, "UA 13+", "AVENGERS: DOOMSDAY", "UPCOMING", "assets/posters/poster_avengers_doomsday.jpg", "English", "2026-05-01"));
-        movies.add(new Movie(38, "RRR", "Action / Drama", 187, "UA 13+", "RRR", "NOW_SHOWING", "assets/posters/poster_rrr.jpg", "Telugu", "2022-03-25"));
+        movies.add(new Movie(34, "Pushpa 2: The Rule", "Action / Drama", 200, "UA 13+", "PUSHPA 2", "NOW_SHOWING", "assets/posters/poster_pushpa2.jpg", "Hindi", "2024-12-05"));
+        movies.add(new Movie(35, "Singham Again", "Action / Crime", 160, "UA 13+", "SINGHAM AGAIN", "NOW_SHOWING", "assets/posters/poster_singham_again.jpg", "Hindi", "2024-11-01"));
+        movies.add(new Movie(36, "Gladiator II", "Action / Drama", 148, "A", "GLADIATOR II", "NOW_SHOWING", "assets/posters/poster_gladiator2.jpg", "English", "2024-11-15"));
+        movies.add(new Movie(37, "Bhool Bhulaiyaa 3", "Comedy / Horror", 158, "UA 13+", "BHOOL BHULAIYAA 3", "NOW_SHOWING", "assets/posters/poster_bhool_bhulaiyaa3.jpg", "Hindi", "2024-11-01"));
+        movies.add(new Movie(38, "Mufasa: The Lion King", "Adventure / Animation", 120, "U", "MUFASA", "NOW_SHOWING", "assets/posters/poster_mufasa.jpg", "English", "2024-12-20"));
         movies.add(new Movie(39, "Top Gun: Maverick", "Action / Drama", 130, "UA 13+", "TOP GUN", "NOW_SHOWING", "assets/posters/poster_top_gun_maverick.jpg", "English", "2022-05-27"));
+        movies.add(new Movie(40, "RRR", "Action / Drama", 187, "UA 13+", "RRR", "NOW_SHOWING", "assets/posters/poster_rrr.jpg", "Telugu", "2022-03-25"));
+        movies.add(new Movie(41, "Avengers: Doomsday", "Action / Sci-Fi", 180, "UA 13+", "AVENGERS: DOOMSDAY", "UPCOMING", "assets/posters/poster_avengers_doomsday.jpg", "English", "2026-05-01"));
         return movies;
     }
 }

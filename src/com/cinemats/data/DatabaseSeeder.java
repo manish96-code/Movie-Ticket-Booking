@@ -63,6 +63,7 @@ public class DatabaseSeeder {
         com.cinemats.dao.ScreenDAO.seedDefaultScreens();
         com.cinemats.dao.ScreenSeatDAO.seedDefaultScreenSeats();
         ScheduleMockData.seedShowsForRange(-1, 10);
+        BookingMockData.seedBookingsIfEmpty();
         BookingMockData.seedWeeklyBookings(6, 1);
 
         if (!DBConnection.isDriverAvailable()) {
