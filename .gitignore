@@ -11,3 +11,4 @@ db.properties
 .DS_Store
 Thumbs.db
 *.log
+dist/
