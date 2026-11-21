@@ -158,6 +158,19 @@ public class Show {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Show show = (Show) o;
+        return id == show.id;
+    }
+
+    @Override
+    public int hashCode() {
+        return Integer.hashCode(id);
+    }
+
+    @Override
     public String toString() {
         return movieTitle + " @ " + screenName + " (" + showDate + " " + startTime + " - " + endTime + ")";
     }

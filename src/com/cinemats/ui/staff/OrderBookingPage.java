@@ -17,6 +17,7 @@ import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.math.BigDecimal;
@@ -506,6 +507,8 @@ public class OrderBookingPage extends JPanel {
     public void showStep1() {
         currentStep = STEP_MOVIES_SHOWS;
         stepCardLayout.show(stepCardsPanel, STEP_MOVIES_SHOWS);
+        stepCardsPanel.revalidate();
+        stepCardsPanel.repaint();
     }
 
     public void showStep2() {
@@ -515,6 +518,8 @@ public class OrderBookingPage extends JPanel {
             step2ShowMeta.setText("📅 " + formatDatePill(selectedShow.getShowDate()) + "  •  ⏰ " + selectedShow.getStartTime() + "  •  " + selectedMovie.getLanguage() + " • " + selectedMovie.getCertificate() + " • " + selectedMovie.getShortDuration());
         }
         stepCardLayout.show(stepCardsPanel, STEP_SEATS_SUMMARY);
+        stepCardsPanel.revalidate();
+        stepCardsPanel.repaint();
     }
 
     // ==========================================================
@@ -2303,40 +2308,18 @@ public class OrderBookingPage extends JPanel {
     private JPanel createShowTile(Show show) {
         final boolean bookable = show.isBookable();
 
-        JPanel tile = new JPanel(new BorderLayout(6, 4)) {
-            private boolean isHovered = false;
+        class ShowTilePanel extends JPanel {
+            private boolean hovered = false;
 
-            {
-                addMouseListener(new MouseAdapter() {
-                    @Override
-                    public void mouseEntered(MouseEvent e) {
-                        isHovered = true;
-                        repaint();
-                    }
+            public ShowTilePanel() {
+                super(new BorderLayout(6, 4));
+            }
 
-                    @Override
-                    public void mouseExited(MouseEvent e) {
-                        isHovered = false;
-                        repaint();
-                    }
-
-                    @Override
-                    public void mousePressed(MouseEvent e) {
-                        if (SwingUtilities.isLeftMouseButton(e)) {
-                            if (!bookable) {
-                                JOptionPane.showMessageDialog(OrderBookingPage.this,
-                                        "Ticket booking for this screening is closed.\n\n"
-                                        + "• Movie: " + show.getMovieTitle() + "\n"
-                                        + "• Showtime: " + show.getStartTime() + " (" + formatDatePill(show.getShowDate()) + ")\n"
-                                        + "• Reason: Past 30-minute booking cutoff window.\n\n"
-                                        + "Please select an upcoming screening.",
-                                        "Screening Closed", JOptionPane.WARNING_MESSAGE);
-                                return;
-                            }
-                            selectShow(show);
-                        }
-                    }
-                });
+            public void setHovered(boolean h) {
+                if (this.hovered != h) {
+                    this.hovered = h;
+                    repaint();
+                }
             }
 
             @Override
@@ -2347,7 +2330,7 @@ public class OrderBookingPage extends JPanel {
                 int h = getHeight();
                 boolean isSelected = (selectedShow != null && selectedShow.getId() == show.getId());
 
-                if (isSelected || (isHovered && bookable)) {
+                if (isSelected || (hovered && bookable)) {
                     g2.setColor(new Color(239, 246, 255));
                     g2.fillRoundRect(2, 2, w - 4, h - 4, 10, 10);
                     g2.setColor(new Color(37, 99, 235));
@@ -2362,8 +2345,9 @@ public class OrderBookingPage extends JPanel {
                 }
                 g2.dispose();
             }
-        };
+        }
 
+        ShowTilePanel tile = new ShowTilePanel();
         tile.setPreferredSize(new Dimension(180, 74));
         tile.setMinimumSize(new Dimension(160, 70));
         tile.setCursor(new Cursor(bookable ? Cursor.HAND_CURSOR : Cursor.DEFAULT_CURSOR));
@@ -2451,6 +2435,41 @@ public class OrderBookingPage extends JPanel {
         content.add(botRow);
 
         tile.add(content, BorderLayout.CENTER);
+
+        MouseAdapter tileHandler = new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                tile.setHovered(true);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                Component src = (Component) e.getSource();
+                Point p = SwingUtilities.convertPoint(src, e.getPoint(), tile);
+                if (p.x < 0 || p.x >= tile.getWidth() || p.y < 0 || p.y >= tile.getHeight()) {
+                    tile.setHovered(false);
+                }
+            }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (SwingUtilities.isLeftMouseButton(e)) {
+                    if (!bookable) {
+                        JOptionPane.showMessageDialog(OrderBookingPage.this,
+                                "Ticket booking for this screening is closed.\n\n"
+                                + "• Movie: " + show.getMovieTitle() + "\n"
+                                + "• Showtime: " + show.getStartTime() + " (" + formatDatePill(show.getShowDate()) + ")\n"
+                                + "• Reason: Past 30-minute booking cutoff window.\n\n"
+                                + "Please select an upcoming screening.",
+                                "Screening Closed", JOptionPane.WARNING_MESSAGE);
+                        return;
+                    }
+                    selectShow(show);
+                }
+            }
+        };
+
+        bindTileInteractions(tile, tileHandler, bookable);
         attachWheelScrollForwarder(tile, showsScroll);
 
         return tile;
@@ -2462,9 +2481,22 @@ public class OrderBookingPage extends JPanel {
         }
         selectedShow = show;
         if (selectedMovie == null || selectedMovie.getId() != show.getMovieId()) {
-            selectedMovie = MovieDAO.getMovieById(show.getMovieId());
+            Movie found = null;
+            if (allMoviesList != null) {
+                for (Movie m : allMoviesList) {
+                    if (m != null && m.getId() == show.getMovieId()) {
+                        found = m;
+                        break;
+                    }
+                }
+            }
+            selectedMovie = (found != null) ? found : MovieDAO.getMovieById(show.getMovieId());
+            if (selectedMovie != null) {
+                movieShows = ShowDAO.getShowsByMovie(selectedMovie.getId());
+                movieShows.removeIf(Show::isCancelled);
+            }
         }
-        renderShowsForSelectedDate();
+        showsContainerPanel.repaint();
         loadSeatsForSelectedShow();
         updateSummary();
         showStep2();
@@ -3274,6 +3306,21 @@ public class OrderBookingPage extends JPanel {
         if (component instanceof Container) {
             for (Component child : ((Container) component).getComponents()) {
                 attachWheelScrollForwarder(child, scrollPane);
+            }
+        }
+    }
+
+    /**
+     * Recursively binds mouse click and hover interactions to a show tile and all its child
+     * components (labels, pills, rows, buttons) so clicks anywhere inside the tile work reliably.
+     */
+    private void bindTileInteractions(Component comp, MouseListener listener, boolean bookable) {
+        if (comp == null) return;
+        comp.setCursor(new Cursor(bookable ? Cursor.HAND_CURSOR : Cursor.DEFAULT_CURSOR));
+        comp.addMouseListener(listener);
+        if (comp instanceof Container) {
+            for (Component child : ((Container) comp).getComponents()) {
+                bindTileInteractions(child, listener, bookable);
             }
         }
     }
