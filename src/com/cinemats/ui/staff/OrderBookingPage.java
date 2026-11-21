@@ -2574,13 +2574,13 @@ public class OrderBookingPage extends JPanel {
                     return Integer.compare(p1, p2);
                 }
 
-                // 2. Row Position: Closest to screen first (higher row index in hall, e.g. Row J before Row I)
+                // 2. Row Position: Best viewing row (top of tier / farther from screen, e.g. Row E before Row J in Regular)
                 String r1 = extractRow(s1.getSeatLabel());
                 String r2 = extractRow(s2.getSeatLabel());
                 int idx1 = rowIndexMap.getOrDefault(r1, 0);
                 int idx2 = rowIndexMap.getOrDefault(r2, 0);
                 if (idx1 != idx2) {
-                    return Integer.compare(idx2, idx1); // descending
+                    return Integer.compare(idx1, idx2); // ascending: row E before row J
                 }
 
                 // 3. Seat Number: Starting from seat 1 (1, 2, 3...)
