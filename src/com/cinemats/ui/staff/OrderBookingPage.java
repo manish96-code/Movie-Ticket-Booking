@@ -3325,6 +3325,7 @@ public class OrderBookingPage extends JPanel {
                     delta = rotation > 0 ? unitInc : -unitInc;
                 }
                 vBar.setValue(vBar.getValue() + delta);
+                e.consume();
             }
         });
         if (component instanceof Container) {
