@@ -369,7 +369,7 @@ public class OrderBookingPage extends JPanel {
         showSection.add(showHeader, BorderLayout.NORTH);
 
         showsContainerPanel.setBackground(Color.WHITE);
-        showsContainerPanel.setBorder(new EmptyBorder(8, 8, 36, 8));
+        showsContainerPanel.setBorder(new EmptyBorder(8, 8, 60, 8));
         showsScroll = new JScrollPane(showsContainerPanel);
         showsScroll.setBorder(new LineBorder(Theme.BORDER_COLOR, 1, true));
         showsScroll.getViewport().setBackground(Color.WHITE);
@@ -621,15 +621,15 @@ public class OrderBookingPage extends JPanel {
         // Scrollable Movie Cards List (Responsive 4-column Wrap Grid)
         movieListPanel.setLayout(new com.cinemats.util.WrapLayout(FlowLayout.LEFT, 10, 8));
         movieListPanel.setBackground(new Color(248, 250, 252));
-        movieListPanel.setBorder(new EmptyBorder(10, 10, 16, 10));
+        movieListPanel.setBorder(new EmptyBorder(10, 10, 80, 10));
 
         cardsScroll = new JScrollPane(movieListPanel);
         cardsScroll.setBorder(new LineBorder(new Color(226, 232, 240), 1, true));
         cardsScroll.getViewport().setBackground(new Color(248, 250, 252));
         cardsScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         cardsScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
-        cardsScroll.getVerticalScrollBar().setUnitIncrement(28);
-        cardsScroll.getVerticalScrollBar().setBlockIncrement(112);
+        cardsScroll.getVerticalScrollBar().setUnitIncrement(36);
+        cardsScroll.getVerticalScrollBar().setBlockIncrement(144);
         com.cinemats.util.ModernScrollBarUI.apply(cardsScroll, 10);
 
         attachWheelScrollForwarder(movieListPanel, cardsScroll);
@@ -649,7 +649,8 @@ public class OrderBookingPage extends JPanel {
                 int dy = pressPoint.y - current.y;
                 JViewport vp = cardsScroll.getViewport();
                 Point viewPos = vp.getViewPosition();
-                int maxY = Math.max(0, vp.getView().getHeight() - vp.getHeight());
+                int viewH = Math.max(vp.getView().getHeight(), vp.getView().getPreferredSize().height);
+                int maxY = Math.max(0, viewH - vp.getHeight());
                 int targetY = Math.max(0, Math.min(maxY, viewPos.y + dy));
                 vp.setViewPosition(new Point(viewPos.x, targetY));
                 pressPoint = current;
@@ -3314,9 +3315,15 @@ public class OrderBookingPage extends JPanel {
         component.addMouseWheelListener(e -> {
             JScrollBar vBar = scrollPane.getVerticalScrollBar();
             if (vBar != null && vBar.isEnabled()) {
-                int rotation = e.getWheelRotation();
-                int scrollAmount = e.getScrollAmount();
-                int delta = rotation * scrollAmount * vBar.getUnitIncrement();
+                double rotation = e.getPreciseWheelRotation();
+                if (Math.abs(rotation) < 0.001) {
+                    rotation = e.getWheelRotation();
+                }
+                int unitInc = Math.max(36, vBar.getUnitIncrement());
+                int delta = (int) Math.round(rotation * e.getScrollAmount() * unitInc);
+                if (delta == 0 && rotation != 0) {
+                    delta = rotation > 0 ? unitInc : -unitInc;
+                }
                 vBar.setValue(vBar.getValue() + delta);
             }
         });
@@ -3359,12 +3366,12 @@ public class OrderBookingPage extends JPanel {
 
         @Override
         public int getScrollableUnitIncrement(Rectangle visibleRect, int orientation, int direction) {
-            return 28;
+            return 36;
         }
 
         @Override
         public int getScrollableBlockIncrement(Rectangle visibleRect, int orientation, int direction) {
-            return 112;
+            return 144;
         }
 
         @Override
