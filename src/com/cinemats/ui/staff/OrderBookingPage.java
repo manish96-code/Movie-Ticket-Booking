@@ -2096,11 +2096,12 @@ public class OrderBookingPage extends JPanel {
                 tomorrowStr.equals(selectedDate), e -> selectDateFilter(tomorrowStr));
         datePillsContainer.add(tomorrowBtn);
 
-        // 3. Other upcoming dates
+        // 3. Other upcoming dates (strictly future dates after tomorrow)
         int extra = 0;
+        int maxUpcomingDays = 5; // Show next 5 upcoming days in toolbar
         for (String dStr : distinctDates) {
-            if (!dStr.equals(todayStr) && !dStr.equals(tomorrowStr)) {
-                if (extra < 3) {
+            if (dStr.compareTo(tomorrowStr) > 0) {
+                if (extra < maxUpcomingDays) {
                     int count = countMoviesForDate(dStr);
                     JButton datePill = createDateFilterButton(formatDatePill(dStr) + " • " + count + " Movies",
                             dStr.equals(selectedDate), e -> selectDateFilter(dStr));
@@ -2111,7 +2112,20 @@ public class OrderBookingPage extends JPanel {
         }
 
         // 4. "📅 Pick Date" Button
-        boolean isCustomDate = !selectedDate.equals("ALL") && !selectedDate.equals(todayStr) && !selectedDate.equals(tomorrowStr) && !distinctDates.contains(selectedDate);
+        boolean isPillVisible = selectedDate.equals("ALL") || selectedDate.equals(todayStr) || selectedDate.equals(tomorrowStr);
+        if (!isPillVisible) {
+            int chk = 0;
+            for (String dStr : distinctDates) {
+                if (dStr.compareTo(tomorrowStr) > 0) {
+                    if (chk < maxUpcomingDays && dStr.equals(selectedDate)) {
+                        isPillVisible = true;
+                        break;
+                    }
+                    chk++;
+                }
+            }
+        }
+        boolean isCustomDate = !isPillVisible;
         String pickLabel = isCustomDate ? "📅 " + formatDatePill(selectedDate) : "📅 Pick Date";
         JButton pickBtn = createDateFilterButton(pickLabel, isCustomDate, e -> {
             JTextField hidden = new JTextField(selectedDate.equals("ALL") ? todayStr : selectedDate);
