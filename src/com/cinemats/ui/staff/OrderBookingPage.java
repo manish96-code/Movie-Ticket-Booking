@@ -1674,8 +1674,7 @@ public class OrderBookingPage extends JPanel {
             if (upiQrPanel != null) {
                 upiQrPanel.setVisible(false);
             }
-            refField.setVisible(true);
-            refField.setToolTipText("Card Auth / Slip Ref");
+            refField.setVisible(false);
         }
         revalidate();
         repaint();
@@ -3148,6 +3147,10 @@ public class OrderBookingPage extends JPanel {
                 ref = (currentUpiTrxId != null && !currentUpiTrxId.isEmpty())
                         ? currentUpiTrxId
                         : ("UPI" + (System.currentTimeMillis() % 100000000L));
+            }
+        } else if ("CARD".equalsIgnoreCase(method)) {
+            if (ref.isEmpty() || ref.toLowerCase().contains("slip") || ref.toLowerCase().contains("card") || ref.toLowerCase().contains("auth")) {
+                ref = "CARD-" + (System.currentTimeMillis() % 100000000L);
             }
         }
 
