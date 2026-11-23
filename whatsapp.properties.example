@@ -1,0 +1,21 @@
+# ====================================================================
+# Cinema Express - WhatsApp Business Cloud API Configuration (Template)
+# ====================================================================
+# Copy this file to whatsapp.properties and configure your Meta credentials.
+
+# Enable or disable WhatsApp notifications
+whatsapp.enabled=true
+
+# Meta WhatsApp Cloud API Credentials
+whatsapp.access.token=YOUR_META_PERMANENT_ACCESS_TOKEN
+whatsapp.phone.number.id=YOUR_PHONE_NUMBER_ID
+whatsapp.waba.id=YOUR_WHATSAPP_BUSINESS_ACCOUNT_ID
+whatsapp.api.version=v21.0
+
+# Messaging Settings
+whatsapp.default.country.code=91
+whatsapp.send.mode=auto
+
+# Meta WhatsApp Template Details
+whatsapp.template.name=movie_booking_confirmation
+whatsapp.template.language=en_US

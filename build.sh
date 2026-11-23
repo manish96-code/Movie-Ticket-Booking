@@ -75,6 +75,7 @@ rm -rf "$STAGING"
 
 # Copy runtime config to dist
 cp -n db.properties dist/ 2>/dev/null || true
+cp -n whatsapp.properties dist/ 2>/dev/null || true
 cp -r assets dist/ 2>/dev/null || true
 
 # 4. Build Native Linux App Bundle via jpackage
@@ -90,6 +91,7 @@ if command -v jpackage >/dev/null 2>&1; then
     # Copy assets and config inside app bundle directory
     if [ -d "dist/CinemaExpress" ]; then
         cp -n db.properties dist/CinemaExpress/ 2>/dev/null || true
+        cp -n whatsapp.properties dist/CinemaExpress/ 2>/dev/null || true
         cp -r assets dist/CinemaExpress/ 2>/dev/null || true
     fi
 fi

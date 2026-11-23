@@ -3,6 +3,7 @@ package com.cinemats.ui.staff.booking;
 import com.cinemats.model.Booking;
 import com.cinemats.model.BookingItem;
 import com.cinemats.model.Ticket;
+import com.cinemats.service.WhatsAppService;
 import com.cinemats.util.QRCodeRenderer;
 import com.cinemats.util.Theme;
 
@@ -21,18 +22,21 @@ public class TicketConfirmationDialog extends JDialog {
     private final Booking booking;
     private final Runnable onNewBooking;
     private JPanel ticketCardPanel;
+    private JButton whatsappBtn;
+    private JLabel whatsappStatusLabel;
 
     public TicketConfirmationDialog(Window owner, Booking booking, Runnable onNewBooking) {
         super(owner, "Booking Confirmed - Ticket Generation", ModalityType.APPLICATION_MODAL);
         this.booking = booking;
         this.onNewBooking = onNewBooking;
 
-        setSize(480, 680);
+        setSize(520, 700);
         setLocationRelativeTo(owner);
         setLayout(new BorderLayout());
         getContentPane().setBackground(Theme.BG_MAIN);
 
         initUI();
+        triggerAutoWhatsApp();
     }
 
     private void initUI() {
@@ -61,16 +65,37 @@ public class TicketConfirmationDialog extends JDialog {
         add(scrollPane, BorderLayout.CENTER);
 
         // Footer Actions (Clean, standard, original buttons)
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 12));
+        JPanel footer = new JPanel(new BorderLayout());
         footer.setBackground(Color.WHITE);
         footer.setBorder(new LineBorder(Theme.BORDER_COLOR, 1, false));
 
-        JButton printBtn = Theme.createPrimaryButton("🖨  Print Tickets");
-        printBtn.setPreferredSize(new Dimension(140, 36));
+        JPanel leftFooter = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 12));
+        leftFooter.setOpaque(false);
+        whatsappStatusLabel = new JLabel("💬 WhatsApp: Ready");
+        whatsappStatusLabel.setFont(Theme.FONT_SMALL);
+        whatsappStatusLabel.setForeground(new Color(22, 163, 74));
+        leftFooter.add(whatsappStatusLabel);
+
+        JPanel rightBtns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
+        rightBtns.setOpaque(false);
+
+        whatsappBtn = new JButton("💬 WhatsApp");
+        whatsappBtn.setPreferredSize(new Dimension(135, 36));
+        whatsappBtn.setFont(Theme.FONT_BOLD_SM);
+        whatsappBtn.setForeground(Color.WHITE);
+        whatsappBtn.setBackground(new Color(22, 163, 74));
+        whatsappBtn.setFocusPainted(false);
+        whatsappBtn.setBorder(new LineBorder(new Color(21, 128, 61), 1, true));
+        whatsappBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        whatsappBtn.setToolTipText("Send or resend e-Ticket directly to customer WhatsApp number");
+        whatsappBtn.addActionListener(e -> sendOrResendWhatsApp());
+
+        JButton printBtn = Theme.createPrimaryButton("🖨  Print");
+        printBtn.setPreferredSize(new Dimension(100, 36));
         printBtn.addActionListener(e -> printReceipt());
 
-        JButton newBookingBtn = Theme.createSecondaryButton("+ New Booking");
-        newBookingBtn.setPreferredSize(new Dimension(130, 36));
+        JButton newBookingBtn = Theme.createSecondaryButton("+ Done");
+        newBookingBtn.setPreferredSize(new Dimension(95, 36));
         newBookingBtn.addActionListener(e -> {
             dispose();
             if (onNewBooking != null) {
@@ -78,8 +103,12 @@ public class TicketConfirmationDialog extends JDialog {
             }
         });
 
-        footer.add(printBtn);
-        footer.add(newBookingBtn);
+        rightBtns.add(whatsappBtn);
+        rightBtns.add(printBtn);
+        rightBtns.add(newBookingBtn);
+
+        footer.add(leftFooter, BorderLayout.WEST);
+        footer.add(rightBtns, BorderLayout.EAST);
         add(footer, BorderLayout.SOUTH);
     }
 
@@ -263,6 +292,15 @@ public class TicketConfirmationDialog extends JDialog {
         scanHint.setAlignmentX(Component.CENTER_ALIGNMENT);
         receipt.add(scanHint);
 
+        if (booking.getCustomerPhone() != null && !booking.getCustomerPhone().isEmpty()) {
+            JLabel waReceiptHint = new JLabel("📱 WhatsApp e-Ticket: +" + WhatsAppService.formatPhoneNumber(booking.getCustomerPhone()));
+            waReceiptHint.setFont(new Font("Segoe UI", Font.BOLD, 10));
+            waReceiptHint.setForeground(new Color(22, 163, 74));
+            waReceiptHint.setAlignmentX(Component.CENTER_ALIGNMENT);
+            receipt.add(Box.createVerticalStrut(4));
+            receipt.add(waReceiptHint);
+        }
+
         receipt.add(Box.createVerticalStrut(14));
         JLabel terms = new JLabel("<html><center>Tickets once booked cannot be cancelled or exchanged.<br/>Enjoy your movie experience at Cinema Express!</center></html>", SwingConstants.CENTER);
         terms.setFont(new Font("Segoe UI", Font.PLAIN, 10));
@@ -308,6 +346,91 @@ public class TicketConfirmationDialog extends JDialog {
                 return new Dimension(Integer.MAX_VALUE, 6);
             }
         };
+    }
+
+    private void triggerAutoWhatsApp() {
+        if (!WhatsAppService.isEnabled()) {
+            if (whatsappStatusLabel != null) {
+                whatsappStatusLabel.setText("💬 WhatsApp: Off");
+                whatsappStatusLabel.setForeground(Theme.TEXT_MUTED);
+            }
+            return;
+        }
+
+        WhatsAppService.sendBookingConfirmation(booking).thenAccept(res -> {
+            SwingUtilities.invokeLater(() -> {
+                if (res.isSuccess()) {
+                    if (whatsappStatusLabel != null) {
+                        whatsappStatusLabel.setText("✓ WhatsApp Sent");
+                        whatsappStatusLabel.setForeground(new Color(22, 163, 74));
+                    }
+                } else {
+                    if (whatsappStatusLabel != null) {
+                        String shortErr = res.getErrorMessage();
+                        if (shortErr != null && shortErr.length() > 24) {
+                            shortErr = shortErr.substring(0, 24) + "...";
+                        }
+                        whatsappStatusLabel.setText("⚠️ " + (shortErr != null ? shortErr : "WhatsApp Notice"));
+                        whatsappStatusLabel.setForeground(new Color(220, 38, 38));
+                    }
+                }
+            });
+        });
+    }
+
+    private void sendOrResendWhatsApp() {
+        String currentPhone = booking.getCustomerPhone() != null ? booking.getCustomerPhone() : "";
+        String targetPhone = JOptionPane.showInputDialog(this,
+                "Enter or verify customer WhatsApp mobile number (10 digits):",
+                currentPhone);
+        if (targetPhone == null || targetPhone.trim().isEmpty()) {
+            return;
+        }
+
+        whatsappBtn.setEnabled(false);
+        whatsappBtn.setText("Sending...");
+
+        SwingWorker<WhatsAppService.WhatsAppResult, Void> worker = new SwingWorker<>() {
+            @Override
+            protected WhatsAppService.WhatsAppResult doInBackground() {
+                if (targetPhone.trim().equals(currentPhone)) {
+                    return WhatsAppService.sendBookingConfirmationSync(booking);
+                } else {
+                    String fullMsg = WhatsAppService.buildBookingTicketMessage(booking);
+                    return WhatsAppService.sendTextMessage(targetPhone.trim(), fullMsg);
+                }
+            }
+
+            @Override
+            protected void done() {
+                whatsappBtn.setEnabled(true);
+                whatsappBtn.setText("💬 WhatsApp");
+                try {
+                    WhatsAppService.WhatsAppResult res = get();
+                    if (res.isSuccess()) {
+                        JOptionPane.showMessageDialog(TicketConfirmationDialog.this,
+                                "✓ WhatsApp e-Ticket sent successfully to +" + res.getRecipient() + "!\n\nMessage ID: " + res.getMessageId(),
+                                "WhatsApp Sent", JOptionPane.INFORMATION_MESSAGE);
+                        if (whatsappStatusLabel != null) {
+                            whatsappStatusLabel.setText("✓ WhatsApp Sent");
+                            whatsappStatusLabel.setForeground(new Color(22, 163, 74));
+                        }
+                    } else {
+                        String err = res.getErrorMessage();
+                        if (res.getHttpStatus() == 400 && err != null && err.contains("131037")) {
+                            err += "\n\n(Tip: Your Meta WhatsApp display name is undergoing review. Once approved, live messages will deliver instantly.)";
+                        }
+                        JOptionPane.showMessageDialog(TicketConfirmationDialog.this,
+                                "WhatsApp Delivery Status:\n" + err,
+                                "WhatsApp Notification", JOptionPane.WARNING_MESSAGE);
+                    }
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(TicketConfirmationDialog.this,
+                            "Error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        };
+        worker.execute();
     }
 
     private void printReceipt() {
