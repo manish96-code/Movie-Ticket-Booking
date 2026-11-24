@@ -154,6 +154,7 @@ public class OrderBookingPage extends JPanel {
     private JTextField customerPhoneField;
     private JTextField customerNameField;
     private JLabel customerBadge;
+    private JCheckBox sendWhatsAppCheckBox;
     private Customer activeCustomer = null;
 
     private JRadioButton cashRadio;
@@ -1361,7 +1362,17 @@ public class OrderBookingPage extends JPanel {
             }
         });
         content.add(customerNameField);
-        content.add(Box.createVerticalStrut(16));
+        content.add(Box.createVerticalStrut(6));
+
+        sendWhatsAppCheckBox = new JCheckBox("Send WhatsApp e-Ticket (+91)", true);
+        sendWhatsAppCheckBox.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        sendWhatsAppCheckBox.setForeground(new Color(22, 163, 74));
+        sendWhatsAppCheckBox.setOpaque(false);
+        sendWhatsAppCheckBox.setAlignmentX(Component.LEFT_ALIGNMENT);
+        sendWhatsAppCheckBox.setToolTipText("Automatically sends movie e-ticket receipt directly to customer via WhatsApp");
+        content.add(sendWhatsAppCheckBox);
+
+        content.add(Box.createVerticalStrut(14));
 
         // 4. Payment Method Section
         JLabel payHeader = new JLabel("PAYMENT METHOD");
@@ -3185,11 +3196,13 @@ public class OrderBookingPage extends JPanel {
                     payment
             );
 
-            // Open Confirmation Dialog with Vector QR Code
+            // Open Confirmation Dialog with Vector QR Code & WhatsApp delivery
+            boolean autoSend = sendWhatsAppCheckBox != null && sendWhatsAppCheckBox.isSelected();
             TicketConfirmationDialog dialog = new TicketConfirmationDialog(
                     SwingUtilities.getWindowAncestor(this),
                     booking,
-                    this::resetBookingWorkspace
+                    this::resetBookingWorkspace,
+                    autoSend
             );
             dialog.setVisible(true);
 
@@ -3221,6 +3234,9 @@ public class OrderBookingPage extends JPanel {
         currentUpiTrxId = "";
         upiPaymentReceived = false;
         cashRadio.setSelected(true);
+        if (sendWhatsAppCheckBox != null) {
+            sendWhatsAppCheckBox.setSelected(true);
+        }
         updatePaymentModeUI();
 
         if (selectedShow != null) {

@@ -190,9 +190,14 @@ jpackage --type app-image -d dist -n CinemaExpress ^
     --icon assets\icon.ico ^
     --main-class com.cinemats.Main ^
     --main-jar CinemaExpress.jar ^
-    -i dist\ ^
-    --win-shortcut ^
-    --win-menu
+    -i dist\
+
+if exist "db.properties" copy /y "db.properties" "dist\CinemaExpress\" >nul
+if exist "whatsapp.properties" copy /y "whatsapp.properties" "dist\CinemaExpress\" >nul
+if exist "assets" xcopy /e /i /y "assets" "dist\CinemaExpress\assets" >nul
+
+echo Creating Desktop shortcut...
+powershell -NoProfile -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut([Environment]::GetFolderPath('Desktop') + '\Cinema Express.lnk'); $s.TargetPath = '%~dp0dist\CinemaExpress\CinemaExpress.exe'; $s.WorkingDirectory = '%~dp0dist\CinemaExpress'; if (Test-Path '%~dp0assets\icon.ico') { $s.IconLocation = '%~dp0assets\icon.ico'; } $s.Save()" 2>nul
 
 echo.
 echo [SUCCESS] Windows executable created inside dist\CinemaExpress\CinemaExpress.exe!

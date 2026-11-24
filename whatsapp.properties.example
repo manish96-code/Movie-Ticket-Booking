@@ -19,3 +19,4 @@ whatsapp.send.mode=auto
 # Meta WhatsApp Template Details
 whatsapp.template.name=movie_booking_confirmation
 whatsapp.template.language=en_US
+

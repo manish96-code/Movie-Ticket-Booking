@@ -26,6 +26,10 @@ public class TicketConfirmationDialog extends JDialog {
     private JLabel whatsappStatusLabel;
 
     public TicketConfirmationDialog(Window owner, Booking booking, Runnable onNewBooking) {
+        this(owner, booking, onNewBooking, false);
+    }
+
+    public TicketConfirmationDialog(Window owner, Booking booking, Runnable onNewBooking, boolean autoSendWhatsApp) {
         super(owner, "Booking Confirmed - Ticket Generation", ModalityType.APPLICATION_MODAL);
         this.booking = booking;
         this.onNewBooking = onNewBooking;
@@ -36,7 +40,9 @@ public class TicketConfirmationDialog extends JDialog {
         getContentPane().setBackground(Theme.BG_MAIN);
 
         initUI();
-        triggerAutoWhatsApp();
+        if (autoSendWhatsApp) {
+            triggerAutoWhatsApp();
+        }
     }
 
     private void initUI() {
