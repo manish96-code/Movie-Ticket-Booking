@@ -16,6 +16,9 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.print.Printable;
 import java.awt.print.PrinterJob;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 public class TicketConfirmationDialog extends JDialog {
 
@@ -25,6 +28,7 @@ public class TicketConfirmationDialog extends JDialog {
     private JButton whatsappBtn;
     private JLabel whatsappStatusLabel;
     private JPanel statusStrip;
+    private JButton webWhatsAppBtn;
 
     public TicketConfirmationDialog(Window owner, Booking booking, Runnable onNewBooking) {
         this(owner, booking, onNewBooking, false);
@@ -86,6 +90,18 @@ public class TicketConfirmationDialog extends JDialog {
         whatsappStatusLabel.setFont(new Font("Segoe UI", Font.BOLD, 11));
         whatsappStatusLabel.setForeground(new Color(22, 163, 74));
         statusStrip.add(whatsappStatusLabel, BorderLayout.CENTER);
+
+        webWhatsAppBtn = new JButton("🌐 Open WhatsApp Web");
+        webWhatsAppBtn.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        webWhatsAppBtn.setForeground(new Color(22, 163, 74));
+        webWhatsAppBtn.setBackground(Color.WHITE);
+        webWhatsAppBtn.setBorder(new LineBorder(new Color(187, 247, 208), 1, true));
+        webWhatsAppBtn.setPreferredSize(new Dimension(175, 26));
+        webWhatsAppBtn.setFocusPainted(false);
+        webWhatsAppBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        webWhatsAppBtn.setVisible(false);
+        webWhatsAppBtn.addActionListener(e -> openWhatsAppWeb(booking.getCustomerPhone()));
+        statusStrip.add(webWhatsAppBtn, BorderLayout.EAST);
 
         // 2. Action Buttons Strip
         JPanel actionBtns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
@@ -391,6 +407,9 @@ public class TicketConfirmationDialog extends JDialog {
                     if (whatsappBtn != null) {
                         whatsappBtn.setText("💬 Resend WhatsApp");
                     }
+                    if (webWhatsAppBtn != null) {
+                        webWhatsAppBtn.setVisible(false);
+                    }
                 } else {
                     String err = res.getErrorMessage();
                     if (statusStrip != null) {
@@ -403,6 +422,9 @@ public class TicketConfirmationDialog extends JDialog {
                             whatsappStatusLabel.setText("⚠️ WhatsApp Notice: " + (err != null ? err : "Delivery failed"));
                         }
                         whatsappStatusLabel.setForeground(new Color(220, 38, 38));
+                    }
+                    if (webWhatsAppBtn != null) {
+                        webWhatsAppBtn.setVisible(true);
                     }
                 }
             });
@@ -451,7 +473,10 @@ public class TicketConfirmationDialog extends JDialog {
                         }
                         if (whatsappStatusLabel != null) {
                             whatsappStatusLabel.setText("✓ WhatsApp e-Ticket sent successfully to +" + res.getRecipient());
-                            whatsappStatusLabel.setForeground(new Color(22, 163, 74));
+                            whatsappStatusLabel.setForeground(new Color(220, 38, 38));
+                        }
+                        if (webWhatsAppBtn != null) {
+                            webWhatsAppBtn.setVisible(false);
                         }
                         JOptionPane.showMessageDialog(TicketConfirmationDialog.this,
                                 "✓ WhatsApp e-Ticket sent successfully to +" + res.getRecipient() + "!\n\nMessage ID: " + res.getMessageId(),
@@ -469,12 +494,23 @@ public class TicketConfirmationDialog extends JDialog {
                             }
                             whatsappStatusLabel.setForeground(new Color(220, 38, 38));
                         }
-                        if (err != null && (err.contains("131037") || err.toLowerCase().contains("display name"))) {
-                            err += "\n\n(Tip: In Meta WhatsApp Manager, your Phone Number Display Name needs to be submitted & approved. Also ensure your number is verified in the 'To' list in developers.facebook.com -> WhatsApp -> API Setup.)";
+                        if (webWhatsAppBtn != null) {
+                            webWhatsAppBtn.setVisible(true);
                         }
-                        JOptionPane.showMessageDialog(TicketConfirmationDialog.this,
-                                "WhatsApp Delivery Status:\n" + err,
-                                "WhatsApp Notification", JOptionPane.WARNING_MESSAGE);
+
+                        Object[] options = {"Open WhatsApp Web (Send Now)", "OK"};
+                        int choice = JOptionPane.showOptionDialog(TicketConfirmationDialog.this,
+                                "Meta Cloud API Status:\n" + err
+                                + "\n\n💡 Tip: Your Meta Display Name is awaiting review on Meta.\nWould you like to open and send this e-Ticket via WhatsApp Web right now?",
+                                "WhatsApp Delivery",
+                                JOptionPane.YES_NO_OPTION,
+                                JOptionPane.WARNING_MESSAGE,
+                                null,
+                                options,
+                                options[0]);
+                        if (choice == 0) {
+                            openWhatsAppWeb(targetPhone.trim());
+                        }
                     }
                 } catch (Exception ex) {
                     JOptionPane.showMessageDialog(TicketConfirmationDialog.this,
@@ -483,6 +519,21 @@ public class TicketConfirmationDialog extends JDialog {
             }
         };
         worker.execute();
+    }
+
+    private void openWhatsAppWeb(String rawPhone) {
+        try {
+            String cleanPhone = WhatsAppService.formatPhoneNumber(rawPhone != null && !rawPhone.trim().isEmpty() ? rawPhone : booking.getCustomerPhone());
+            String ticketMsg = WhatsAppService.buildBookingTicketMessage(booking);
+            String url = "https://api.whatsapp.com/send?phone=" + cleanPhone + "&text=" + URLEncoder.encode(ticketMsg, StandardCharsets.UTF_8);
+            if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+                Desktop.getDesktop().browse(new URI(url));
+            } else {
+                new ProcessBuilder("xdg-open", url).start();
+            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Could not open browser: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void printReceipt() {
