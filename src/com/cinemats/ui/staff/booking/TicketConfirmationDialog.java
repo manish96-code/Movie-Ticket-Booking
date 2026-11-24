@@ -397,7 +397,7 @@ public class TicketConfirmationDialog extends JDialog {
                         statusStrip.setBackground(new Color(254, 242, 242));
                     }
                     if (whatsappStatusLabel != null) {
-                        if (err != null && err.contains("131037")) {
+                        if (err != null && (err.contains("131037") || err.toLowerCase().contains("display name"))) {
                             whatsappStatusLabel.setText("⚠️ Meta Error 131037: Display Name review pending in WhatsApp Manager");
                         } else {
                             whatsappStatusLabel.setText("⚠️ WhatsApp Notice: " + (err != null ? err : "Delivery failed"));
@@ -462,15 +462,15 @@ public class TicketConfirmationDialog extends JDialog {
                             statusStrip.setBackground(new Color(254, 242, 242));
                         }
                         if (whatsappStatusLabel != null) {
-                            if (err != null && err.contains("131037")) {
+                            if (err != null && (err.contains("131037") || err.toLowerCase().contains("display name"))) {
                                 whatsappStatusLabel.setText("⚠️ Meta Error 131037: Display Name review pending in WhatsApp Manager");
                             } else {
                                 whatsappStatusLabel.setText("⚠️ WhatsApp Notice: " + (err != null ? err : "Delivery failed"));
                             }
                             whatsappStatusLabel.setForeground(new Color(220, 38, 38));
                         }
-                        if (res.getHttpStatus() == 400 && err != null && err.contains("131037")) {
-                            err += "\n\n(Tip: In Meta WhatsApp Manager, edit & submit your Phone Number Display Name for approval to enable live message sending.)";
+                        if (err != null && (err.contains("131037") || err.toLowerCase().contains("display name"))) {
+                            err += "\n\n(Tip: In Meta WhatsApp Manager, your Phone Number Display Name needs to be submitted & approved. Also ensure your number is verified in the 'To' list in developers.facebook.com -> WhatsApp -> API Setup.)";
                         }
                         JOptionPane.showMessageDialog(TicketConfirmationDialog.this,
                                 "WhatsApp Delivery Status:\n" + err,

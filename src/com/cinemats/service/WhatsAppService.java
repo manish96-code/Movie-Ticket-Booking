@@ -47,7 +47,7 @@ public class WhatsAppService {
     private static String templateLanguage = DEFAULT_TEMPLATE_LANG;
 
     private static final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(10))
+            .connectTimeout(Duration.ofSeconds(20))
             .build();
 
     private static final ExecutorService asyncPool = Executors.newCachedThreadPool(r -> {
@@ -272,7 +272,7 @@ public class WhatsAppService {
         try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(endpoint))
-                    .timeout(Duration.ofSeconds(15))
+                    .timeout(Duration.ofSeconds(25))
                     .header("Authorization", "Bearer " + accessToken)
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
@@ -292,8 +292,12 @@ public class WhatsAppService {
                 return new WhatsAppResult(false, null, recipient, errMessage, code);
             }
         } catch (Exception ex) {
-            System.err.println("[WhatsAppService] Exception sending WhatsApp to " + recipient + ": " + ex.getMessage());
-            return new WhatsAppResult(false, null, recipient, ex.getMessage(), 0);
+            String err = ex.getMessage();
+            if (err == null || err.trim().isEmpty()) {
+                err = ex.getClass().getSimpleName();
+            }
+            System.err.println("[WhatsAppService] Exception sending WhatsApp to " + recipient + ": " + err);
+            return new WhatsAppResult(false, null, recipient, "Network error: " + err, 0);
         }
     }
 
@@ -356,14 +360,22 @@ public class WhatsAppService {
     }
 
     private static String extractErrorMessage(String json) {
-        if (json == null) return "Unknown error";
+        if (json == null) return "Unknown Meta API error";
         String msg = extractJsonField(json, "message");
         String details = extractJsonField(json, "details");
-        if (details != null && !details.isEmpty()) {
-            return details;
+        String code = null;
+        Pattern cp = Pattern.compile("\"code\"\\s*:\\s*(\\d+)");
+        Matcher cm = cp.matcher(json);
+        if (cm.find()) {
+            code = cm.group(1);
         }
-        if (msg != null && !msg.isEmpty()) {
-            return msg;
+
+        String full = (details != null && !details.isEmpty()) ? details : msg;
+        if (full != null && !full.isEmpty()) {
+            if (code != null && !full.contains(code)) {
+                return "(#" + code + ") " + full;
+            }
+            return full;
         }
         return json;
     }
