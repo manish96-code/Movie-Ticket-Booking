@@ -24,6 +24,7 @@ public class TicketConfirmationDialog extends JDialog {
     private JPanel ticketCardPanel;
     private JButton whatsappBtn;
     private JLabel whatsappStatusLabel;
+    private JPanel statusStrip;
 
     public TicketConfirmationDialog(Window owner, Booking booking, Runnable onNewBooking) {
         this(owner, booking, onNewBooking, false);
@@ -34,7 +35,7 @@ public class TicketConfirmationDialog extends JDialog {
         this.booking = booking;
         this.onNewBooking = onNewBooking;
 
-        setSize(520, 700);
+        setSize(540, 720);
         setLocationRelativeTo(owner);
         setLayout(new BorderLayout());
         getContentPane().setBackground(Theme.BG_MAIN);
@@ -70,23 +71,28 @@ public class TicketConfirmationDialog extends JDialog {
         Theme.applyModernScrollBars(scrollPane);
         add(scrollPane, BorderLayout.CENTER);
 
-        // Footer Actions (Clean, standard, original buttons)
-        JPanel footer = new JPanel(new BorderLayout());
+        // Footer Actions: 2-Tier Stack (Status banner on top, buttons on bottom)
+        JPanel footer = new JPanel();
+        footer.setLayout(new BoxLayout(footer, BoxLayout.Y_AXIS));
         footer.setBackground(Color.WHITE);
-        footer.setBorder(new LineBorder(Theme.BORDER_COLOR, 1, false));
+        footer.setBorder(new MatteBorder(1, 0, 0, 0, Theme.BORDER_COLOR));
 
-        JPanel leftFooter = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 12));
-        leftFooter.setOpaque(false);
-        whatsappStatusLabel = new JLabel("💬 WhatsApp: Ready");
-        whatsappStatusLabel.setFont(Theme.FONT_SMALL);
+        // 1. WhatsApp Delivery Status Strip (Full width banner)
+        statusStrip = new JPanel(new BorderLayout());
+        statusStrip.setBackground(new Color(240, 253, 244));
+        statusStrip.setBorder(new EmptyBorder(8, 16, 8, 16));
+
+        whatsappStatusLabel = new JLabel("💬 WhatsApp e-Ticket ready");
+        whatsappStatusLabel.setFont(new Font("Segoe UI", Font.BOLD, 11));
         whatsappStatusLabel.setForeground(new Color(22, 163, 74));
-        leftFooter.add(whatsappStatusLabel);
+        statusStrip.add(whatsappStatusLabel, BorderLayout.CENTER);
 
-        JPanel rightBtns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
-        rightBtns.setOpaque(false);
+        // 2. Action Buttons Strip
+        JPanel actionBtns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
+        actionBtns.setOpaque(false);
 
         whatsappBtn = new JButton("💬 WhatsApp");
-        whatsappBtn.setPreferredSize(new Dimension(135, 36));
+        whatsappBtn.setPreferredSize(new Dimension(140, 36));
         whatsappBtn.setFont(Theme.FONT_BOLD_SM);
         whatsappBtn.setForeground(Color.WHITE);
         whatsappBtn.setBackground(new Color(22, 163, 74));
@@ -96,12 +102,12 @@ public class TicketConfirmationDialog extends JDialog {
         whatsappBtn.setToolTipText("Send or resend e-Ticket directly to customer WhatsApp number");
         whatsappBtn.addActionListener(e -> sendOrResendWhatsApp());
 
-        JButton printBtn = Theme.createPrimaryButton("🖨  Print");
-        printBtn.setPreferredSize(new Dimension(100, 36));
+        JButton printBtn = Theme.createPrimaryButton("🖨  Print Tickets");
+        printBtn.setPreferredSize(new Dimension(130, 36));
         printBtn.addActionListener(e -> printReceipt());
 
         JButton newBookingBtn = Theme.createSecondaryButton("+ Done");
-        newBookingBtn.setPreferredSize(new Dimension(95, 36));
+        newBookingBtn.setPreferredSize(new Dimension(90, 36));
         newBookingBtn.addActionListener(e -> {
             dispose();
             if (onNewBooking != null) {
@@ -109,12 +115,12 @@ public class TicketConfirmationDialog extends JDialog {
             }
         });
 
-        rightBtns.add(whatsappBtn);
-        rightBtns.add(printBtn);
-        rightBtns.add(newBookingBtn);
+        actionBtns.add(whatsappBtn);
+        actionBtns.add(printBtn);
+        actionBtns.add(newBookingBtn);
 
-        footer.add(leftFooter, BorderLayout.WEST);
-        footer.add(rightBtns, BorderLayout.EAST);
+        footer.add(statusStrip);
+        footer.add(actionBtns);
         add(footer, BorderLayout.SOUTH);
     }
 
@@ -356,27 +362,46 @@ public class TicketConfirmationDialog extends JDialog {
 
     private void triggerAutoWhatsApp() {
         if (!WhatsAppService.isEnabled()) {
+            if (statusStrip != null) {
+                statusStrip.setBackground(new Color(248, 250, 252));
+            }
             if (whatsappStatusLabel != null) {
-                whatsappStatusLabel.setText("💬 WhatsApp: Off");
+                whatsappStatusLabel.setText("ℹ WhatsApp notifications are turned off in whatsapp.properties");
                 whatsappStatusLabel.setForeground(Theme.TEXT_MUTED);
             }
             return;
         }
 
+        String phone = booking.getCustomerPhone() != null ? booking.getCustomerPhone() : "";
+        if (whatsappStatusLabel != null) {
+            whatsappStatusLabel.setText("💬 Auto-sending e-Ticket via WhatsApp to +91 " + phone + "...");
+            whatsappStatusLabel.setForeground(new Color(37, 99, 235));
+        }
+
         WhatsAppService.sendBookingConfirmation(booking).thenAccept(res -> {
             SwingUtilities.invokeLater(() -> {
                 if (res.isSuccess()) {
+                    if (statusStrip != null) {
+                        statusStrip.setBackground(new Color(240, 253, 244));
+                    }
                     if (whatsappStatusLabel != null) {
-                        whatsappStatusLabel.setText("✓ WhatsApp Sent");
+                        whatsappStatusLabel.setText("✓ WhatsApp e-Ticket sent successfully to +" + res.getRecipient());
                         whatsappStatusLabel.setForeground(new Color(22, 163, 74));
                     }
+                    if (whatsappBtn != null) {
+                        whatsappBtn.setText("💬 Resend WhatsApp");
+                    }
                 } else {
+                    String err = res.getErrorMessage();
+                    if (statusStrip != null) {
+                        statusStrip.setBackground(new Color(254, 242, 242));
+                    }
                     if (whatsappStatusLabel != null) {
-                        String shortErr = res.getErrorMessage();
-                        if (shortErr != null && shortErr.length() > 24) {
-                            shortErr = shortErr.substring(0, 24) + "...";
+                        if (err != null && err.contains("131037")) {
+                            whatsappStatusLabel.setText("⚠️ Meta Error 131037: Display Name review pending in WhatsApp Manager");
+                        } else {
+                            whatsappStatusLabel.setText("⚠️ WhatsApp Notice: " + (err != null ? err : "Delivery failed"));
                         }
-                        whatsappStatusLabel.setText("⚠️ " + (shortErr != null ? shortErr : "WhatsApp Notice"));
                         whatsappStatusLabel.setForeground(new Color(220, 38, 38));
                     }
                 }
@@ -395,6 +420,13 @@ public class TicketConfirmationDialog extends JDialog {
 
         whatsappBtn.setEnabled(false);
         whatsappBtn.setText("Sending...");
+        if (statusStrip != null) {
+            statusStrip.setBackground(new Color(239, 246, 255));
+        }
+        if (whatsappStatusLabel != null) {
+            whatsappStatusLabel.setText("💬 Sending WhatsApp message to " + targetPhone + "...");
+            whatsappStatusLabel.setForeground(new Color(37, 99, 235));
+        }
 
         SwingWorker<WhatsAppService.WhatsAppResult, Void> worker = new SwingWorker<>() {
             @Override
@@ -410,21 +442,35 @@ public class TicketConfirmationDialog extends JDialog {
             @Override
             protected void done() {
                 whatsappBtn.setEnabled(true);
-                whatsappBtn.setText("💬 WhatsApp");
+                whatsappBtn.setText("💬 Resend WhatsApp");
                 try {
                     WhatsAppService.WhatsAppResult res = get();
                     if (res.isSuccess()) {
+                        if (statusStrip != null) {
+                            statusStrip.setBackground(new Color(240, 253, 244));
+                        }
+                        if (whatsappStatusLabel != null) {
+                            whatsappStatusLabel.setText("✓ WhatsApp e-Ticket sent successfully to +" + res.getRecipient());
+                            whatsappStatusLabel.setForeground(new Color(22, 163, 74));
+                        }
                         JOptionPane.showMessageDialog(TicketConfirmationDialog.this,
                                 "✓ WhatsApp e-Ticket sent successfully to +" + res.getRecipient() + "!\n\nMessage ID: " + res.getMessageId(),
                                 "WhatsApp Sent", JOptionPane.INFORMATION_MESSAGE);
-                        if (whatsappStatusLabel != null) {
-                            whatsappStatusLabel.setText("✓ WhatsApp Sent");
-                            whatsappStatusLabel.setForeground(new Color(22, 163, 74));
-                        }
                     } else {
                         String err = res.getErrorMessage();
+                        if (statusStrip != null) {
+                            statusStrip.setBackground(new Color(254, 242, 242));
+                        }
+                        if (whatsappStatusLabel != null) {
+                            if (err != null && err.contains("131037")) {
+                                whatsappStatusLabel.setText("⚠️ Meta Error 131037: Display Name review pending in WhatsApp Manager");
+                            } else {
+                                whatsappStatusLabel.setText("⚠️ WhatsApp Notice: " + (err != null ? err : "Delivery failed"));
+                            }
+                            whatsappStatusLabel.setForeground(new Color(220, 38, 38));
+                        }
                         if (res.getHttpStatus() == 400 && err != null && err.contains("131037")) {
-                            err += "\n\n(Tip: Your Meta WhatsApp display name is undergoing review. Once approved, live messages will deliver instantly.)";
+                            err += "\n\n(Tip: In Meta WhatsApp Manager, edit & submit your Phone Number Display Name for approval to enable live message sending.)";
                         }
                         JOptionPane.showMessageDialog(TicketConfirmationDialog.this,
                                 "WhatsApp Delivery Status:\n" + err,

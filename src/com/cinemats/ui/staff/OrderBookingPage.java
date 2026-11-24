@@ -3198,6 +3198,11 @@ public class OrderBookingPage extends JPanel {
 
             // Open Confirmation Dialog with Vector QR Code & WhatsApp delivery
             boolean autoSend = sendWhatsAppCheckBox != null && sendWhatsAppCheckBox.isSelected();
+
+            // Reset button state before showing modal dialog so background UI is never stuck on "Processing..."
+            confirmBookingBtn.setText("Confirm Booking");
+            confirmBookingBtn.setEnabled(true);
+
             TicketConfirmationDialog dialog = new TicketConfirmationDialog(
                     SwingUtilities.getWindowAncestor(this),
                     booking,
