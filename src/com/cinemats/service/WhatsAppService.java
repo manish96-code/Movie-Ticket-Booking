@@ -29,8 +29,8 @@ public class WhatsAppService {
 
     // Default configuration (fallback)
     private static final String DEFAULT_ACCESS_TOKEN = "EAAVh6ebH4ZB8BTKF4IrsIuyFbNiIiZAoDxmtyhLmdzcg4dQKfwqXhbqcCvnZAlImUsMOVZCJzZBiDpiSgbEN6dym7K4EaNg52DQrZCmBaZBWiG157lpYZBLzZBrBiFoc0y1wGUuiRxmGMP6ZCT8l00Ho7a9nuGJAFIPKJYuxeplrJ6q5e8pMHZBZB78VBQ4c7eUvLAZDZD";
-    private static final String DEFAULT_PHONE_NUMBER_ID = "1521264724392793";
-    private static final String DEFAULT_WABA_ID = "2613634992467980";
+    private static final String DEFAULT_PHONE_NUMBER_ID = "1398014310071042";
+    private static final String DEFAULT_WABA_ID = "1200428602652356";
     private static final String DEFAULT_API_VERSION = "v21.0";
     private static final String DEFAULT_COUNTRY_CODE = "91";
     private static final String DEFAULT_TEMPLATE_NAME = "movie_booking_confirmation";
@@ -47,7 +47,8 @@ public class WhatsAppService {
     private static String templateLanguage = DEFAULT_TEMPLATE_LANG;
 
     private static final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(20))
+            .version(HttpClient.Version.HTTP_1_1)
+            .connectTimeout(Duration.ofSeconds(30))
             .build();
 
     private static final ExecutorService asyncPool = Executors.newCachedThreadPool(r -> {
@@ -269,36 +270,45 @@ public class WhatsAppService {
     }
 
     private static WhatsAppResult postMessage(String endpoint, String jsonPayload, String recipient) {
-        try {
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(endpoint))
-                    .timeout(Duration.ofSeconds(25))
-                    .header("Authorization", "Bearer " + accessToken)
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
-                    .build();
+        int maxAttempts = 2;
+        Exception lastException = null;
 
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            int code = response.statusCode();
-            String respBody = response.body();
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(endpoint))
+                        .timeout(Duration.ofSeconds(30))
+                        .header("Authorization", "Bearer " + accessToken)
+                        .header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
+                        .build();
 
-            if (code == 200 || code == 201) {
-                String msgId = extractJsonField(respBody, "id");
-                System.out.println("[WhatsAppService] Successfully sent to " + recipient + " (id: " + msgId + ")");
-                return new WhatsAppResult(true, msgId, recipient, null, code);
-            } else {
-                String errMessage = extractErrorMessage(respBody);
-                System.err.println("[WhatsAppService] API Error (" + code + ") for " + recipient + ": " + errMessage);
-                return new WhatsAppResult(false, null, recipient, errMessage, code);
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                int code = response.statusCode();
+                String respBody = response.body();
+
+                if (code == 200 || code == 201) {
+                    String msgId = extractJsonField(respBody, "id");
+                    System.out.println("[WhatsAppService] Successfully sent to " + recipient + " (id: " + msgId + ")");
+                    return new WhatsAppResult(true, msgId, recipient, null, code);
+                } else {
+                    String errMessage = extractErrorMessage(respBody);
+                    System.err.println("[WhatsAppService] API Error (" + code + ") for " + recipient + ": " + errMessage);
+                    return new WhatsAppResult(false, null, recipient, errMessage, code);
+                }
+            } catch (Exception ex) {
+                lastException = ex;
+                System.err.println("[WhatsAppService] Attempt " + attempt + " failed for " + recipient + ": " + ex.getMessage());
+                if (attempt < maxAttempts) {
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException ignored) {}
+                }
             }
-        } catch (Exception ex) {
-            String err = ex.getMessage();
-            if (err == null || err.trim().isEmpty()) {
-                err = ex.getClass().getSimpleName();
-            }
-            System.err.println("[WhatsAppService] Exception sending WhatsApp to " + recipient + ": " + err);
-            return new WhatsAppResult(false, null, recipient, "Network error: " + err, 0);
         }
+
+        String err = lastException != null ? lastException.getMessage() : "Connection failed";
+        return new WhatsAppResult(false, null, recipient, "Network error: " + err, 0);
     }
 
     /**
