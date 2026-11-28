@@ -177,6 +177,8 @@ public class OrderBookingPage extends JPanel {
 
     private JButton confirmBookingBtn;
     private JButton resetBtn;
+    private int movieLoadGeneration = 0;
+    private int seatLoadGeneration = 0;
 
     // --- Bottom: Current Bookings (Today) ---
     private JTable todayBookingsTable;
@@ -370,8 +372,9 @@ public class OrderBookingPage extends JPanel {
         showSection.add(showHeader, BorderLayout.NORTH);
 
         showsContainerPanel.setBackground(Color.WHITE);
-        showsContainerPanel.setBorder(new EmptyBorder(8, 8, 60, 8));
+        showsContainerPanel.setBorder(new EmptyBorder(8, 8, 24, 8));
         showsScroll = new JScrollPane(showsContainerPanel);
+        showsScroll.setPreferredSize(new Dimension(0, 0));
         showsScroll.setBorder(new LineBorder(Theme.BORDER_COLOR, 1, true));
         showsScroll.getViewport().setBackground(Color.WHITE);
         showsScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
@@ -622,9 +625,10 @@ public class OrderBookingPage extends JPanel {
         // Scrollable Movie Cards List (Responsive 4-column Wrap Grid)
         movieListPanel.setLayout(new com.cinemats.util.WrapLayout(FlowLayout.LEFT, 10, 8));
         movieListPanel.setBackground(new Color(248, 250, 252));
-        movieListPanel.setBorder(new EmptyBorder(10, 10, 80, 10));
+        movieListPanel.setBorder(new EmptyBorder(10, 10, 24, 10));
 
         cardsScroll = new JScrollPane(movieListPanel);
+        cardsScroll.setPreferredSize(new Dimension(0, 0));
         cardsScroll.setBorder(new LineBorder(new Color(226, 232, 240), 1, true));
         cardsScroll.getViewport().setBackground(new Color(248, 250, 252));
         cardsScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
@@ -1095,6 +1099,7 @@ public class OrderBookingPage extends JPanel {
         seatPanel.addMouseMotionListener(seatPanner);
 
         seatsScrollPane = new JScrollPane(seatPanel);
+        seatsScrollPane.setPreferredSize(new Dimension(0, 0));
         seatsScrollPane.setBorder(null);
         seatsScrollPane.getViewport().setBackground(Color.WHITE);
         seatsScrollPane.getViewport().addMouseListener(seatPanner);
@@ -2036,6 +2041,7 @@ public class OrderBookingPage extends JPanel {
             return;
         }
         selectedMovie = movie;
+        final int gen = ++movieLoadGeneration;
 
         // Update Movie Banner in Column 2
         movieBannerTitle.setText(capitalizeTitle(movie.getTitle()));
@@ -2043,14 +2049,40 @@ public class OrderBookingPage extends JPanel {
 
         // Refresh Movie List Highlight
         movieListPanel.repaint();
-
         selectedSeats.clear();
-        movieShows = ShowDAO.getShowsByMovie(movie.getId());
-        // Keep active/scheduled shows (do not discard shows whose cutoff passed so schedule is visible)
-        movieShows.removeIf(Show::isCancelled);
 
-        renderShowsForSelectedDate();
+        // Instant render from cached shows so UI responds with zero lag
+        if (allShowsCache != null && !allShowsCache.isEmpty()) {
+            List<Show> cached = new ArrayList<>();
+            for (Show s : allShowsCache) {
+                if (s != null && s.getMovieId() == movie.getId() && !s.isCancelled()) {
+                    cached.add(s);
+                }
+            }
+            movieShows = cached;
+            renderShowsForSelectedDate();
+        }
         updateSummary();
+
+        // Refresh live show seat counts in background
+        new SwingWorker<List<Show>, Void>() {
+            @Override
+            protected List<Show> doInBackground() {
+                List<Show> fresh = ShowDAO.getShowsByMovie(movie.getId());
+                fresh.removeIf(Show::isCancelled);
+                return fresh;
+            }
+
+            @Override
+            protected void done() {
+                if (gen != movieLoadGeneration) return;
+                try {
+                    movieShows = get();
+                    renderShowsForSelectedDate();
+                } catch (Exception ignored) {
+                }
+            }
+        }.execute();
     }
 
     private void selectDateFilter(String dateStr) {
@@ -2515,16 +2547,13 @@ public class OrderBookingPage extends JPanel {
                     }
                 }
             }
-            selectedMovie = (found != null) ? found : MovieDAO.getMovieById(show.getMovieId());
-            if (selectedMovie != null) {
-                movieShows = ShowDAO.getShowsByMovie(selectedMovie.getId());
-                movieShows.removeIf(Show::isCancelled);
+            if (found != null) {
+                selectedMovie = found;
             }
         }
         showsContainerPanel.repaint();
-        loadSeatsForSelectedShow();
-        updateSummary();
         showStep2();
+        loadSeatsForSelectedShow();
     }
 
     // ==========================================================
@@ -2541,22 +2570,48 @@ public class OrderBookingPage extends JPanel {
             return;
         }
 
-        seatHeaderTitle.setText(selectedShow.getScreenName() + " (" + selectedShow.getScreenType() + ") • " + selectedShow.getStartTime() + " Seating");
+        final Show targetShow = selectedShow;
+        final int gen = ++seatLoadGeneration;
+        seatHeaderTitle.setText(targetShow.getScreenName() + " (" + targetShow.getScreenType() + ") • " + targetShow.getStartTime() + " Seating");
+        showSeatMessage("⏳ Loading seating layout...");
+        updateSummary();
 
-        List<ShowSeat> showSeats = ShowSeatDAO.getShowSeatsByShowId(selectedShow.getId());
-
-        // If seats not yet generated for this show, generate them automatically from physical screen seats
-        if (showSeats.isEmpty()) {
-            try (java.sql.Connection conn = com.cinemats.config.DBConnection.getConnection()) {
-                List<ShowPrice> prices = com.cinemats.dao.ShowPriceDAO.getPricesByShowId(selectedShow.getId());
-                ShowSeatDAO.generateShowSeats(selectedShow.getId(), selectedShow.getScreenId(), prices, conn);
-                showSeats = ShowSeatDAO.getShowSeatsByShowId(selectedShow.getId());
-            } catch (Exception ex) {
-                System.err.println("[OrderBookingPage] Auto-generating seats error: " + ex.getMessage());
+        new SwingWorker<List<ShowSeat>, Void>() {
+            @Override
+            protected List<ShowSeat> doInBackground() {
+                if (selectedMovie == null || selectedMovie.getId() != targetShow.getMovieId()) {
+                    selectedMovie = MovieDAO.getMovieById(targetShow.getMovieId());
+                }
+                List<ShowSeat> seats = ShowSeatDAO.getShowSeatsByShowId(targetShow.getId());
+                if (seats.isEmpty()) {
+                    try (java.sql.Connection conn = com.cinemats.config.DBConnection.getConnection()) {
+                        List<ShowPrice> prices = com.cinemats.dao.ShowPriceDAO.getPricesByShowId(targetShow.getId());
+                        ShowSeatDAO.generateShowSeats(targetShow.getId(), targetShow.getScreenId(), prices, conn);
+                        seats = ShowSeatDAO.getShowSeatsByShowId(targetShow.getId());
+                    } catch (Exception ex) {
+                        System.err.println("[OrderBookingPage] Auto-generating seats error: " + ex.getMessage());
+                    }
+                }
+                return seats;
             }
-        }
 
-        if (showSeats.isEmpty()) {
+            @Override
+            protected void done() {
+                if (gen != seatLoadGeneration) return;
+                try {
+                    renderSeatsGrid(get());
+                } catch (Exception ex) {
+                    showSeatMessage("Failed to load seats: " + ex.getMessage());
+                }
+            }
+        }.execute();
+    }
+
+    private void renderSeatsGrid(List<ShowSeat> showSeats) {
+        selectedSeats.clear();
+        seatPanel.removeAll();
+
+        if (showSeats == null || showSeats.isEmpty()) {
             showSeatMessage("This show has no seat inventory configured.");
             updateSummary();
             return;

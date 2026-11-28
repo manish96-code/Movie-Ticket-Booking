@@ -3,9 +3,12 @@ package com.cinemats.dao;
 import com.cinemats.config.DBConnection;
 import com.cinemats.model.Show;
 import com.cinemats.model.ShowPrice;
+import java.math.BigDecimal;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 // Data access object for movie show screenings and transaction operations
 public class ShowDAO {
@@ -171,6 +174,28 @@ public class ShowDAO {
     }
 
     // Returns all shows with live seat counts and pricing breakdown
+    private static Map<Integer, List<ShowPrice>> loadPricesMap(Connection conn) {
+        Map<Integer, List<ShowPrice>> map = new HashMap<>();
+        String sql = "SELECT id, show_id, seat_type, price FROM show_prices";
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                int showId = rs.getInt("show_id");
+                map.computeIfAbsent(showId, k -> new ArrayList<>())
+                        .add(new ShowPrice(
+                                rs.getInt("id"),
+                                showId,
+                                rs.getString("seat_type"),
+                                BigDecimal.valueOf(rs.getDouble("price")),
+                                "", ""
+                        ));
+            }
+        } catch (SQLException e) {
+            System.err.println("[ShowDAO] Error loading prices map: " + e.getMessage());
+        }
+        return map;
+    }
+
     public static List<Show> getAllShows() {
         List<Show> list = new ArrayList<>();
         if (!DBConnection.isDriverAvailable()) return list;
@@ -188,32 +213,34 @@ public class ShowDAO {
                 + "GROUP BY sh.id "
                 + "ORDER BY sh.show_date DESC, sh.start_time ASC";
 
-        try (Connection conn = DBConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+        try (Connection conn = DBConnection.getConnection()) {
+            Map<Integer, List<ShowPrice>> pricesMap = loadPricesMap(conn);
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery(sql)) {
 
-            while (rs.next()) {
-                int showId = rs.getInt("id");
-                List<ShowPrice> prices = ShowPriceDAO.getPricesByShowId(showId);
+                while (rs.next()) {
+                    int showId = rs.getInt("id");
+                    List<ShowPrice> prices = pricesMap.getOrDefault(showId, new ArrayList<>());
 
-                list.add(new Show(
-                        showId,
-                        rs.getInt("movie_id"),
-                        rs.getInt("screen_id"),
-                        rs.getString("movie_title"),
-                        rs.getString("screen_name"),
-                        rs.getString("screen_type"),
-                        rs.getString("show_date"),
-                        rs.getString("start_time"),
-                        rs.getString("end_time"),
-                        rs.getInt("available_seats"),
-                        rs.getInt("booked_seats"),
-                        rs.getInt("total_seats"),
-                        rs.getString("status"),
-                        prices,
-                        rs.getString("created_at"),
-                        rs.getString("updated_at")
-                ));
+                    list.add(new Show(
+                            showId,
+                            rs.getInt("movie_id"),
+                            rs.getInt("screen_id"),
+                            rs.getString("movie_title"),
+                            rs.getString("screen_name"),
+                            rs.getString("screen_type"),
+                            rs.getString("show_date"),
+                            rs.getString("start_time"),
+                            rs.getString("end_time"),
+                            rs.getInt("available_seats"),
+                            rs.getInt("booked_seats"),
+                            rs.getInt("total_seats"),
+                            rs.getString("status"),
+                            prices,
+                            rs.getString("created_at"),
+                            rs.getString("updated_at")
+                    ));
+                }
             }
         } catch (SQLException e) {
             System.err.println("[ShowDAO] Error querying all shows: " + e.getMessage());
@@ -240,32 +267,34 @@ public static List<Show> getShowsByMovie(int movieId) {
             + "GROUP BY sh.id "
             + "ORDER BY sh.show_date ASC, sh.start_time ASC";
 
-    try (Connection conn = DBConnection.getConnection();
-         PreparedStatement stmt = conn.prepareStatement(sql)) {
-        stmt.setInt(1, movieId);
-        try (ResultSet rs = stmt.executeQuery()) {
-            while (rs.next()) {
-                int showId = rs.getInt("id");
-                List<ShowPrice> prices = ShowPriceDAO.getPricesByShowId(showId);
+    try (Connection conn = DBConnection.getConnection()) {
+        Map<Integer, List<ShowPrice>> pricesMap = loadPricesMap(conn);
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, movieId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    int showId = rs.getInt("id");
+                    List<ShowPrice> prices = pricesMap.getOrDefault(showId, new ArrayList<>());
 
-                list.add(new Show(
-                        showId,
-                        rs.getInt("movie_id"),
-                        rs.getInt("screen_id"),
-                        rs.getString("movie_title"),
-                        rs.getString("screen_name"),
-                        rs.getString("screen_type"),
-                        rs.getString("show_date"),
-                        rs.getString("start_time"),
-                        rs.getString("end_time"),
-                        rs.getInt("available_seats"),
-                        rs.getInt("booked_seats"),
-                        rs.getInt("total_seats"),
-                        rs.getString("status"),
-                        prices,
-                        rs.getString("created_at"),
-                        rs.getString("updated_at")
-                ));
+                    list.add(new Show(
+                            showId,
+                            rs.getInt("movie_id"),
+                            rs.getInt("screen_id"),
+                            rs.getString("movie_title"),
+                            rs.getString("screen_name"),
+                            rs.getString("screen_type"),
+                            rs.getString("show_date"),
+                            rs.getString("start_time"),
+                            rs.getString("end_time"),
+                            rs.getInt("available_seats"),
+                            rs.getInt("booked_seats"),
+                            rs.getInt("total_seats"),
+                            rs.getString("status"),
+                            prices,
+                            rs.getString("created_at"),
+                            rs.getString("updated_at")
+                    ));
+                }
             }
         }
     } catch (SQLException e) {
